@@ -50,6 +50,12 @@ export default function Docs() {
           <aside className="lg:col-span-1">
             <div className="sticky top-24">
               <nav className="space-y-1">
+                <Link href="/overview">
+                  <a className="block px-3 py-2 text-sm text-blue-400 hover:bg-slate-800 rounded-md transition-colors font-medium">
+                    📘 System Architecture
+                  </a>
+                </Link>
+                <div className="h-2"></div>
                 <a
                   href="#overview"
                   className="block px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-md transition-colors"
