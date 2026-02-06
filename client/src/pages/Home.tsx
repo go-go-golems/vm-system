@@ -1,26 +1,47 @@
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeEditor } from '@/components/CodeEditor';
 import { ExecutionConsole } from '@/components/ExecutionConsole';
+import { ExecutionLogViewer } from '@/components/ExecutionLogViewer';
 import { PresetSelector } from '@/components/PresetSelector';
+import { SessionManager } from '@/components/SessionManager';
 import { VMInfo } from '@/components/VMInfo';
-import { vmService, type Execution } from '@/lib/vmService';
-import { BookOpen, Play, RotateCcw, Terminal } from 'lucide-react';
+import { vmService, type Execution, type VMSession } from '@/lib/vmService';
+import { BookOpen, History, Layers, Play, RotateCcw, Terminal } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function Home() {
-  const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, VM!");\n');
+  const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, VM!");');
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [sessions, setSessions] = useState<VMSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<VMSession | null>(null);
+  const [activeTab, setActiveTab] = useState('editor');
 
-  const vm = vmService.getVMs()[0];
-  const session = vmService.getCurrentSession();
-
+  // Load sessions and executions on mount
   useEffect(() => {
-    // Load recent executions on mount
-    setExecutions(vmService.getRecentExecutions());
+    loadSessions();
+    loadExecutions();
   }, []);
+
+  const loadSessions = async () => {
+    const sessionList = await vmService.listSessions();
+    setSessions(sessionList);
+    const current = vmService.getCurrentSession();
+    setCurrentSession(current);
+  };
+
+  const loadExecutions = async () => {
+    const current = vmService.getCurrentSession();
+    if (current) {
+      const sessionExecs = await vmService.getExecutionsBySession(current.id);
+      setExecutions(sessionExecs);
+    } else {
+      setExecutions([]);
+    }
+  };
 
   const handleExecute = async () => {
     if (!code.trim()) {
@@ -28,19 +49,28 @@ export default function Home() {
       return;
     }
 
-    setIsExecuting(true);
+    const current = vmService.getCurrentSession();
+    if (!current) {
+      toast.error('No active session');
+      return;
+    }
 
+    setIsExecuting(true);
     try {
       const execution = await vmService.executeREPL(code);
-      setExecutions((prev) => [execution, ...prev].slice(0, 10));
+      setExecutions((prev) => [...prev, execution]);
 
-      if (execution.status === 'ok') {
-        toast.success('Execution completed successfully');
-      } else if (execution.status === 'error') {
-        toast.error('Execution failed with error');
+      if (execution.status === 'error') {
+        toast.error('Execution failed', {
+          description: execution.error,
+        });
+      } else {
+        toast.success('Execution completed');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Execution failed');
+      toast.error('Execution failed', {
+        description: error.message,
+      });
     } finally {
       setIsExecuting(false);
     }
@@ -53,21 +83,81 @@ export default function Home() {
 
   const handleLoadPreset = (presetCode: string) => {
     setCode(presetCode);
-    toast.success('Example loaded');
+    toast.success('Preset loaded');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleExecute();
+  const handleCreateSession = async (name?: string) => {
+    try {
+      const session = await vmService.createSession(name);
+      await loadSessions();
+      await vmService.setCurrentSession(session.id);
+      setCurrentSession(session);
+      setExecutions([]);
+      toast.success('Session created', {
+        description: `Now using ${session.name}`,
+      });
+    } catch (error: any) {
+      toast.error('Failed to create session', {
+        description: error.message,
+      });
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      await vmService.setCurrentSession(sessionId);
+      const session = await vmService.getSession(sessionId);
+      setCurrentSession(session);
+      const sessionExecs = await vmService.getExecutionsBySession(sessionId);
+      setExecutions(sessionExecs);
+      toast.success('Session switched', {
+        description: `Now using ${session?.name}`,
+      });
+      setActiveTab('editor');
+    } catch (error: any) {
+      toast.error('Failed to switch session', {
+        description: error.message,
+      });
+    }
+  };
+
+  const handleCloseSession = async (sessionId: string) => {
+    try {
+      await vmService.closeSession(sessionId);
+      await loadSessions();
+      toast.success('Session closed');
+    } catch (error: any) {
+      toast.error('Failed to close session', {
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await vmService.deleteSession(sessionId);
+      await loadSessions();
+      toast.success('Session deleted');
+    } catch (error: any) {
+      toast.error('Failed to delete session', {
+        description: error.message,
+      });
+    }
+  };
+
+  const handleSelectExecution = (execution: Execution) => {
+    if (execution.input) {
+      setCode(execution.input);
+      setActiveTab('editor');
+      toast.success('Code loaded from execution');
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col" onKeyDown={handleKeyDown}>
+    <div className="min-h-screen flex flex-col bg-slate-950">
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur">
-        <div className="container py-4">
+        <div className="container py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
@@ -112,56 +202,95 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 container py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
-          {/* Left column: Editor */}
-          <div className="lg:col-span-2 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-200">Code Editor</h2>
-              <div className="text-xs text-slate-500 font-mono">
-                Press <kbd className="px-2 py-1 bg-slate-800 rounded">⌘/Ctrl + Enter</kbd> to run
+      {/* Main content with tabs */}
+      <main className="flex-1 container py-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <TabsList className="bg-slate-900 border border-slate-800 mb-4">
+            <TabsTrigger value="editor" className="data-[state=active]:bg-slate-800">
+              <Terminal className="w-4 h-4 mr-2" />
+              Editor
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className="data-[state=active]:bg-slate-800">
+              <Layers className="w-4 h-4 mr-2" />
+              Sessions ({sessions.length})
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-slate-800">
+              <History className="w-4 h-4 mr-2" />
+              Execution Log ({executions.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="editor" className="flex-1 mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+              {/* Left: Code editor */}
+              <div className="flex flex-col gap-4">
+                <CodeEditor value={code} onChange={setCode} />
+                {currentSession && (
+                  <VMInfo
+                    vm={vmService.getVMs()[0]}
+                    session={currentSession}
+                  />
+                )}
+              </div>
+
+              {/* Right: Output console */}
+              <div className="flex flex-col gap-4">
+                <ExecutionConsole executions={executions} />
+                <Button
+                  onClick={handleClear}
+                  variant="outline"
+                  size="sm"
+                  className="bg-slate-900 border-slate-700 text-slate-300"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Clear Console
+                </Button>
               </div>
             </div>
-            <CodeEditor
-              value={code}
-              onChange={setCode}
-              placeholder="// Write your JavaScript code here..."
-              className="flex-1"
-            />
-          </div>
+          </TabsContent>
 
-          {/* Right column: Console and VM info */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-200">Output</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClear}
-                className="bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300"
-              >
-                <RotateCcw className="w-3 h-3 mr-2" />
-                Clear
-              </Button>
+          <TabsContent value="sessions" className="flex-1 mt-0">
+            <div className="h-[calc(100vh-12rem)] border border-slate-800 rounded-lg overflow-hidden">
+              <SessionManager
+                sessions={sessions}
+                currentSession={currentSession}
+                onCreateSession={handleCreateSession}
+                onSelectSession={handleSelectSession}
+                onCloseSession={handleCloseSession}
+                onDeleteSession={handleDeleteSession}
+              />
             </div>
-            <ExecutionConsole executions={executions} className="flex-1 min-h-[300px]" />
+          </TabsContent>
 
-            <VMInfo vm={vm} session={session} />
-          </div>
-        </div>
+          <TabsContent value="logs" className="flex-1 mt-0">
+            <div className="h-[calc(100vh-12rem)] border border-slate-800 rounded-lg overflow-hidden">
+              {currentSession ? (
+                <ExecutionLogViewer
+                  executions={executions}
+                  onSelectExecution={handleSelectExecution}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                  <History className="w-12 h-12 mb-3 opacity-50" />
+                  <p className="text-sm">No active session</p>
+                  <p className="text-xs text-slate-600 mt-1">Create or select a session to view execution logs</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-800 bg-slate-900/50 backdrop-blur">
-        <div className="container py-4">
+        <div className="container py-3">
           <div className="flex items-center justify-between text-sm text-slate-500">
-            <div>
-              Built with <span className="text-blue-500">goja</span> VM system
-            </div>
+            <div>Built with goja VM system</div>
             <div className="flex items-center gap-4">
-              <span>Session: {session?.id.slice(0, 8)}...</span>
-              <span>•</span>
+              <span>
+                Session: {currentSession?.name || 'None'} •{' '}
+                {currentSession?.status || 'No session'}
+              </span>
               <span>Executions: {executions.length}</span>
             </div>
           </div>

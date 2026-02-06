@@ -51,6 +51,9 @@ export interface VMSession {
   workspaceId: string;
   status: 'starting' | 'ready' | 'crashed' | 'closed';
   createdAt: Date;
+  closedAt?: Date;
+  lastActivityAt: Date;
+  name: string;
 }
 
 export interface Execution {
@@ -219,11 +222,46 @@ class VMService {
   private vms: Map<string, VMProfile> = new Map();
   private sessions: Map<string, VMSession> = new Map();
   private executions: Map<string, Execution> = new Map();
-  private currentSession: VMSession | null = null;
+  private executionsBySession: Map<string, string[]> = new Map();
+  private currentSessionId: string | null = null;
+  private gcInterval: number | null = null;
+  private readonly IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly GC_CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
 
   constructor() {
     // Create default VM profile
     this.createDefaultVM();
+    this.startGarbageCollection();
+  }
+
+  private startGarbageCollection() {
+    if (this.gcInterval) return;
+
+    this.gcInterval = window.setInterval(() => {
+      const now = Date.now();
+      const sessionsToClose: string[] = [];
+
+      this.sessions.forEach((session, sessionId) => {
+        if (
+          session.status === 'ready' &&
+          now - session.lastActivityAt.getTime() > this.IDLE_TIMEOUT_MS
+        ) {
+          sessionsToClose.push(sessionId);
+        }
+      });
+
+      sessionsToClose.forEach((sessionId) => {
+        console.log(`[GC] Closing idle session: ${sessionId}`);
+        this.closeSession(sessionId);
+      });
+    }, this.GC_CHECK_INTERVAL_MS);
+  }
+
+  private stopGarbageCollection() {
+    if (this.gcInterval) {
+      clearInterval(this.gcInterval);
+      this.gcInterval = null;
+    }
   }
 
   private createDefaultVM() {
@@ -266,17 +304,25 @@ class VMService {
 
     this.vms.set(vm.id, vm);
 
-    // Create a session for this VM
+    // Create a default session
+    const session = this.createSessionSync(vm.id, 'default-workspace', 'Default Session');
+    this.currentSessionId = session.id;
+  }
+
+  private createSessionSync(vmId: string, workspaceId: string, name: string): VMSession {
     const session: VMSession = {
       id: nanoid(),
-      vmId: vm.id,
-      workspaceId: 'default-workspace',
+      vmId,
+      workspaceId,
       status: 'ready',
       createdAt: new Date(),
+      lastActivityAt: new Date(),
+      name,
     };
 
     this.sessions.set(session.id, session);
-    this.currentSession = session;
+    this.executionsBySession.set(session.id, []);
+    return session;
   }
 
   getVMs(): VMProfile[] {
@@ -287,18 +333,100 @@ class VMService {
     return this.vms.get(id);
   }
 
-  getCurrentSession(): VMSession | null {
-    return this.currentSession;
+  async createSession(name?: string): Promise<VMSession> {
+    const defaultVM = Array.from(this.vms.values())[0];
+    if (!defaultVM) {
+      throw new Error('No VM profile available');
+    }
+
+    const sessionName = name || `Session ${this.sessions.size + 1}`;
+    const session = this.createSessionSync(
+      defaultVM.id,
+      `workspace-${nanoid()}`,
+      sessionName
+    );
+
+    return session;
   }
 
-  async executeREPL(code: string): Promise<Execution> {
-    if (!this.currentSession) {
+  async listSessions(): Promise<VMSession[]> {
+    return Array.from(this.sessions.values()).sort(
+      (a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime()
+    );
+  }
+
+  async getSession(sessionId: string): Promise<VMSession | null> {
+    return this.sessions.get(sessionId) || null;
+  }
+
+  getCurrentSession(): VMSession | null {
+    if (!this.currentSessionId) return null;
+    return this.sessions.get(this.currentSessionId) || null;
+  }
+
+  async setCurrentSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+    if (session.status !== 'ready') {
+      throw new Error('Session is not ready');
+    }
+    this.currentSessionId = sessionId;
+    this.touchSession(sessionId);
+  }
+
+  async closeSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    session.status = 'closed';
+    session.closedAt = new Date();
+    this.sessions.set(sessionId, session);
+
+    // If this was the current session, clear it
+    if (this.currentSessionId === sessionId) {
+      this.currentSessionId = null;
+    }
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    this.sessions.delete(sessionId);
+    this.executionsBySession.delete(sessionId);
+
+    if (this.currentSessionId === sessionId) {
+      this.currentSessionId = null;
+    }
+  }
+
+  private touchSession(sessionId: string) {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.lastActivityAt = new Date();
+      this.sessions.set(sessionId, session);
+    }
+  }
+
+  async executeREPL(code: string, sessionId?: string): Promise<Execution> {
+    const targetSessionId = sessionId || this.currentSessionId;
+    if (!targetSessionId) {
       throw new Error('No active session');
     }
 
+    const session = this.sessions.get(targetSessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    if (session.status !== 'ready') {
+      throw new Error('Session is not ready');
+    }
+
+    this.touchSession(targetSessionId);
+
     const execution: Execution = {
       id: nanoid(),
-      sessionId: this.currentSession.id,
+      sessionId: targetSessionId,
       kind: 'repl',
       input: code,
       status: 'running',
@@ -307,6 +435,11 @@ class VMService {
     };
 
     this.executions.set(execution.id, execution);
+
+    // Track execution by session
+    const sessionExecutions = this.executionsBySession.get(targetSessionId) || [];
+    sessionExecutions.push(execution.id);
+    this.executionsBySession.set(targetSessionId, sessionExecutions);
 
     // Simulate execution with setTimeout
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -410,14 +543,32 @@ class VMService {
     }
   }
 
-  getExecution(id: string): Execution | undefined {
-    return this.executions.get(id);
+  async getExecution(id: string): Promise<Execution | null> {
+    return this.executions.get(id) || null;
+  }
+
+  async getExecutionsBySession(sessionId: string): Promise<Execution[]> {
+    const executionIds = this.executionsBySession.get(sessionId) || [];
+    return executionIds
+      .map((id) => this.executions.get(id))
+      .filter((exec): exec is Execution => exec !== undefined)
+      .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  }
+
+  async getAllExecutions(): Promise<Execution[]> {
+    return Array.from(this.executions.values()).sort(
+      (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
+    );
   }
 
   getRecentExecutions(limit: number = 10): Execution[] {
     return Array.from(this.executions.values())
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
       .slice(0, limit);
+  }
+
+  destroy() {
+    this.stopGarbageCollection();
   }
 }
 
