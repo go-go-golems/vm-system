@@ -6,8 +6,9 @@ import { ExecutionLogViewer } from '@/components/ExecutionLogViewer';
 import { PresetSelector } from '@/components/PresetSelector';
 import { SessionManager } from '@/components/SessionManager';
 import { VMInfo } from '@/components/VMInfo';
+import { VMConfig } from '@/components/VMConfig';
 import { vmService, type Execution, type VMSession } from '@/lib/vmService';
-import { BookOpen, History, Layers, Play, RotateCcw, Terminal } from 'lucide-react';
+import { BookOpen, History, Layers, Play, RotateCcw, Settings, Terminal } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ export default function Home() {
   const [sessions, setSessions] = useState<VMSession[]>([]);
   const [currentSession, setCurrentSession] = useState<VMSession | null>(null);
   const [activeTab, setActiveTab] = useState('editor');
+  const [vmProfile, setVMProfile] = useState(vmService.getVMs()[0]);
 
   // Load sessions and executions on mount
   useEffect(() => {
@@ -218,6 +220,10 @@ export default function Home() {
               <History className="w-4 h-4 mr-2" />
               Execution Log ({executions.length})
             </TabsTrigger>
+            <TabsTrigger value="config" className="data-[state=active]:bg-slate-800">
+              <Settings className="w-4 h-4 mr-2" />
+              VM Config
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="editor" className="flex-1 mt-0">
@@ -276,6 +282,12 @@ export default function Home() {
                   <p className="text-xs text-slate-600 mt-1">Create or select a session to view execution logs</p>
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="config" className="flex-1 mt-0">
+            <div className="h-[calc(100vh-12rem)] overflow-auto px-4">
+              <VMConfig vm={vmProfile} onUpdate={setVMProfile} />
             </div>
           </TabsContent>
         </Tabs>

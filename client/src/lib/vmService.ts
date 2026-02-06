@@ -7,6 +7,8 @@ export interface VMProfile {
   engine: string;
   isActive: boolean;
   createdAt: Date;
+  exposedModules: string[];
+  libraries: string[];
   settings: {
     limits: {
       cpu_ms: number;
@@ -76,6 +78,124 @@ export interface ExecutionEvent {
   type: 'input_echo' | 'console' | 'value' | 'exception';
   payload: any;
 }
+
+// Built-in modules that can be exposed to VMs
+export const BUILTIN_MODULES = [
+  {
+    id: 'console',
+    name: 'console',
+    kind: 'builtin',
+    description: 'Console logging and debugging',
+    functions: ['log', 'warn', 'error', 'info', 'debug'],
+  },
+  {
+    id: 'math',
+    name: 'Math',
+    kind: 'builtin',
+    description: 'Mathematical functions and constants',
+    functions: ['abs', 'ceil', 'floor', 'round', 'sqrt', 'pow', 'random'],
+  },
+  {
+    id: 'json',
+    name: 'JSON',
+    kind: 'builtin',
+    description: 'JSON parsing and stringification',
+    functions: ['parse', 'stringify'],
+  },
+  {
+    id: 'date',
+    name: 'Date',
+    kind: 'builtin',
+    description: 'Date and time manipulation',
+    functions: ['now', 'parse', 'UTC'],
+  },
+  {
+    id: 'array',
+    name: 'Array',
+    kind: 'builtin',
+    description: 'Array manipulation methods',
+    functions: ['map', 'filter', 'reduce', 'forEach', 'find', 'some', 'every'],
+  },
+  {
+    id: 'string',
+    name: 'String',
+    kind: 'builtin',
+    description: 'String manipulation methods',
+    functions: ['split', 'join', 'slice', 'substring', 'indexOf', 'replace'],
+  },
+  {
+    id: 'object',
+    name: 'Object',
+    kind: 'builtin',
+    description: 'Object manipulation methods',
+    functions: ['keys', 'values', 'entries', 'assign', 'freeze'],
+  },
+  {
+    id: 'promise',
+    name: 'Promise',
+    kind: 'builtin',
+    description: 'Asynchronous programming with promises',
+    functions: ['resolve', 'reject', 'all', 'race'],
+  },
+];
+
+// Built-in libraries that can be loaded
+export const BUILTIN_LIBRARIES = [
+  {
+    id: 'lodash',
+    name: 'Lodash',
+    version: '4.17.21',
+    description: 'A modern JavaScript utility library delivering modularity, performance & extras',
+    source: 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js',
+    type: 'npm',
+    config: { global: '_' },
+  },
+  {
+    id: 'moment',
+    name: 'Moment.js',
+    version: '2.29.4',
+    description: 'Parse, validate, manipulate, and display dates and times in JavaScript',
+    source: 'https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js',
+    type: 'npm',
+    config: { global: 'moment' },
+  },
+  {
+    id: 'axios',
+    name: 'Axios',
+    version: '1.6.0',
+    description: 'Promise based HTTP client for the browser and node.js',
+    source: 'https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js',
+    type: 'npm',
+    config: { global: 'axios' },
+  },
+  {
+    id: 'ramda',
+    name: 'Ramda',
+    version: '0.29.0',
+    description: 'A practical functional library for JavaScript programmers',
+    source: 'https://cdn.jsdelivr.net/npm/ramda@0.29.0/dist/ramda.min.js',
+    type: 'npm',
+    config: { global: 'R' },
+  },
+  {
+    id: 'dayjs',
+    name: 'Day.js',
+    version: '1.11.10',
+    description: 'Fast 2kB alternative to Moment.js with the same modern API',
+    source: 'https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js',
+    type: 'npm',
+    config: { global: 'dayjs' },
+  },
+  {
+    id: 'zustand',
+    name: 'Zustand',
+    version: '4.4.7',
+    description: 'A small, fast and scalable bearbones state-management solution',
+    source: 'https://cdn.jsdelivr.net/npm/zustand@4.4.7/index.js',
+    type: 'npm',
+    config: { global: 'zustand' },
+  },
+];
 
 // Preset examples
 export const PRESET_EXAMPLES = [
@@ -215,6 +335,377 @@ console.log("Factorial(5):", fact5);
 
 { fib10, fact5 };`,
   },
+  {
+    id: 'lodash-demo',
+    name: 'Lodash Utilities',
+    description: 'Using Lodash library functions (requires lodash library)',
+    code: `// Note: This example requires the 'lodash' library to be enabled in VM Config
+// Simulating Lodash functionality
+
+const users = [
+  { name: 'Alice', age: 30, active: true },
+  { name: 'Bob', age: 25, active: false },
+  { name: 'Charlie', age: 35, active: true },
+  { name: 'David', age: 28, active: true }
+];
+
+// Filter active users
+const activeUsers = users.filter(u => u.active);
+console.log("Active users:", activeUsers);
+
+// Group by age range
+const grouped = users.reduce((acc, user) => {
+  const range = user.age < 30 ? '20s' : '30s';
+  if (!acc[range]) acc[range] = [];
+  acc[range].push(user);
+  return acc;
+}, {});
+console.log("Grouped by age:", grouped);
+
+// Get names only
+const names = users.map(u => u.name);
+console.log("Names:", names);
+
+{ activeUsers, grouped, names };`,
+  },
+  {
+    id: 'date-manipulation',
+    name: 'Date Manipulation',
+    description: 'Working with dates using built-in Date module',
+    code: `// Using built-in Date module
+const now = new Date();
+console.log("Current date:", now.toISOString());
+
+// Create specific dates
+const birthday = new Date('2024-01-15');
+console.log("Birthday:", birthday.toDateString());
+
+// Date arithmetic
+const tomorrow = new Date(now);
+tomorrow.setDate(tomorrow.getDate() + 1);
+console.log("Tomorrow:", tomorrow.toDateString());
+
+// Calculate difference
+const diff = tomorrow - now;
+const hours = Math.floor(diff / (1000 * 60 * 60));
+console.log("Hours until tomorrow:", hours);
+
+{ now: now.toISOString(), tomorrow: tomorrow.toISOString(), hoursUntil: hours };`,
+  },
+  {
+    id: 'json-processing',
+    name: 'JSON Processing',
+    description: 'Parse and stringify JSON data',
+    code: `// JSON module demo
+const data = {
+  user: "Alice",
+  preferences: {
+    theme: "dark",
+    notifications: true
+  },
+  tags: ["admin", "developer"]
+};
+
+// Stringify
+const jsonString = JSON.stringify(data, null, 2);
+console.log("JSON string:");
+console.log(jsonString);
+
+// Parse
+const parsed = JSON.parse(jsonString);
+console.log("Parsed back:", parsed);
+
+// Verify
+const isEqual = JSON.stringify(data) === JSON.stringify(parsed);
+console.log("Data preserved:", isEqual);
+
+{ original: data, parsed, isEqual };`,
+  },
+  {
+    id: 'advanced-array',
+    name: 'Advanced Array Operations',
+    description: 'Complex array transformations and reductions',
+    code: `// Advanced array operations
+const products = [
+  { name: 'Laptop', price: 1200, category: 'Electronics' },
+  { name: 'Mouse', price: 25, category: 'Electronics' },
+  { name: 'Desk', price: 300, category: 'Furniture' },
+  { name: 'Chair', price: 200, category: 'Furniture' },
+  { name: 'Monitor', price: 400, category: 'Electronics' }
+];
+
+// Calculate total by category
+const totalByCategory = products.reduce((acc, product) => {
+  if (!acc[product.category]) {
+    acc[product.category] = 0;
+  }
+  acc[product.category] += product.price;
+  return acc;
+}, {});
+console.log("Total by category:", totalByCategory);
+
+// Find expensive items (>$300)
+const expensive = products.filter(p => p.price > 300);
+console.log("Expensive items:", expensive);
+
+// Apply discount
+const discounted = products.map(p => ({
+  ...p,
+  salePrice: Math.round(p.price * 0.9)
+}));
+console.log("With 10% discount:", discounted);
+
+{ totalByCategory, expensive, discounted };`,
+  },
+  {
+    id: 'vm-module-check',
+    name: 'VM Module Check',
+    description: 'Check which modules are available in the current VM',
+    code: `// Check available modules
+console.log("Checking VM capabilities...");
+
+// Test console module
+try {
+  console.log("✓ Console module available");
+} catch (e) {
+  console.log("✗ Console module not available");
+}
+
+// Test Math module
+try {
+  const result = Math.sqrt(16);
+  console.log("✓ Math module available, sqrt(16) =", result);
+} catch (e) {
+  console.log("✗ Math module not available");
+}
+
+// Test JSON module
+try {
+  const obj = { test: true };
+  const str = JSON.stringify(obj);
+  console.log("✓ JSON module available");
+} catch (e) {
+  console.log("✗ JSON module not available");
+}
+
+// Test Array methods
+try {
+  const arr = [1, 2, 3].map(x => x * 2);
+  console.log("✓ Array methods available:", arr);
+} catch (e) {
+  console.log("✗ Array methods not available");
+}
+
+"Module check complete";`,
+  },
+  {
+    id: 'vm-library-check',
+    name: 'VM Library Check',
+    description: 'Check which external libraries are loaded',
+    code: `// Check loaded libraries
+console.log("Checking loaded libraries...");
+
+const libraries = [];
+
+// Check Lodash
+if (typeof _ !== 'undefined') {
+  console.log("✓ Lodash available");
+  libraries.push('lodash');
+} else {
+  console.log("✗ Lodash not loaded (enable in VM Config)");
+}
+
+// Check Moment.js
+if (typeof moment !== 'undefined') {
+  console.log("✓ Moment.js available");
+  libraries.push('moment');
+} else {
+  console.log("✗ Moment.js not loaded");
+}
+
+// Check Ramda
+if (typeof R !== 'undefined') {
+  console.log("✓ Ramda available");
+  libraries.push('ramda');
+} else {
+  console.log("✗ Ramda not loaded");
+}
+
+// Check Day.js
+if (typeof dayjs !== 'undefined') {
+  console.log("✓ Day.js available");
+  libraries.push('dayjs');
+} else {
+  console.log("✗ Day.js not loaded");
+}
+
+// Check Zustand
+if (typeof zustand !== 'undefined') {
+  console.log("✓ Zustand available");
+  libraries.push('zustand');
+} else {
+  console.log("✗ Zustand not loaded");
+}
+
+console.log("\nLoaded libraries:", libraries.length);
+
+{ loadedLibraries: libraries, count: libraries.length };`,
+  },
+  {
+    id: 'zustand-state',
+    name: 'Zustand State Management',
+    description: 'Using Zustand for state management (requires zustand library)',
+    code: `// Note: This example requires the 'zustand' library to be enabled in VM Config
+// Simulating Zustand state management pattern
+
+// Create a simple state store
+const createStore = (initialState) => {
+  let state = initialState;
+  const listeners = [];
+
+  return {
+    getState: () => state,
+    setState: (partial) => {
+      state = { ...state, ...partial };
+      listeners.forEach(listener => listener(state));
+    },
+    subscribe: (listener) => {
+      listeners.push(listener);
+      return () => {
+        const index = listeners.indexOf(listener);
+        if (index > -1) listeners.splice(index, 1);
+      };
+    }
+  };
+};
+
+// Create a counter store
+const counterStore = createStore({
+  count: 0,
+  increment: function() {
+    this.setState({ count: this.getState().count + 1 });
+  },
+  decrement: function() {
+    this.setState({ count: this.getState().count - 1 });
+  }
+});
+
+console.log("Initial state:", counterStore.getState());
+
+// Subscribe to changes
+counterStore.subscribe((state) => {
+  console.log("State changed:", state);
+});
+
+// Update state
+counterStore.setState({ count: counterStore.getState().count + 1 });
+counterStore.setState({ count: counterStore.getState().count + 5 });
+counterStore.setState({ count: counterStore.getState().count - 2 });
+
+const finalState = counterStore.getState();
+console.log("Final state:", finalState);
+
+finalState;`,
+  },
+  {
+    id: 'functional-ramda',
+    name: 'Functional Programming with Ramda',
+    description: 'Using Ramda for functional programming (requires ramda library)',
+    code: `// Note: This example requires the 'ramda' library to be enabled in VM Config
+// Simulating Ramda functional programming patterns
+
+const users = [
+  { id: 1, name: 'Alice', age: 30, role: 'admin' },
+  { id: 2, name: 'Bob', age: 25, role: 'user' },
+  { id: 3, name: 'Charlie', age: 35, role: 'admin' },
+  { id: 4, name: 'David', age: 28, role: 'user' }
+];
+
+// Compose functions (functional style)
+const isAdmin = user => user.role === 'admin';
+const isOver30 = user => user.age > 30;
+const getName = user => user.name;
+
+// Filter admins
+const admins = users.filter(isAdmin);
+console.log("Admins:", admins.map(getName));
+
+// Filter users over 30
+const over30 = users.filter(isOver30);
+console.log("Over 30:", over30.map(getName));
+
+// Compose: admins over 30
+const adminOver30 = users.filter(user => isAdmin(user) && isOver30(user));
+console.log("Admin over 30:", adminOver30.map(getName));
+
+// Transform data
+const userSummaries = users.map(user => ({
+  name: user.name,
+  summary: \`\${user.name} (\${user.age}) - \${user.role}\`
+}));
+
+console.log("Summaries:", userSummaries);
+
+{ admins: admins.length, over30: over30.length, adminOver30, userSummaries };`,
+  },
+  {
+    id: 'vm-capability-demo',
+    name: 'VM Capability Demo',
+    description: 'Demonstrate different VM capabilities working together',
+    code: `// Comprehensive VM capability demonstration
+console.log("=== VM Capability Demo ===");
+
+// 1. Console module
+console.log("\n1. Console logging:");
+console.log("Standard log");
+console.log("Multiple", "arguments", 123);
+
+// 2. Math module
+console.log("\n2. Math operations:");
+const calculations = {
+  sqrt: Math.sqrt(144),
+  pow: Math.pow(2, 8),
+  random: Math.floor(Math.random() * 100),
+  pi: Math.PI
+};
+console.log("Calculations:", calculations);
+
+// 3. Array methods
+console.log("\n3. Array operations:");
+const numbers = [1, 2, 3, 4, 5];
+const processed = {
+  doubled: numbers.map(n => n * 2),
+  filtered: numbers.filter(n => n > 2),
+  sum: numbers.reduce((a, b) => a + b, 0)
+};
+console.log("Array processing:", processed);
+
+// 4. Object methods
+console.log("\n4. Object operations:");
+const obj = { a: 1, b: 2, c: 3 };
+const objOps = {
+  keys: Object.keys(obj),
+  values: Object.values(obj),
+  entries: Object.entries(obj)
+};
+console.log("Object operations:", objOps);
+
+// 5. JSON module
+console.log("\n5. JSON operations:");
+const data = { name: "Test", values: [1, 2, 3] };
+const jsonStr = JSON.stringify(data);
+const parsed = JSON.parse(jsonStr);
+console.log("JSON round-trip successful:", JSON.stringify(data) === JSON.stringify(parsed));
+
+// 6. Date module
+console.log("\n6. Date operations:");
+const now = new Date();
+console.log("Current time:", now.toISOString());
+
+console.log("\n=== Demo Complete ===");
+
+{ calculations, processed, objOps, timestamp: now.toISOString() };`,
+  },
 ];
 
 // Mock VM service
@@ -271,6 +762,8 @@ class VMService {
       engine: 'goja',
       isActive: true,
       createdAt: new Date(),
+      exposedModules: ['console', 'math', 'json', 'array', 'object'],
+      libraries: [],
       settings: {
         limits: {
           cpu_ms: 2000,
