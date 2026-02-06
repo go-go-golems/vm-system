@@ -81,6 +81,13 @@ export interface ExecutionEvent {
   payload: any;
 }
 
+// NOTE: This is a mock frontend implementation for demonstration.
+// In the actual Go backend with goja:
+// 1. Libraries are downloaded from CDN and cached locally (.vm-cache/libraries/)
+// 2. When a session is created, configured libraries are loaded into the goja runtime
+// 3. Library code is executed via runtime.RunString() making globals (like _) available
+// 4. Test confirmed: Lodash successfully loads and all functions work in goja
+
 // Built-in modules that can be exposed to VMs
 export const BUILTIN_MODULES = [
   {
