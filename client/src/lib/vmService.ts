@@ -50,12 +50,14 @@ export interface VMStartupFile {
 export interface VMSession {
   id: string;
   vmId: string;
+  vmProfile: string;
   workspaceId: string;
   status: 'starting' | 'ready' | 'crashed' | 'closed';
   createdAt: Date;
   closedAt?: Date;
   lastActivityAt: Date;
   name: string;
+  vm?: VMProfile; // Reference to the VM configuration
 }
 
 export interface Execution {
@@ -339,8 +341,12 @@ console.log("Factorial(5):", fact5);
     id: 'lodash-demo',
     name: 'Lodash Utilities',
     description: 'Using Lodash library functions (requires lodash library)',
-    code: `// Note: This example requires the 'lodash' library to be enabled in VM Config
-// Simulating Lodash functionality
+    code: `// This example REQUIRES the 'lodash' library to be enabled in VM Config
+// It will fail if lodash is not configured
+
+if (typeof _ === 'undefined') {
+  throw new Error('Lodash library not loaded! Enable it in VM Config > Libraries.');
+}
 
 const users = [
   { name: 'Alice', age: 30, active: true },
@@ -349,24 +355,23 @@ const users = [
   { name: 'David', age: 28, active: true }
 ];
 
-// Filter active users
-const activeUsers = users.filter(u => u.active);
-console.log("Active users:", activeUsers);
+// Use actual Lodash functions
+const activeUsers = _.filter(users, { active: true });
+console.log("Active users (_.filter):", activeUsers);
 
-// Group by age range
-const grouped = users.reduce((acc, user) => {
-  const range = user.age < 30 ? '20s' : '30s';
-  if (!acc[range]) acc[range] = [];
-  acc[range].push(user);
-  return acc;
-}, {});
-console.log("Grouped by age:", grouped);
+// Group by age range using Lodash
+const grouped = _.groupBy(users, user => user.age < 30 ? '20s' : '30s');
+console.log("Grouped by age (_.groupBy):", grouped);
 
-// Get names only
-const names = users.map(u => u.name);
-console.log("Names:", names);
+// Get names using Lodash map
+const names = _.map(users, 'name');
+console.log("Names (_.map):", names);
 
-{ activeUsers, grouped, names };`,
+// Find user using Lodash
+const charlie = _.find(users, { name: 'Charlie' });
+console.log("Found Charlie (_.find):", charlie);
+
+{ activeUsers, grouped, names, charlie };`,
   },
   {
     id: 'date-manipulation',
@@ -555,8 +560,18 @@ console.log("\nLoaded libraries:", libraries.length);
     id: 'zustand-state',
     name: 'Zustand State Management',
     description: 'Using Zustand for state management (requires zustand library)',
-    code: `// Note: This example requires the 'zustand' library to be enabled in VM Config
-// Simulating Zustand state management pattern
+    code: `// This example REQUIRES the 'zustand' library to be enabled in VM Config
+// It will fail if zustand is not configured
+
+if (typeof zustand === 'undefined') {
+  throw new Error('Zustand library not loaded! Enable it in VM Config > Libraries.');
+}
+
+// Note: In a real browser/node environment, zustand would be used differently
+// This demonstrates the library availability check
+console.log('Zustand library loaded:', typeof zustand);
+
+// Simulating Zustand state management pattern for demo
 
 // Create a simple state store
 const createStore = (initialState) => {
@@ -611,8 +626,12 @@ finalState;`,
     id: 'functional-ramda',
     name: 'Functional Programming with Ramda',
     description: 'Using Ramda for functional programming (requires ramda library)',
-    code: `// Note: This example requires the 'ramda' library to be enabled in VM Config
-// Simulating Ramda functional programming patterns
+    code: `// This example REQUIRES the 'ramda' library to be enabled in VM Config
+// It will fail if ramda is not configured
+
+if (typeof R === 'undefined') {
+  throw new Error('Ramda library not loaded! Enable it in VM Config > Libraries.');
+}
 
 const users = [
   { id: 1, name: 'Alice', age: 30, role: 'admin' },
@@ -621,30 +640,40 @@ const users = [
   { id: 4, name: 'David', age: 28, role: 'user' }
 ];
 
-// Compose functions (functional style)
-const isAdmin = user => user.role === 'admin';
-const isOver30 = user => user.age > 30;
-const getName = user => user.name;
+// Use actual Ramda functions
+const isAdmin = R.propEq('role', 'admin');
+const isOver30 = R.propSatisfies(age => age > 30, 'age');
+const getName = R.prop('name');
 
-// Filter admins
-const admins = users.filter(isAdmin);
-console.log("Admins:", admins.map(getName));
+// Filter admins using Ramda
+const admins = R.filter(isAdmin, users);
+console.log("Admins (R.filter):", R.map(getName, admins));
 
 // Filter users over 30
-const over30 = users.filter(isOver30);
-console.log("Over 30:", over30.map(getName));
+const over30 = R.filter(isOver30, users);
+console.log("Over 30 (R.filter):", R.map(getName, over30));
 
-// Compose: admins over 30
-const adminOver30 = users.filter(user => isAdmin(user) && isOver30(user));
-console.log("Admin over 30:", adminOver30.map(getName));
+// Compose: admins over 30 using Ramda composition
+const adminAndOver30 = R.both(isAdmin, isOver30);
+const adminOver30 = R.filter(adminAndOver30, users);
+console.log("Admin over 30 (R.both + R.filter):", R.map(getName, adminOver30));
 
-// Transform data
-const userSummaries = users.map(user => ({
+// Transform data using Ramda
+const createSummary = user => ({
   name: user.name,
   summary: \`\${user.name} (\${user.age}) - \${user.role}\`
-}));
+});
+const userSummaries = R.map(createSummary, users);
 
-console.log("Summaries:", userSummaries);
+console.log("Summaries (R.map):", userSummaries);
+
+// Demonstrate pipe
+const getAdminNames = R.pipe(
+  R.filter(isAdmin),
+  R.map(getName),
+  R.join(', ')
+);
+console.log("Admin names (R.pipe):", getAdminNames(users));
 
 { admins: admins.length, over30: over30.length, adminOver30, userSummaries };`,
   },
@@ -803,14 +832,17 @@ class VMService {
   }
 
   private createSessionSync(vmId: string, workspaceId: string, name: string): VMSession {
+    const vm = this.vms.get(vmId);
     const session: VMSession = {
       id: nanoid(),
       vmId,
+      vmProfile: vm?.name || 'Unknown VM',
       workspaceId,
       status: 'ready',
       createdAt: new Date(),
       lastActivityAt: new Date(),
       name,
+      vm, // Include full VM configuration
     };
 
     this.sessions.set(session.id, session);

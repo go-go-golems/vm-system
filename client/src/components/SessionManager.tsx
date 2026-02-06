@@ -235,6 +235,40 @@ export function SessionManager({
                           <div className="text-xs text-slate-600 font-mono">
                             {session.id.substring(0, 16)}...
                           </div>
+                          
+                          {/* Display enabled modules */}
+                          {session.vm && session.vm.exposedModules && session.vm.exposedModules.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-slate-800">
+                              <div className="text-xs text-slate-500 mb-1">Modules:</div>
+                              <div className="flex flex-wrap gap-1">
+                                {session.vm.exposedModules.map((module) => (
+                                  <span
+                                    key={module}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                  >
+                                    {module}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Display enabled libraries */}
+                          {session.vm && session.vm.libraries && session.vm.libraries.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-slate-800">
+                              <div className="text-xs text-slate-500 mb-1">Libraries:</div>
+                              <div className="flex flex-wrap gap-1">
+                                {session.vm.libraries.map((library) => (
+                                  <span
+                                    key={library}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-green-500/10 text-green-400 border border-green-500/20"
+                                  >
+                                    {library}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
