@@ -488,7 +488,7 @@ This is the foundation for replacing string-based path checks in execution and s
 
 **Inferred user intent:** Reduce fragile string-based logic and make safety-critical behavior enforced by construction.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `b8c906095b4ea4c75348022134e1ef2b720016a0` - `feat(paths): add typed worktree path primitives and tests`
 
 ### What I did
 
@@ -577,7 +577,7 @@ This step directly addresses one of the highest-severity findings from VM-006 by
 
 **Inferred user intent:** Ensure type-system improvements are practical and close real security gaps.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `b812c1b27e21c80c34cba08064b843051305d441` - `fix(paths): enforce typed run-file resolution and symlink safety`
 
 ### What I did
 
@@ -657,7 +657,7 @@ I also expanded the safety integration test to cover startup traversal rejection
 
 **Inferred user intent:** Make path safety consistent and robust across all execution entry points.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `61148406c0439d31b2f776d266b94c3aff69a737` - `fix(startup): enforce typed startup path safety end-to-end`
 
 ### What I did
 
@@ -746,7 +746,7 @@ The integration contract now aligns with other not-found resources in the API (`
 
 **Inferred user intent:** Replace stringly/implicit error behavior with explicit typed domain errors.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `6197ed90fc4194a0a7d97090660813d30f6336cd` - `fix(api): add typed execution-not-found error contract`
 
 ### What I did
 
@@ -828,7 +828,7 @@ This keeps one authoritative schema for limits/resolver/runtime settings and red
 
 **Inferred user intent:** Simplify maintenance by centralizing shared configuration contracts.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `e0bfaf829eed4bac48062bb0cdbd9bccdca2f5ec` - `refactor(types): unify vmcontrol config types with vmmodels`
 
 ### What I did
 
