@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmtransport/http/server_templates_integration_test.go
+      Note: Task 3 template route integration test suite
     - Path: ttmp/2026/02/08/VM-004-EXPAND-E2E-COVERAGE--expand-vm-system-daemon-api-e2e-and-integration-coverage/design-doc/01-daemon-api-test-coverage-matrix-and-expansion-plan.md
       Note: Coverage matrix baseline and plan
     - Path: ttmp/2026/02/08/VM-004-EXPAND-E2E-COVERAGE--expand-vm-system-daemon-api-e2e-and-integration-coverage/tasks.md
@@ -26,6 +28,7 @@ LastUpdated: 2026-02-08T10:47:00-05:00
 WhatFor: Track task-by-task progress, rationale, validations, and commit traceability for the coverage expansion ticket.
 WhenToUse: Use when reviewing testing changes, reproducing verification steps, or auditing why specific coverage decisions were made.
 ---
+
 
 
 # Diary
@@ -161,6 +164,81 @@ I published a design-doc with route-level baseline coverage, risk gaps, design d
 ### Technical details
 
 - Baseline matrix scope includes API routes, error contracts, safety hooks, and script reliability constraints.
+
+## Step 3: Add Table-Driven Template Endpoint Integration Coverage
+
+This step added the first substantial coverage expansion in code: template route family integration tests. The objective was to ensure template CRUD and nested resources are asserted with deterministic API checks rather than relying on smoke-script side effects.
+
+I implemented a dedicated integration test that exercises template creation, listing, detail retrieval, capability and startup-file nested resources, and deletion with not-found verification after removal.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Continue the backlog by implementing route-family integration tests and recording task/commit evidence.
+
+**Inferred user intent:** Expand confidence beyond happy-path scripts to explicit endpoint contract checks.
+
+**Commit (code):** 276d09dd60495288b9980564c8bdb548bcf32853 — "test(api): add template endpoint integration coverage"
+
+### What I did
+
+- Added new test file:
+- `pkg/vmtransport/http/server_templates_integration_test.go`
+- Implemented `TestTemplateEndpointsCRUDAndNestedResources`:
+- `POST /api/v1/templates`
+- `GET /api/v1/templates`
+- `POST /api/v1/templates/{id}/capabilities`
+- `POST /api/v1/templates/{id}/startup-files`
+- `GET /api/v1/templates/{id}`
+- `GET /api/v1/templates/{id}/capabilities`
+- `GET /api/v1/templates/{id}/startup-files`
+- `DELETE /api/v1/templates/{id}`
+- `GET /api/v1/templates/{id}` -> assert `404 TEMPLATE_NOT_FOUND`
+- Added reusable test-local integration helpers for server setup and arbitrary HTTP request assertions.
+- Ran targeted and full validation:
+- `GOWORK=off go test ./pkg/vmtransport/http -run TestTemplateEndpointsCRUDAndNestedResources -count=1`
+- `GOWORK=off go test ./...`
+
+### Why
+
+- Template endpoints are foundational for all session/execution workflows and currently lacked direct automated contract coverage.
+
+### What worked
+
+- All targeted template endpoint assertions passed.
+- Full repository test run remained green.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- A table-driven nested-resource pattern keeps route-family expansion concise and makes future endpoint additions straightforward.
+
+### What was tricky to build
+
+- The subtle part was asserting both nested-resource persistence and delete semantics in one deterministic flow. I resolved this with a single lifecycle test that transitions from create -> nested adds -> detail/list assertions -> delete -> not-found verification.
+
+### What warrants a second pair of eyes
+
+- Confirm whether template delete should continue returning generic success payload or include stronger deletion metadata for clients.
+
+### What should be done in the future
+
+- Add negative template validation tests (missing fields, malformed bodies) under the dedicated error-contract task.
+
+### Code review instructions
+
+- Review `pkg/vmtransport/http/server_templates_integration_test.go`.
+- Focus on endpoint sequence and the explicit `404 TEMPLATE_NOT_FOUND` post-delete assertion.
+- Validate with:
+- `GOWORK=off go test ./pkg/vmtransport/http -run TestTemplateEndpointsCRUDAndNestedResources -count=1`
+
+### Technical details
+
+- The test boots a real in-memory integration stack (`vmstore` + `vmcontrol` + `vmhttp`) via `httptest.NewServer`; no mocks are used.
 
 ## Related
 
