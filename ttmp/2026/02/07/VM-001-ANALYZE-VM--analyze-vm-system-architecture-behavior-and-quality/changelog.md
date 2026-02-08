@@ -98,3 +98,17 @@ Step 10: added vmcontrol-backed REST transport with template/session/execution/e
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — HTTP adapter and endpoint handlers backed by vmcontrol
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 10 diary entry
 
+
+## 2026-02-08
+
+Step 11: added vmclient package and switched session/exec CLI commands to daemon API client mode by default (commit 7cbdea6a4f99672a327c691625fcaa8eea15e47f).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_exec.go — Execution CLI now backed by daemon API
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_session.go — Session CLI now backed by daemon API
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/executions_client.go — Execution API client methods
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/rest_client.go — Shared REST client core and API error decoding
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/sessions_client.go — Session API client methods
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 11 diary entry
+

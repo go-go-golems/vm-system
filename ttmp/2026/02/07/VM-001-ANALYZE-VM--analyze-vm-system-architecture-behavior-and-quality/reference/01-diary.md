@@ -12,6 +12,12 @@ RelatedFiles:
       Note: CLI command to run daemon process
     - Path: pkg/libloader/loader.go
       Note: Library cache mismatch reproduction
+    - Path: pkg/vmclient/executions_client.go
+      Note: Execution endpoint client wrappers
+    - Path: pkg/vmclient/rest_client.go
+      Note: Generic REST request/response handling for CLI client mode
+    - Path: pkg/vmclient/sessions_client.go
+      Note: Session endpoint client wrappers
     - Path: pkg/vmcontrol/core.go
       Note: Reusable core constructor used by daemon and adapters
     - Path: pkg/vmcontrol/execution_service.go
@@ -40,6 +46,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -778,6 +785,87 @@ I implemented endpoint coverage for health, runtime summary, templates, sessions
 ### Technical details
 
 - Error responses follow `{ \"error\": { \"code\", \"message\", \"details\" } }` with mappings for known `vmmodels` errors.
+
+## Step 11: Add vmclient And Switch Session/Exec CLI To Client Mode
+
+This step completed the first major behavior cutover: runtime-oriented CLI commands (`session` and `exec`) now call daemon REST endpoints by default instead of creating process-local session managers. This directly addresses the session continuity defect discovered in earlier experiments.
+
+I added a reusable REST client package and rewired command handlers to use it, then validated the flow end-to-end by creating a template over HTTP, creating a session via CLI, and running REPL execution via CLI against the daemon.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue sequential implementation by moving CLI runtime behavior onto daemon API calls.
+
+**Inferred user intent:** Ensure separate CLI invocations operate on shared daemon state rather than isolated per-process memory.
+
+**Commit (code):** 7cbdea6a4f99672a327c691625fcaa8eea15e47f — "feat(cli): default session and exec commands to daemon REST client"
+
+### What I did
+
+- Added `pkg/vmclient`:
+- `rest_client.go` generic JSON request/response wrapper.
+- `sessions_client.go` for session CRUD calls.
+- `executions_client.go` for repl/run-file/list/get/events calls.
+- Added global CLI flag in `cmd/vm-system/main.go`:
+- `--server-url` (default `http://127.0.0.1:3210`).
+- Replaced local runtime usage in:
+- `cmd/vm-system/cmd_session.go`
+- `cmd/vm-system/cmd_exec.go`
+- Runtime commands now instantiate `vmclient.Client` and call daemon endpoints.
+- Validated behavior with live flow:
+- Start daemon.
+- Create template via API.
+- Run `session create` CLI against daemon.
+- Run `exec repl` CLI against daemon.
+- Observed successful execution result (`42`) and event stream over API-backed CLI.
+
+### Why
+
+- Runtime operations must not rely on one-shot CLI process globals.
+- Shared client behavior enables consistent command semantics across invocations and aligns with UI/backend integration needs.
+
+### What worked
+
+- CLI runtime commands successfully operated against daemon endpoints.
+- End-to-end REPL execution and event retrieval worked with shared daemon state.
+- Compile/tests remained green after refactor.
+
+### What didn't work
+
+- Cleanup command `rm -f vm-system` was blocked by execution policy when removing local build artifact; workaround was to simply avoid staging that untracked binary.
+
+### What I learned
+
+- The client abstraction is small but high-leverage: command handlers become straightforward adapters and stop duplicating transport details.
+
+### What was tricky to build
+
+- The sharp edge was preserving existing command UX while changing execution mode. I kept existing command/flag shapes (`session create --vm-id ...`, `exec repl ...`) and only changed backend wiring so callers get continuity benefits without new invocation patterns yet.
+
+### What warrants a second pair of eyes
+
+- Verify that API error mapping surfaced by `vmclient.APIError` provides enough details for operator troubleshooting in shell workflows.
+
+### What should be done in the future
+
+- Extend vmclient usage to template commands during naming cutover (`vm` -> `template`) so all runtime/control commands are daemon-backed.
+
+### Code review instructions
+
+- Start with generic client plumbing in `pkg/vmclient/rest_client.go`.
+- Review command refactors in:
+- `cmd/vm-system/cmd_session.go`
+- `cmd/vm-system/cmd_exec.go`
+- Check root flag wiring in `cmd/vm-system/main.go`.
+- Validate with:
+- `GOWORK=off go test ./...`
+- daemon startup + CLI session/exec flow using `--server-url`.
+
+### Technical details
+
+- `vmclient` decodes structured error envelopes and returns typed `APIError` with status/code/message metadata.
 
 ## Related
 
