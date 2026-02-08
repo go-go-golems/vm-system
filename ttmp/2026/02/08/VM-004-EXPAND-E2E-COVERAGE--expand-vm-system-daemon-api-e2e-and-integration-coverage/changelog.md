@@ -25,3 +25,13 @@ Step 3: added table-driven integration coverage for template CRUD and nested res
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_templates_integration_test.go — Template endpoint integration coverage
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-004-EXPAND-E2E-COVERAGE--expand-vm-system-daemon-api-e2e-and-integration-coverage/reference/01-diary.md — Added detailed Step 3 diary entry
 
+
+## 2026-02-08
+
+Step 4: added session lifecycle integration coverage including status filters, close/delete semantics, and missing-session contract assertion (commit ebf84dac29cf652b9522716b46ef1750be9b8e41).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_sessions_integration_test.go — Session endpoint integration coverage
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-004-EXPAND-E2E-COVERAGE--expand-vm-system-daemon-api-e2e-and-integration-coverage/reference/01-diary.md — Added detailed Step 4 diary entry
+

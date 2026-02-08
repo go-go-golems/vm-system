@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmtransport/http/server_sessions_integration_test.go
+      Note: Task 4 session lifecycle integration test suite
     - Path: pkg/vmtransport/http/server_templates_integration_test.go
       Note: Task 3 template route integration test suite
     - Path: ttmp/2026/02/08/VM-004-EXPAND-E2E-COVERAGE--expand-vm-system-daemon-api-e2e-and-integration-coverage/design-doc/01-daemon-api-test-coverage-matrix-and-expansion-plan.md
@@ -28,6 +30,7 @@ LastUpdated: 2026-02-08T10:47:00-05:00
 WhatFor: Track task-by-task progress, rationale, validations, and commit traceability for the coverage expansion ticket.
 WhenToUse: Use when reviewing testing changes, reproducing verification steps, or auditing why specific coverage decisions were made.
 ---
+
 
 
 
@@ -239,6 +242,78 @@ I implemented a dedicated integration test that exercises template creation, lis
 ### Technical details
 
 - The test boots a real in-memory integration stack (`vmstore` + `vmcontrol` + `vmhttp`) via `httptest.NewServer`; no mocks are used.
+
+## Step 4: Add Session Lifecycle Integration Coverage
+
+This step expanded endpoint-family coverage for session APIs. The goal was to assert lifecycle behavior (create/list/get/filter/close/delete) and not-found error contract paths with deterministic integration checks.
+
+I added a dedicated session integration test that creates multiple sessions, exercises status filtering, verifies close/delete semantics, and asserts `SESSION_NOT_FOUND` behavior for missing IDs.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Continue sequential execution by implementing the next route-family test set and documenting results.
+
+**Inferred user intent:** Ensure session lifecycle behavior is regression-protected at API contract level.
+
+**Commit (code):** ebf84dac29cf652b9522716b46ef1750be9b8e41 — "test(api): add session lifecycle integration coverage"
+
+### What I did
+
+- Added `pkg/vmtransport/http/server_sessions_integration_test.go`.
+- Implemented `TestSessionLifecycleEndpoints` covering:
+- session create (`POST /api/v1/sessions`) for two sessions.
+- session list (`GET /api/v1/sessions`).
+- session get (`GET /api/v1/sessions/{id}`).
+- status filter list (`GET /api/v1/sessions?status=ready` and `?status=closed`).
+- close endpoint (`POST /api/v1/sessions/{id}/close`).
+- delete endpoint alias (`DELETE /api/v1/sessions/{id}`).
+- missing session error (`GET /api/v1/sessions/does-not-exist` -> `404 SESSION_NOT_FOUND`).
+- Added local helpers for workspace setup and template seeding in test context.
+- Ran validation:
+- `GOWORK=off go test ./pkg/vmtransport/http -run TestSessionLifecycleEndpoints -count=1`
+- `GOWORK=off go test ./...`
+
+### Why
+
+- Session state transitions are central to runtime ownership and were previously under-tested.
+
+### What worked
+
+- Session lifecycle assertions passed in integration context.
+- Full test suite remained green.
+
+### What didn't work
+
+- Initial helper implementation overcomplicated client typing and required quick simplification to compile cleanly.
+
+### What I learned
+
+- Reusing the integration server harness across test files keeps endpoint-family coverage easy to scale.
+
+### What was tricky to build
+
+- The tricky part was verifying close/delete state transitions without adding extra API endpoints. I resolved this by performing post-action `GET /sessions/{id}` checks and status-filter list assertions.
+
+### What warrants a second pair of eyes
+
+- Confirm `DELETE /sessions/{id}` semantics should remain alias-to-close (current behavior) versus hard deletion in future revisions.
+
+### What should be done in the future
+
+- Add conflict tests for repeated close/delete operations if/when behavior contract is finalized.
+
+### Code review instructions
+
+- Review `pkg/vmtransport/http/server_sessions_integration_test.go`.
+- Focus on lifecycle transition assertions and not-found error code checks.
+- Validate with:
+- `GOWORK=off go test ./pkg/vmtransport/http -run TestSessionLifecycleEndpoints -count=1`
+
+### Technical details
+
+- Test uses real HTTP requests against `httptest` server and validates both data-state and status/error-code contract outcomes.
 
 ## Related
 
