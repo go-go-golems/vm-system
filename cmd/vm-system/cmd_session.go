@@ -1,22 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/go-go-golems/vm-system/pkg/vmsession"
-	"github.com/go-go-golems/vm-system/pkg/vmstore"
+	"github.com/go-go-golems/vm-system/pkg/vmclient"
 )
-
-var sessionManager *vmsession.SessionManager
 
 func newSessionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "session",
-		Short: "Manage VM sessions",
-		Long:  `Create, list, and manage VM runtime sessions.`,
+		Short: "Manage VM sessions via daemon API",
+		Long:  `Create, list, and manage VM runtime sessions through the daemon REST API.`,
 	}
 
 	cmd.AddCommand(
@@ -36,17 +34,13 @@ func newSessionCreateCommand() *cobra.Command {
 		Use:   "create",
 		Short: "Create a new VM session",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := vmstore.NewVMStore(dbPath)
-			if err != nil {
-				return err
-			}
-			defer store.Close()
-
-			if sessionManager == nil {
-				sessionManager = vmsession.NewSessionManager(store)
-			}
-
-			session, err := sessionManager.CreateSession(vmID, workspaceID, baseCommitOID, worktreePath)
+			client := vmclient.New(serverURL, nil)
+			session, err := client.CreateSession(context.Background(), vmclient.CreateSessionRequest{
+				TemplateID:    vmID,
+				WorkspaceID:   workspaceID,
+				BaseCommitOID: baseCommitOID,
+				WorktreePath:  worktreePath,
+			})
 			if err != nil {
 				return err
 			}
@@ -66,10 +60,10 @@ func newSessionCreateCommand() *cobra.Command {
 	cmd.Flags().StringVar(&workspaceID, "workspace-id", "", "Workspace ID (required)")
 	cmd.Flags().StringVar(&baseCommitOID, "base-commit", "", "Base commit OID (required)")
 	cmd.Flags().StringVar(&worktreePath, "worktree-path", "", "Worktree path (required)")
-	cmd.MarkFlagRequired("vm-id")
-	cmd.MarkFlagRequired("workspace-id")
-	cmd.MarkFlagRequired("base-commit")
-	cmd.MarkFlagRequired("worktree-path")
+	_ = cmd.MarkFlagRequired("vm-id")
+	_ = cmd.MarkFlagRequired("workspace-id")
+	_ = cmd.MarkFlagRequired("base-commit")
+	_ = cmd.MarkFlagRequired("worktree-path")
 
 	return cmd
 }
@@ -81,13 +75,8 @@ func newSessionListCommand() *cobra.Command {
 		Use:   "list",
 		Short: "List VM sessions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := vmstore.NewVMStore(dbPath)
-			if err != nil {
-				return err
-			}
-			defer store.Close()
-
-			sessions, err := store.ListSessions(status)
+			client := vmclient.New(serverURL, nil)
+			sessions, err := client.ListSessions(context.Background(), status)
 			if err != nil {
 				return err
 			}
@@ -112,7 +101,6 @@ func newSessionListCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&status, "status", "", "Filter by status (starting, ready, crashed, closed)")
-
 	return cmd
 }
 
@@ -122,15 +110,10 @@ func newSessionGetCommand() *cobra.Command {
 		Short: "Get session details",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := vmstore.NewVMStore(dbPath)
-			if err != nil {
-				return err
-			}
-			defer store.Close()
-
+			client := vmclient.New(serverURL, nil)
 			sessionID := args[0]
 
-			session, err := store.GetSession(sessionID)
+			session, err := client.GetSession(context.Background(), sessionID)
 			if err != nil {
 				return err
 			}
@@ -142,11 +125,11 @@ func newSessionGetCommand() *cobra.Command {
 			fmt.Printf("Worktree Path: %s\n", session.WorktreePath)
 			fmt.Printf("Status: %s\n", session.Status)
 			fmt.Printf("Created: %s\n", session.CreatedAt.Format(time.RFC3339))
-			
+
 			if session.ClosedAt != nil {
 				fmt.Printf("Closed: %s\n", session.ClosedAt.Format(time.RFC3339))
 			}
-			
+
 			if session.LastError != "" {
 				fmt.Printf("Last Error: %s\n", session.LastError)
 			}
@@ -159,22 +142,12 @@ func newSessionGetCommand() *cobra.Command {
 func newSessionDeleteCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete [session-id]",
-		Short: "Delete a session",
+		Short: "Close a session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := vmstore.NewVMStore(dbPath)
-			if err != nil {
-				return err
-			}
-			defer store.Close()
-
-			if sessionManager == nil {
-				sessionManager = vmsession.NewSessionManager(store)
-			}
-
+			client := vmclient.New(serverURL, nil)
 			sessionID := args[0]
-
-			if err := sessionManager.CloseSession(sessionID); err != nil {
+			if _, err := client.CloseSession(context.Background(), sessionID); err != nil {
 				return err
 			}
 

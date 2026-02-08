@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	dbPath  string
-	rootCmd *cobra.Command
+	dbPath    string
+	serverURL string
+	rootCmd   *cobra.Command
 )
 
 func main() {
@@ -20,6 +21,7 @@ func main() {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "vm-system.db", "Path to SQLite database")
+	rootCmd.PersistentFlags().StringVar(&serverURL, "server-url", "http://127.0.0.1:3210", "Daemon base URL for client mode commands")
 
 	rootCmd.AddCommand(
 		newServeCommand(),
