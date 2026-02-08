@@ -1196,6 +1196,77 @@ I rewrote the primary smoke and e2e scripts and refreshed the README to document
 
 - Both scripts now run daemon lifecycle in-process (`serve` in background, health check, trap-based cleanup) and invoke CLI with `--server-url`.
 
+## Step 16: Final Task-to-Commit Bookkeeping Closure
+
+This step closed the implementation loop by explicitly mapping each completed v2 task to its corresponding code/doc commits in ticket records. The goal was strict traceability so reviewers can audit the work in task order without reconstructing history manually.
+
+I verified tasks 8–16 are checked and consolidated commit references in this step before closing task 17.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Complete the requested discipline of one-by-one task execution with commit-linked diary/changelog evidence.
+
+**Inferred user intent:** Ensure the ticket itself is the authoritative implementation ledger.
+
+**Commit (code):** N/A
+
+### What I did
+
+- Verified task completion state with `docmgr task list --ticket VM-001-ANALYZE-VM`.
+- Added final task-to-commit ledger:
+- Task 8 -> docs backlog setup: `39e937a2df330d89372a38cba9fbe79efb327e9e` and docs follow-up entries.
+- Task 9 -> `pkg/vmcontrol`: `a257a5a6b3e9eba9ac9b4aaf90a5b5eff46d03b4`.
+- Task 10 -> daemon host + serve: `a89ddcedaa8a6035bfcf939550c657dcc2934483`.
+- Task 11 -> HTTP transport: `5046108bd0d1c3930aa4bf45fdda8714f2ac1301`.
+- Task 12 -> CLI session/exec client mode: `7cbdea6a4f99672a327c691625fcaa8eea15e47f`.
+- Task 13 -> template naming cutover: `10a6c7382a228b4dff9f2a9cd33dc248ed16359c`.
+- Task 14 -> safety hooks: `a645a4a87190a3ead23d35b8c9de8395369409f0`.
+- Task 15 -> integration test: `c4dae0d2002711d4a8ed65274515398c3e89d64d`.
+- Task 16 -> smoke/e2e/README update: `1ef14f69b4fd6612576eb592694bc9626e3c7771`.
+- Confirmed each implementation step has a paired docs commit entry in this ticket.
+
+### Why
+
+- The user explicitly requested commit-by-commit, checked-task execution with frequent detailed diary records.
+- This closure step ensures auditability and continuation safety for future follow-up work.
+
+### What worked
+
+- Ticket now has task state, changelog entries, and diary steps aligned with actual commit sequence.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- Maintaining docs in lockstep with each task significantly reduces end-of-work reconciliation effort.
+
+### What was tricky to build
+
+- The subtle challenge was preventing drift between implementation commits and docs commits over many steps. The solution was to update task/checklist/changelog immediately after each task commit rather than batching.
+
+### What warrants a second pair of eyes
+
+- Optional reviewer check: verify each listed commit hash corresponds to the referenced task scope in git log order.
+
+### What should be done in the future
+
+- Keep this per-task commit+docs cadence for future tickets that involve architectural migrations.
+
+### Code review instructions
+
+- Start at `ttmp/.../tasks.md` for completion state.
+- Read this diary from Step 7 onward for implementation chronology.
+- Cross-check commits with:
+- `git log --oneline --reverse --since=<start>`
+
+### Technical details
+
+- Final bookkeeping closure is documentation-only and does not alter runtime behavior.
+
 ## Related
 
 - `../design-doc/01-comprehensive-vm-system-analysis-report.md`

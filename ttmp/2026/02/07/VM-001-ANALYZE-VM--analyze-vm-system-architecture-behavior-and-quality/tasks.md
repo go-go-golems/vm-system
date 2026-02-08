@@ -19,4 +19,4 @@
 - [x] Add execution/runtime safety hooks (path normalization and core limits scaffolding)
 - [x] Add integration tests proving cross-request session continuity through daemon HTTP API
 - [x] Update smoke/e2e scripts and README for daemon-first usage
-- [ ] Record diary/changelog updates with commit hashes for each completed task
+- [x] Record diary/changelog updates with commit hashes for each completed task
