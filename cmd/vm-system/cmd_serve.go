@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
+	vmhttp "github.com/go-go-golems/vm-system/pkg/vmtransport/http"
 )
 
 func newServeCommand() *cobra.Command {
@@ -27,20 +27,13 @@ func newServeCommand() *cobra.Command {
 				cfg.ListenAddr = listenAddr
 			}
 
-			// Start with a minimal operational surface; API routes are added via transport package wiring.
-			mux := http.NewServeMux()
-			mux.HandleFunc("/api/v1/health", func(w http.ResponseWriter, _ *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(map[string]string{
-					"status": "ok",
-				})
-			})
-
-			app, err := vmdaemon.New(cfg, mux)
+			app, err := vmdaemon.New(cfg, http.NewServeMux())
 			if err != nil {
 				return err
 			}
 			defer app.Close()
+
+			app.SetHandler(vmhttp.NewHandler(app.Core()))
 
 			fmt.Printf("vm-system daemon listening on %s\n", cfg.ListenAddr)
 
