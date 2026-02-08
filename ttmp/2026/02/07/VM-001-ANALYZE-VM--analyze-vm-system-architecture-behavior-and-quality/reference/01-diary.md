@@ -40,6 +40,8 @@ RelatedFiles:
       Note: Experiment-backed session continuity failures
     - Path: pkg/vmtransport/http/server.go
       Note: Full REST API adapter for daemon runtime operations
+    - Path: pkg/vmtransport/http/server_integration_test.go
+      Note: Automated daemon API continuity test
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md
       Note: Companion report summarized per diary step
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md
@@ -52,6 +54,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -1034,6 +1037,77 @@ I also wired new error mapping at the HTTP layer so invalid path attempts return
 ### Technical details
 
 - Traversal guard uses `filepath.Clean`, absolute-path rejection, and `filepath.Rel` containment check against `worktree_path`.
+
+## Step 14: Add API Integration Test For Cross-Request Session Continuity
+
+This step added automated verification for the core daemon promise: a session created in one request preserves runtime state across subsequent independent requests. The test boots the vmcontrol+HTTP stack in-process and executes a multi-call sequence that depends on persisted runtime variables.
+
+This closes a major gap from earlier experiments, where process-local CLI sessions failed continuity checks between commands.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue sequential implementation by adding regression-proof verification for daemon continuity behavior.
+
+**Inferred user intent:** Ensure the new architecture is validated with automated evidence, not only manual smoke checks.
+
+**Commit (code):** c4dae0d2002711d4a8ed65274515398c3e89d64d — "test(api): verify daemon session continuity across requests"
+
+### What I did
+
+- Added `pkg/vmtransport/http/server_integration_test.go` with `TestSessionContinuityAcrossAPIRequests`.
+- Test flow:
+- create temporary DB/worktree.
+- boot in-process HTTP server with `vmcontrol.NewCore` + `vmhttp.NewHandler`.
+- `POST /templates` and `POST /sessions`.
+- execute REPL request #1: `var persisted = 20; persisted`.
+- execute REPL request #2: `persisted + 22`.
+- assert second execution preview is `42`.
+- assert events endpoint returns entries.
+- assert runtime summary reports one active session.
+- Ran full test suite with `GOWORK=off go test ./...`.
+
+### Why
+
+- Continuity was the highest-impact defect in the original architecture.
+- This test guards against regressions in daemon/core/transport wiring.
+
+### What worked
+
+- The integration test passed and validated cross-request runtime continuity.
+- Existing package tests remained green.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- In-process `httptest` with real `vmstore`/`vmcontrol` components provides high-value coverage without heavy external orchestration.
+
+### What was tricky to build
+
+- The tricky point was proving true continuity instead of just repeated success. The solution was stateful REPL chaining (`persisted` variable) so the second request would fail if runtime identity changed.
+
+### What warrants a second pair of eyes
+
+- Confirm desired long-term test placement (`pkg/vmtransport/http` vs dedicated integration test package) as the API matrix grows.
+
+### What should be done in the future
+
+- Add negative-path integration tests (busy session, not-ready session, invalid path, output limit exceeded).
+
+### Code review instructions
+
+- Review test logic in `pkg/vmtransport/http/server_integration_test.go`.
+- Validate by running:
+- `GOWORK=off go test ./...`
+- Confirm assertions around second REPL result preview and runtime summary active session count.
+
+### Technical details
+
+- Test uses `httptest.NewServer` and real JSON endpoints; no mock transports are used.
 
 ## Related
 

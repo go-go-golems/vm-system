@@ -137,3 +137,13 @@ Step 13: added core run-file path traversal protection and execution limit scaff
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — Mapped new core safety errors to API response codes
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 13 diary entry
 
+
+## 2026-02-08
+
+Step 14: added integration test proving daemon session continuity across independent API requests (commit c4dae0d2002711d4a8ed65274515398c3e89d64d).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_integration_test.go — Cross-request session continuity integration coverage
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 14 diary entry
+
