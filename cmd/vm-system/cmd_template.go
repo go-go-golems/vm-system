@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmclient"
+	"github.com/go-go-golems/vm-system/pkg/vmmodels"
 )
 
 func newTemplateCommand() *cobra.Command {
@@ -23,6 +24,14 @@ func newTemplateCommand() *cobra.Command {
 		newTemplateListCommand(),
 		newTemplateGetCommand(),
 		newTemplateDeleteCommand(),
+		newTemplateAddModuleCommand(),
+		newTemplateRemoveModuleCommand(),
+		newTemplateListModulesCommand(),
+		newTemplateAddLibraryCommand(),
+		newTemplateRemoveLibraryCommand(),
+		newTemplateListLibrariesCommand(),
+		newTemplateListAvailableModulesCommand(),
+		newTemplateListAvailableLibrariesCommand(),
 		newTemplateAddCapabilityCommand(),
 		newTemplateListCapabilitiesCommand(),
 		newTemplateAddStartupFileCommand(),
@@ -169,6 +178,198 @@ func newTemplateDeleteCommand() *cobra.Command {
 				return err
 			}
 			fmt.Printf("Deleted template: %s\n", templateID)
+			return nil
+		},
+	}
+}
+
+func newTemplateAddModuleCommand() *cobra.Command {
+	var name string
+
+	cmd := &cobra.Command{
+		Use:   "add-module [template-id]",
+		Short: "Add a module to a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			if _, err := client.AddTemplateModule(context.Background(), templateID, vmclient.AddTemplateModuleRequest{
+				Name: name,
+			}); err != nil {
+				return err
+			}
+
+			fmt.Printf("Added module: %s to template %s\n", name, templateID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&name, "name", "", "Module name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
+}
+
+func newTemplateRemoveModuleCommand() *cobra.Command {
+	var name string
+
+	cmd := &cobra.Command{
+		Use:   "remove-module [template-id]",
+		Short: "Remove a module from a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			if _, err := client.RemoveTemplateModule(context.Background(), templateID, name); err != nil {
+				return err
+			}
+
+			fmt.Printf("Removed module: %s from template %s\n", name, templateID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&name, "name", "", "Module name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
+}
+
+func newTemplateListModulesCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list-modules [template-id]",
+		Short: "List modules configured on a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			modules, err := client.ListTemplateModules(context.Background(), templateID)
+			if err != nil {
+				return err
+			}
+
+			if len(modules) == 0 {
+				fmt.Println("No modules configured")
+				return nil
+			}
+
+			for _, module := range modules {
+				fmt.Println(module)
+			}
+
+			return nil
+		},
+	}
+}
+
+func newTemplateAddLibraryCommand() *cobra.Command {
+	var name string
+
+	cmd := &cobra.Command{
+		Use:   "add-library [template-id]",
+		Short: "Add a library to a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			if _, err := client.AddTemplateLibrary(context.Background(), templateID, vmclient.AddTemplateLibraryRequest{
+				Name: name,
+			}); err != nil {
+				return err
+			}
+
+			fmt.Printf("Added library: %s to template %s\n", name, templateID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&name, "name", "", "Library name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
+}
+
+func newTemplateRemoveLibraryCommand() *cobra.Command {
+	var name string
+
+	cmd := &cobra.Command{
+		Use:   "remove-library [template-id]",
+		Short: "Remove a library from a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			if _, err := client.RemoveTemplateLibrary(context.Background(), templateID, name); err != nil {
+				return err
+			}
+
+			fmt.Printf("Removed library: %s from template %s\n", name, templateID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&name, "name", "", "Library name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
+}
+
+func newTemplateListLibrariesCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list-libraries [template-id]",
+		Short: "List libraries configured on a template",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client := vmclient.New(serverURL, nil)
+			templateID := args[0]
+
+			libraries, err := client.ListTemplateLibraries(context.Background(), templateID)
+			if err != nil {
+				return err
+			}
+
+			if len(libraries) == 0 {
+				fmt.Println("No libraries configured")
+				return nil
+			}
+
+			for _, library := range libraries {
+				fmt.Println(library)
+			}
+
+			return nil
+		},
+	}
+}
+
+func newTemplateListAvailableModulesCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list-available-modules",
+		Short: "List built-in module catalog",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			modules := vmmodels.BuiltinModules()
+			data, err := json.MarshalIndent(modules, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data))
+			return nil
+		},
+	}
+}
+
+func newTemplateListAvailableLibrariesCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list-available-libraries",
+		Short: "List built-in library catalog",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			libraries := vmmodels.BuiltinLibraries()
+			data, err := json.MarshalIndent(libraries, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(data))
 			return nil
 		},
 	}

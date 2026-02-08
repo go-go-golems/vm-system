@@ -55,3 +55,13 @@ Task 3: Removed ad-hoc command-side mutation logic from the legacy modules comma
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_modules.go — Replaced direct store mutation with template API client calls
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 3 complete
 
+
+## 2026-02-08
+
+Task 5: Added template-native CLI subcommands for module/library add/remove/list plus available catalog listing under the template command surface.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — Added template module/library management and list-available commands
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 5 complete
+

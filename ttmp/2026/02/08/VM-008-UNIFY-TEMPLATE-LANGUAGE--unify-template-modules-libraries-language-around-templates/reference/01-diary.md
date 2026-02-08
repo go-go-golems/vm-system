@@ -11,6 +11,8 @@ Owners: []
 RelatedFiles:
     - Path: cmd/vm-system/cmd_modules.go
       Note: Task 3 removed command-side store mutation logic
+    - Path: cmd/vm-system/cmd_template.go
+      Note: Task 5 template module/library and catalog subcommands
     - Path: pkg/vmclient/templates_client.go
       Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
@@ -28,6 +30,7 @@ RelatedFiles:
         Task 2 changelog entry
         Task 4 changelog entry
         Task 3 changelog entry
+        Task 5 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -39,12 +42,14 @@ RelatedFiles:
         Task 2 checklist update
         Task 4 checklist update
         Task 3 checklist status
+        Task 5 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -282,7 +287,7 @@ This change keeps architecture consistent with VM-008 goals while preserving com
 
 **Inferred user intent:** Ensure no direct persistence mutation remains in CLI command code for template module/library operations.
 
-**Commit (code):** Pending for Step 4 commit creation.
+**Commit (code):** e57ce0e — "vm008: remove modules command-side mutation logic (task 3)"
 
 ### What I did
 
@@ -337,3 +342,85 @@ The only tricky part was maintaining the intended no-compatibility direction whi
 ### Technical details
 
 - The command no longer imports or uses `vmstore`; mutation requests now transit through daemon template endpoints only.
+
+## Step 5: Add template-native CLI subcommands for module/library operations and catalog listing
+
+I implemented the template command surface required by Task 5 in `cmd_template.go`, adding module/library add/remove/list commands and template-owned available catalog listing commands.
+
+This introduces a complete template-first command path for module/library operations so the legacy `modules` surface can be removed in the next task without losing functionality.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Add the missing template module/library CLI command set and available catalog listing under `vm-system template`.
+
+**Inferred user intent:** Make template command surface authoritative before deleting legacy command entrypoints.
+
+**Commit (code):** Pending for Step 5 commit creation.
+
+### What I did
+
+- Updated `cmd/vm-system/cmd_template.go`:
+  - Added template module commands:
+    - `add-module [template-id] --name ...`
+    - `remove-module [template-id] --name ...`
+    - `list-modules [template-id]`
+  - Added template library commands:
+    - `add-library [template-id] --name ...`
+    - `remove-library [template-id] --name ...`
+    - `list-libraries [template-id]`
+  - Added template catalog commands:
+    - `list-available-modules`
+    - `list-available-libraries`
+  - Wired all new subcommands into `newTemplateCommand()`
+  - Used vmclient template route methods for mutations/query and `vmmodels` builtin catalogs for available lists
+- Ran formatting:
+  - `gofmt -w cmd/vm-system/cmd_template.go`
+- Validated with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 5 requires template-native command parity for module/library management and available catalog listing so the project can remove legacy command surfaces cleanly.
+
+### What worked
+
+- Existing vmclient template methods allowed direct and consistent command wiring.
+- The expanded command set integrated cleanly into `newTemplateCommand` without side effects.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Establishing API and client changes first made CLI surface migration mostly mechanical and low-risk.
+
+### What was tricky to build
+
+The main constraint was preserving strict template terminology while matching expected command ergonomics. I standardized on `[template-id]` args and `--name` flags for all add/remove operations to keep language and UX consistent.
+
+### What warrants a second pair of eyes
+
+- Confirm the chosen command names and `--name` flag pattern align with reviewer expectations for long-term CLI stability.
+
+### What should be done in the future
+
+- Remove `cmd_modules.go` and root registration next (Task 6), then complete global naming cleanup (Task 7).
+
+### Code review instructions
+
+- Start with:
+  - `cmd/vm-system/cmd_template.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- New template command handlers delegate to:
+  - `Client.AddTemplateModule`, `Client.RemoveTemplateModule`, `Client.ListTemplateModules`
+  - `Client.AddTemplateLibrary`, `Client.RemoveTemplateLibrary`, `Client.ListTemplateLibraries`
+- Catalog commands intentionally remain read-only and source built-ins from `vmmodels`.
