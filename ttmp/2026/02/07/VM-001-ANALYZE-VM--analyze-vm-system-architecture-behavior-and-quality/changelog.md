@@ -112,3 +112,16 @@ Step 11: added vmclient package and switched session/exec CLI commands to daemon
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/sessions_client.go — Session API client methods
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 11 diary entry
 
+
+## 2026-02-08
+
+Step 12: completed hard CLI naming cutover from vm to template and removed vm command registration (commit 10a6c7382a228b4dff9f2a9cd33dc248ed16359c).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_session.go — Renamed session create flag to --template-id
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — New template command group backed by daemon API
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_vm.go — Removed legacy vm command implementation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/templates_client.go — Template REST client wrappers
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 12 diary entry
+

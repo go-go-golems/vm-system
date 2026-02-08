@@ -15,7 +15,7 @@
 - [x] Implement pkg/vmdaemon process host and add vm-system serve command
 - [x] Implement pkg/vmtransport/http REST adapter for health, templates, sessions, executions, events, and runtime summary
 - [x] Implement pkg/vmclient REST client and switch CLI runtime commands to client mode by default
-- [ ] Cut over CLI naming from vm to template and remove vm command registration
+- [x] Cut over CLI naming from vm to template and remove vm command registration
 - [ ] Add execution/runtime safety hooks (path normalization and core limits scaffolding)
 - [ ] Add integration tests proving cross-request session continuity through daemon HTTP API
 - [ ] Update smoke/e2e scripts and README for daemon-first usage

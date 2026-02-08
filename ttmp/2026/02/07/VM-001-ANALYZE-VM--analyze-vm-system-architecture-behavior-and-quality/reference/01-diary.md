@@ -10,6 +10,8 @@ Owners: []
 RelatedFiles:
     - Path: cmd/vm-system/cmd_serve.go
       Note: CLI command to run daemon process
+    - Path: cmd/vm-system/cmd_template.go
+      Note: Template-first CLI command surface for cutover
     - Path: pkg/libloader/loader.go
       Note: Library cache mismatch reproduction
     - Path: pkg/vmclient/executions_client.go
@@ -18,6 +20,8 @@ RelatedFiles:
       Note: Generic REST request/response handling for CLI client mode
     - Path: pkg/vmclient/sessions_client.go
       Note: Session endpoint client wrappers
+    - Path: pkg/vmclient/templates_client.go
+      Note: Template-specific API client methods used by CLI
     - Path: pkg/vmcontrol/core.go
       Note: Reusable core constructor used by daemon and adapters
     - Path: pkg/vmcontrol/execution_service.go
@@ -46,6 +50,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -866,6 +871,90 @@ I added a reusable REST client package and rewired command handlers to use it, t
 ### Technical details
 
 - `vmclient` decodes structured error envelopes and returns typed `APIError` with status/code/message metadata.
+
+## Step 12: Hard Cutover From vm To template Command Surface
+
+This step executed the naming cutover described in the architecture document: the public CLI control-plane command is now `template`, and `vm` command registration has been removed. I also aligned session creation flags to `--template-id` to eliminate old naming from the runtime workflow.
+
+The implementation reused the new daemon client layer, so template operations now go through REST endpoints instead of local SQLite command handlers.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue sequential work by completing naming cutover and command-surface cleanup.
+
+**Inferred user intent:** Deliver the new version with explicit template terminology and no legacy vm alias path.
+
+**Commit (code):** 10a6c7382a228b4dff9f2a9cd33dc248ed16359c — "feat(cli): cut over vm commands to template API surface"
+
+### What I did
+
+- Added `cmd/vm-system/cmd_template.go` implementing:
+- `template create`
+- `template list`
+- `template get`
+- `template delete`
+- `template add-capability`
+- `template list-capabilities`
+- `template add-startup`
+- `template list-startup`
+- Added `pkg/vmclient/templates_client.go` with template endpoint wrappers.
+- Updated root command registration (`main.go`) to use `newTemplateCommand()` and removed `newVMCommand()` registration.
+- Removed old file `cmd/vm-system/cmd_vm.go`.
+- Updated `session create` flag from `--vm-id` to `--template-id`.
+- Ran daemon-backed CLI smoke flow:
+- `template create`
+- `template list`
+- `session create --template-id ...`
+- `exec repl ...`
+- Verified successful execution and event retrieval.
+
+### Why
+
+- The design calls for hard cutover to template terminology in public API/CLI.
+- Removing legacy naming reduces ambiguity and avoids dual-surface maintenance drift.
+
+### What worked
+
+- Template command tree works end-to-end via daemon API.
+- Session and execution flows remained functional after flag/path renaming.
+- Tests/build stayed green.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- The template cutover is straightforward once transport and client layers are centralized; the bulk of work becomes command UX/text updates.
+
+### What was tricky to build
+
+- The main risk was accidental partial renaming. I mitigated this by coupling command root replacement (`vm` -> `template`) with session flag cutover (`--vm-id` -> `--template-id`) and validating through a full flow immediately.
+
+### What warrants a second pair of eyes
+
+- Review whether any external automation still invokes `vm` command paths and now needs updates.
+
+### What should be done in the future
+
+- Update repository smoke scripts and README examples to template-first commands (task 16).
+
+### Code review instructions
+
+- Review new command tree in `cmd/vm-system/cmd_template.go`.
+- Review root registration in `cmd/vm-system/main.go`.
+- Confirm removal of legacy path in `cmd/vm-system/cmd_vm.go`.
+- Review template API client in `pkg/vmclient/templates_client.go`.
+- Validate with daemon-backed CLI flow:
+- `template create/list`
+- `session create --template-id ...`
+- `exec repl ...`
+
+### Technical details
+
+- Template command handlers are thin adapters over `vmclient` and share the same REST error handling path used by session/exec commands.
 
 ## Related
 
