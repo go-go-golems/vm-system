@@ -969,3 +969,94 @@ The implementation intentionally uses UUID parsing and normalized string output 
 ### Technical details
 
 - IDs are normalized to canonical UUID string representation through `uuid.Parse(...).String()`.
+
+## Step 12: Task 2 - enforce typed ID validation at HTTP boundary
+
+I wired typed ID parsing into HTTP handlers for template/session/execution IDs across path, request body, and query parameters. This moves ID validity checks to API ingress and prevents malformed IDs from leaking into domain/store layers.
+
+I also updated integration coverage to distinguish malformed ID validation (`400 VALIDATION_ERROR`) from valid-but-missing IDs (`404 ..._NOT_FOUND`).
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 11)
+
+**Assistant interpretation:** Continue task-by-task implementation and apply typed IDs concretely in runtime APIs.
+
+**Inferred user intent:** Make ID handling robust and explicit, with clear contract behavior for malformed versus missing resources.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Updated HTTP boundary validation in:
+  - `pkg/vmtransport/http/server.go`
+- Added typed ID parsing helpers:
+  - `parseTemplateIDOrWriteValidationError`
+  - `parseSessionIDOrWriteValidationError`
+  - `parseExecutionIDOrWriteValidationError`
+- Applied typed validation to handler surfaces:
+  - template path IDs (`get/delete/capabilities/startup-files`)
+  - session create body `template_id`
+  - session path IDs (`get/close/delete`)
+  - execution body `session_id` (`repl`, `run-file`)
+  - executions list query `session_id`
+  - execution path IDs (`get/events`)
+- Updated integration tests:
+  - `pkg/vmtransport/http/server_error_contracts_integration_test.go`
+    - added malformed ID cases for template/session/execution paths
+    - added malformed ID cases for session create body, exec body, and execution list query
+    - switched not-found path fixtures to valid UUID strings
+  - `pkg/vmtransport/http/server_executions_integration_test.go`
+    - missing execution uses valid UUID to keep not-found semantics
+  - `pkg/vmtransport/http/server_sessions_integration_test.go`
+    - missing session uses valid UUID to keep not-found semantics
+- Ran:
+  - `gofmt -w pkg/vmtransport/http/server.go pkg/vmtransport/http/server_error_contracts_integration_test.go pkg/vmtransport/http/server_executions_integration_test.go pkg/vmtransport/http/server_sessions_integration_test.go`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- Without boundary validation, malformed IDs can produce confusing downstream errors and broaden the surface for inconsistent behavior.
+- Typed validation clarifies contract behavior and makes errors deterministic.
+
+### What worked
+
+- All handler-level and full-suite tests passed.
+- Error-contract suite now validates malformed and not-found cases separately.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- A small number of boundary helper functions removes repeated ad-hoc validation logic and improves consistency across endpoints.
+
+### What was tricky to build
+
+- Existing tests used non-UUID placeholders (`does-not-exist`) for not-found checks; after adding boundary validation these became malformed-ID checks. I updated those fixtures to valid UUIDs to preserve intended not-found assertions.
+
+### What warrants a second pair of eyes
+
+- Confirm `VALIDATION_ERROR` is the desired code for malformed UUIDs across all endpoint families.
+
+### What should be done in the future
+
+- Consider reusing typed IDs in vmclient request/response DTOs where feasible for stronger compile-time guarantees end-to-end.
+
+### Code review instructions
+
+- Review boundary parsing additions in:
+  - `pkg/vmtransport/http/server.go`
+- Review malformed-ID coverage in:
+  - `pkg/vmtransport/http/server_error_contracts_integration_test.go`
+- Verify not-found fixture updates in:
+  - `pkg/vmtransport/http/server_executions_integration_test.go`
+  - `pkg/vmtransport/http/server_sessions_integration_test.go`
+
+### Technical details
+
+- New contract split:
+  - malformed UUID -> `400 VALIDATION_ERROR`
+  - valid UUID but missing row -> `404 *_NOT_FOUND`

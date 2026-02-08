@@ -44,7 +44,7 @@ func TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable(t *testing.
 		{
 			name:         "events invalid after_seq",
 			method:       http.MethodGet,
-			path:         "/api/v1/executions/abc/events?after_seq=-1",
+			path:         "/api/v1/executions/00000000-0000-0000-0000-000000000010/events?after_seq=-1",
 			body:         nil,
 			status:       http.StatusBadRequest,
 			expectedCode: "VALIDATION_ERROR",
@@ -52,7 +52,7 @@ func TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable(t *testing.
 		{
 			name:         "template not found",
 			method:       http.MethodGet,
-			path:         "/api/v1/templates/does-not-exist",
+			path:         "/api/v1/templates/00000000-0000-0000-0000-000000000011",
 			body:         nil,
 			status:       http.StatusNotFound,
 			expectedCode: "TEMPLATE_NOT_FOUND",
@@ -60,10 +60,34 @@ func TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable(t *testing.
 		{
 			name:         "session not found",
 			method:       http.MethodGet,
-			path:         "/api/v1/sessions/does-not-exist",
+			path:         "/api/v1/sessions/00000000-0000-0000-0000-000000000012",
 			body:         nil,
 			status:       http.StatusNotFound,
 			expectedCode: "SESSION_NOT_FOUND",
+		},
+		{
+			name:         "template id malformed in path",
+			method:       http.MethodGet,
+			path:         "/api/v1/templates/not-a-uuid",
+			body:         nil,
+			status:       http.StatusBadRequest,
+			expectedCode: "VALIDATION_ERROR",
+		},
+		{
+			name:         "session id malformed in path",
+			method:       http.MethodGet,
+			path:         "/api/v1/sessions/not-a-uuid",
+			body:         nil,
+			status:       http.StatusBadRequest,
+			expectedCode: "VALIDATION_ERROR",
+		},
+		{
+			name:         "execution id malformed in path",
+			method:       http.MethodGet,
+			path:         "/api/v1/executions/not-a-uuid",
+			body:         nil,
+			status:       http.StatusBadRequest,
+			expectedCode: "VALIDATION_ERROR",
 		},
 	}
 
@@ -92,6 +116,26 @@ func TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable(t *testing.
 		"code": "SESSION_BUSY",
 	})
 	session.ExecutionLock.Unlock()
+
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/sessions", map[string]interface{}{
+		"template_id":     "not-a-uuid",
+		"workspace_id":    "ws-errors",
+		"base_commit_oid": "deadbeef",
+		"worktree_path":   worktree,
+	}, http.StatusBadRequest, map[string]string{
+		"code": "VALIDATION_ERROR",
+	})
+
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/repl", map[string]interface{}{
+		"session_id": "not-a-uuid",
+		"input":      "1+1",
+	}, http.StatusBadRequest, map[string]string{
+		"code": "VALIDATION_ERROR",
+	})
+
+	doRequest(t, client, http.MethodGet, server.URL+"/api/v1/executions?session_id=not-a-uuid&limit=3", nil, http.StatusBadRequest, map[string]string{
+		"code": "VALIDATION_ERROR",
+	})
 
 	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/run-file", map[string]interface{}{
 		"session_id": sessionID,

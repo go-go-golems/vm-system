@@ -100,3 +100,16 @@ Reopened VM-006 for Type-System Follow-Up 2 and completed Task 1 by adding typed
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Added follow-up 2 task block and marked Task 1 complete
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/index.md - Reopened ticket status for continued implementation
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 11 implementation diary entry
+
+## 2026-02-08
+
+Completed Follow-Up 2 Task 2 by enforcing typed UUID validation for template/session/execution IDs at HTTP boundary (path/body/query) and extending integration tests for malformed ID contracts.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go - Added typed boundary ID parsing helpers and handler validation hooks
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_error_contracts_integration_test.go - Added malformed-ID error contract coverage and updated not-found fixtures
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_executions_integration_test.go - Updated missing execution fixture to valid UUID not-found case
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_sessions_integration_test.go - Updated missing session fixture to valid UUID not-found case
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Follow-Up 2 Task 2 complete
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 12 implementation diary entry

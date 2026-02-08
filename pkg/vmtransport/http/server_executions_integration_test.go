@@ -77,7 +77,7 @@ func TestExecutionEndpointsLifecycle(t *testing.T) {
 		t.Fatalf("expected fewer events after_seq filter; got all=%d filtered=%d", len(events), len(eventsAfterFirst))
 	}
 
-	doRequest(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s", server.URL, "does-not-exist"), nil, http.StatusNotFound, map[string]string{
+	doRequest(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s", server.URL, "00000000-0000-0000-0000-000000000001"), nil, http.StatusNotFound, map[string]string{
 		"code": "EXECUTION_NOT_FOUND",
 	})
 }

@@ -111,7 +111,7 @@ func TestSessionLifecycleEndpoints(t *testing.T) {
 		t.Fatalf("expected at least 2 closed sessions, got %d", len(closedSessions))
 	}
 
-	doRequest(t, client, "GET", fmt.Sprintf("%s/api/v1/sessions/%s", server.URL, "does-not-exist"), nil, 404, map[string]string{
+	doRequest(t, client, "GET", fmt.Sprintf("%s/api/v1/sessions/%s", server.URL, "00000000-0000-0000-0000-000000000002"), nil, 404, map[string]string{
 		"code": "SESSION_NOT_FOUND",
 	})
 }

@@ -115,29 +115,32 @@ type templateDetailResponse struct {
 }
 
 func (s *Server) handleTemplateGet(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
-
-	template, err := s.core.Templates.Get(r.Context(), templateID)
-	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
 		return
 	}
 
-	settings, err := s.core.Templates.GetSettings(r.Context(), templateID)
+	template, err := s.core.Templates.Get(r.Context(), templateID.String())
+	if err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+
+	settings, err := s.core.Templates.GetSettings(r.Context(), templateID.String())
 	if err != nil && !errors.Is(err, vmmodels.ErrVMNotFound) {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 
-	caps, err := s.core.Templates.ListCapabilities(r.Context(), templateID)
+	caps, err := s.core.Templates.ListCapabilities(r.Context(), templateID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 
-	startup, err := s.core.Templates.ListStartupFiles(r.Context(), templateID)
+	startup, err := s.core.Templates.ListStartupFiles(r.Context(), templateID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 
@@ -150,14 +153,17 @@ func (s *Server) handleTemplateGet(w stdhttp.ResponseWriter, r *stdhttp.Request)
 }
 
 func (s *Server) handleTemplateDelete(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
-	if err := s.core.Templates.Delete(r.Context(), templateID); err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	if err := s.core.Templates.Delete(r.Context(), templateID.String()); err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, map[string]string{
 		"status":      "ok",
-		"template_id": templateID,
+		"template_id": templateID.String(),
 	})
 }
 
@@ -169,7 +175,10 @@ type addCapabilityRequest struct {
 }
 
 func (s *Server) handleTemplateAddCapability(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
 
 	var req addCapabilityRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -186,24 +195,27 @@ func (s *Server) handleTemplateAddCapability(w stdhttp.ResponseWriter, r *stdhtt
 
 	cap := &vmmodels.VMCapability{
 		ID:      uuid.NewString(),
-		VMID:    templateID,
+		VMID:    templateID.String(),
 		Kind:    req.Kind,
 		Name:    req.Name,
 		Enabled: req.Enabled,
 		Config:  req.Config,
 	}
 	if err := s.core.Templates.AddCapability(r.Context(), cap); err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusCreated, cap)
 }
 
 func (s *Server) handleTemplateListCapabilities(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
-	caps, err := s.core.Templates.ListCapabilities(r.Context(), templateID)
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	caps, err := s.core.Templates.ListCapabilities(r.Context(), templateID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, caps)
@@ -216,7 +228,10 @@ type addStartupFileRequest struct {
 }
 
 func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
 
 	var req addStartupFileRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -231,7 +246,7 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 	if err != nil {
 		switch {
 		case errors.Is(err, vmpath.ErrAbsoluteRelativePath), errors.Is(err, vmpath.ErrTraversalRelativePath), errors.Is(err, vmpath.ErrEmptyRelativePath):
-			writeError(w, stdhttp.StatusUnprocessableEntity, "INVALID_PATH", "Path escapes allowed worktree", map[string]string{"template_id": templateID})
+			writeError(w, stdhttp.StatusUnprocessableEntity, "INVALID_PATH", "Path escapes allowed worktree", map[string]string{"template_id": templateID.String()})
 		default:
 			writeError(w, stdhttp.StatusBadRequest, "INVALID_REQUEST", err.Error(), nil)
 		}
@@ -243,13 +258,13 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 
 	startup := &vmmodels.VMStartupFile{
 		ID:         uuid.NewString(),
-		VMID:       templateID,
+		VMID:       templateID.String(),
 		Path:       parsedPath.String(),
 		OrderIndex: req.OrderIndex,
 		Mode:       req.Mode,
 	}
 	if err := s.core.Templates.AddStartupFile(r.Context(), startup); err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 
@@ -257,10 +272,13 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 }
 
 func (s *Server) handleTemplateListStartupFiles(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	templateID := r.PathValue("template_id")
-	files, err := s.core.Templates.ListStartupFiles(r.Context(), templateID)
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	files, err := s.core.Templates.ListStartupFiles(r.Context(), templateID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": templateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, files)
@@ -283,15 +301,20 @@ func (s *Server) handleSessionCreate(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "template_id, workspace_id, base_commit_oid, and worktree_path are required", nil)
 		return
 	}
+	templateID, err := vmmodels.ParseTemplateID(req.TemplateID)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "template_id must be a valid UUID", nil)
+		return
+	}
 
 	session, err := s.core.Sessions.Create(r.Context(), vmcontrol.CreateSessionInput{
-		TemplateID:    req.TemplateID,
+		TemplateID:    templateID.String(),
 		WorkspaceID:   req.WorkspaceID,
 		BaseCommitOID: req.BaseCommitOID,
 		WorktreePath:  req.WorktreePath,
 	})
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"template_id": req.TemplateID})
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusCreated, session)
@@ -308,20 +331,26 @@ func (s *Server) handleSessionList(w stdhttp.ResponseWriter, r *stdhttp.Request)
 }
 
 func (s *Server) handleSessionGet(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	sessionID := r.PathValue("session_id")
-	session, err := s.core.Sessions.Get(r.Context(), sessionID)
+	sessionID, ok := parseSessionIDOrWriteValidationError(w, r.PathValue("session_id"))
+	if !ok {
+		return
+	}
+	session, err := s.core.Sessions.Get(r.Context(), sessionID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"session_id": sessionID})
+		writeCoreError(w, err, map[string]string{"session_id": sessionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, session)
 }
 
 func (s *Server) handleSessionClose(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	sessionID := r.PathValue("session_id")
-	session, err := s.core.Sessions.Close(r.Context(), sessionID)
+	sessionID, ok := parseSessionIDOrWriteValidationError(w, r.PathValue("session_id"))
+	if !ok {
+		return
+	}
+	session, err := s.core.Sessions.Close(r.Context(), sessionID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"session_id": sessionID})
+		writeCoreError(w, err, map[string]string{"session_id": sessionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, session)
@@ -346,13 +375,18 @@ func (s *Server) handleExecutionREPL(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id and input are required", nil)
 		return
 	}
+	sessionID, err := vmmodels.ParseSessionID(req.SessionID)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id must be a valid UUID", nil)
+		return
+	}
 
 	exec, err := s.core.Executions.ExecuteREPL(r.Context(), vmcontrol.ExecuteREPLInput{
-		SessionID: req.SessionID,
+		SessionID: sessionID.String(),
 		Input:     req.Input,
 	})
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"session_id": req.SessionID})
+		writeCoreError(w, err, map[string]string{"session_id": sessionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusCreated, exec)
@@ -375,25 +409,33 @@ func (s *Server) handleExecutionRunFile(w stdhttp.ResponseWriter, r *stdhttp.Req
 		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id and path are required", nil)
 		return
 	}
+	sessionID, err := vmmodels.ParseSessionID(req.SessionID)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id must be a valid UUID", nil)
+		return
+	}
 
 	exec, err := s.core.Executions.ExecuteRunFile(r.Context(), vmcontrol.ExecuteRunFileInput{
-		SessionID: req.SessionID,
+		SessionID: sessionID.String(),
 		Path:      req.Path,
 		Args:      req.Args,
 		Env:       req.Env,
 	})
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"session_id": req.SessionID})
+		writeCoreError(w, err, map[string]string{"session_id": sessionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusCreated, exec)
 }
 
 func (s *Server) handleExecutionGet(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	executionID := r.PathValue("execution_id")
-	exec, err := s.core.Executions.Get(r.Context(), executionID)
+	executionID, ok := parseExecutionIDOrWriteValidationError(w, r.PathValue("execution_id"))
+	if !ok {
+		return
+	}
+	exec, err := s.core.Executions.Get(r.Context(), executionID.String())
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"execution_id": executionID})
+		writeCoreError(w, err, map[string]string{"execution_id": executionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, exec)
@@ -403,6 +445,11 @@ func (s *Server) handleExecutionList(w stdhttp.ResponseWriter, r *stdhttp.Reques
 	sessionID := r.URL.Query().Get("session_id")
 	if sessionID == "" {
 		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id query param is required", nil)
+		return
+	}
+	parsedSessionID, err := vmmodels.ParseSessionID(sessionID)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id must be a valid UUID", nil)
 		return
 	}
 
@@ -416,16 +463,19 @@ func (s *Server) handleExecutionList(w stdhttp.ResponseWriter, r *stdhttp.Reques
 		limit = parsed
 	}
 
-	execs, err := s.core.Executions.List(r.Context(), sessionID, limit)
+	execs, err := s.core.Executions.List(r.Context(), parsedSessionID.String(), limit)
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"session_id": sessionID})
+		writeCoreError(w, err, map[string]string{"session_id": parsedSessionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, execs)
 }
 
 func (s *Server) handleExecutionEvents(w stdhttp.ResponseWriter, r *stdhttp.Request) {
-	executionID := r.PathValue("execution_id")
+	executionID, ok := parseExecutionIDOrWriteValidationError(w, r.PathValue("execution_id"))
+	if !ok {
+		return
+	}
 	afterSeq := 0
 	if rawAfter := r.URL.Query().Get("after_seq"); rawAfter != "" {
 		parsed, err := strconv.Atoi(rawAfter)
@@ -436,12 +486,39 @@ func (s *Server) handleExecutionEvents(w stdhttp.ResponseWriter, r *stdhttp.Requ
 		afterSeq = parsed
 	}
 
-	events, err := s.core.Executions.Events(r.Context(), executionID, afterSeq)
+	events, err := s.core.Executions.Events(r.Context(), executionID.String(), afterSeq)
 	if err != nil {
-		writeCoreError(w, err, map[string]string{"execution_id": executionID})
+		writeCoreError(w, err, map[string]string{"execution_id": executionID.String()})
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, events)
+}
+
+func parseTemplateIDOrWriteValidationError(w stdhttp.ResponseWriter, raw string) (vmmodels.TemplateID, bool) {
+	id, err := vmmodels.ParseTemplateID(raw)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "template_id must be a valid UUID", nil)
+		return "", false
+	}
+	return id, true
+}
+
+func parseSessionIDOrWriteValidationError(w stdhttp.ResponseWriter, raw string) (vmmodels.SessionID, bool) {
+	id, err := vmmodels.ParseSessionID(raw)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "session_id must be a valid UUID", nil)
+		return "", false
+	}
+	return id, true
+}
+
+func parseExecutionIDOrWriteValidationError(w stdhttp.ResponseWriter, raw string) (vmmodels.ExecutionID, bool) {
+	id, err := vmmodels.ParseExecutionID(raw)
+	if err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "execution_id must be a valid UUID", nil)
+		return "", false
+	}
+	return id, true
 }
 
 type errorEnvelope struct {

@@ -22,5 +22,5 @@
 ## Type-System Follow-Up 2
 
 - [x] Introduce typed ID wrappers/parsers (`TemplateID`, `SessionID`, `ExecutionID`) with unit tests
-- [ ] Enforce typed ID validation at HTTP boundary (path/body/query) and extend integration tests for malformed IDs
+- [x] Enforce typed ID validation at HTTP boundary (path/body/query) and extend integration tests for malformed IDs
 - [ ] Revise VM-006 review/improvement report to reflect implemented type-system hardening and updated risk profile
