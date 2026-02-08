@@ -458,6 +458,8 @@ func writeCoreError(w stdhttp.ResponseWriter, err error, details interface{}) {
 		writeError(w, stdhttp.StatusNotFound, "TEMPLATE_NOT_FOUND", "Template not found", details)
 	case errors.Is(err, vmmodels.ErrSessionNotFound):
 		writeError(w, stdhttp.StatusNotFound, "SESSION_NOT_FOUND", "Session not found", details)
+	case errors.Is(err, vmmodels.ErrExecutionNotFound):
+		writeError(w, stdhttp.StatusNotFound, "EXECUTION_NOT_FOUND", "Execution not found", details)
 	case errors.Is(err, vmmodels.ErrSessionNotReady):
 		writeError(w, stdhttp.StatusConflict, "SESSION_NOT_READY", "Session is not ready", details)
 	case errors.Is(err, vmmodels.ErrSessionBusy):

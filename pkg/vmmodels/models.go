@@ -10,6 +10,7 @@ import (
 var (
 	ErrVMNotFound             = errors.New("VM not found")
 	ErrSessionNotFound        = errors.New("session not found")
+	ErrExecutionNotFound      = errors.New("execution not found")
 	ErrSessionNotReady        = errors.New("session not ready")
 	ErrSessionBusy            = errors.New("session busy")
 	ErrPathTraversal          = errors.New("path traversal is not allowed")

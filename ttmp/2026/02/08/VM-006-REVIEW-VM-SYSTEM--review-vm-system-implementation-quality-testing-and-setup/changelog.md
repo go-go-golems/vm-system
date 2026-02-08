@@ -61,3 +61,16 @@ Completed Task 3 by enforcing typed startup path validation at API ingress and t
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_safety_integration_test.go - Added startup traversal and startup symlink escape safety assertions
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Task 3 complete
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 8 implementation diary entry
+
+## 2026-02-08
+
+Completed Task 4 by introducing typed `ErrExecutionNotFound` and wiring 404 execution-not-found API mapping end-to-end with updated integration assertions.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/models.go - Added `ErrExecutionNotFound` domain error
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmstore/vmstore.go - Mapped missing execution rows to typed domain error
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go - Added typed 404 `EXECUTION_NOT_FOUND` transport mapping
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_executions_integration_test.go - Updated missing execution expectation to typed 404 contract
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Task 4 complete
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 9 implementation diary entry

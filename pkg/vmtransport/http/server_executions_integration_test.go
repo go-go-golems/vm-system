@@ -77,8 +77,8 @@ func TestExecutionEndpointsLifecycle(t *testing.T) {
 		t.Fatalf("expected fewer events after_seq filter; got all=%d filtered=%d", len(events), len(eventsAfterFirst))
 	}
 
-	doRequest(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s", server.URL, "does-not-exist"), nil, http.StatusInternalServerError, map[string]string{
-		"code": "INTERNAL",
+	doRequest(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s", server.URL, "does-not-exist"), nil, http.StatusNotFound, map[string]string{
+		"code": "EXECUTION_NOT_FOUND",
 	})
 }
 

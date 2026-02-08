@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // VMStore manages VM-related data in SQLite
@@ -485,7 +485,7 @@ func (s *VMStore) GetExecution(id string) (*vmmodels.Execution, error) {
 	`, id).Scan(&exec.ID, &exec.SessionID, &exec.Kind, &input, &path, &exec.Args, &exec.Env, &exec.Status, &startedAt, &endedAt, &result, &errorJSON, &exec.Metrics)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("execution not found")
+		return nil, vmmodels.ErrExecutionNotFound
 	}
 	if err != nil {
 		return nil, err

@@ -731,3 +731,85 @@ I also expanded the safety integration test to cover startup traversal rejection
   - `startup-link.js` -> symlink to outside file
   - add-startup returns `201` (path is syntactically valid)
   - session create returns `422 INVALID_PATH` due canonical resolution escape detection.
+
+## Step 9: Task 4 - typed execution-not-found error contract
+
+I implemented a typed not-found error for executions and propagated it through store and transport mapping. This removes the prior behavior where missing execution IDs surfaced as `500 INTERNAL`.
+
+The integration contract now aligns with other not-found resources in the API (`template` and `session` already had typed 404 mappings).
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Apply stronger typing to error contracts to improve robustness and API consistency.
+
+**Inferred user intent:** Replace stringly/implicit error behavior with explicit typed domain errors.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Added new typed model error:
+  - `pkg/vmmodels/models.go`
+  - `ErrExecutionNotFound = errors.New(\"execution not found\")`
+- Updated persistence mapping:
+  - `pkg/vmstore/vmstore.go`
+  - `GetExecution` now returns `vmmodels.ErrExecutionNotFound` on `sql.ErrNoRows`
+- Updated transport mapping:
+  - `pkg/vmtransport/http/server.go`
+  - `writeCoreError` now maps `ErrExecutionNotFound` -> `404 EXECUTION_NOT_FOUND`
+- Updated integration expectation:
+  - `pkg/vmtransport/http/server_executions_integration_test.go`
+  - missing execution check now expects `404` + `EXECUTION_NOT_FOUND`
+- Ran:
+  - `gofmt -w pkg/vmmodels/models.go pkg/vmstore/vmstore.go pkg/vmtransport/http/server.go pkg/vmtransport/http/server_executions_integration_test.go`
+  - `GOWORK=off go test ./pkg/vmtransport/http -run TestExecutionEndpointsLifecycle -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- Typed domain errors make API behavior explicit and stable.
+- Returning `404` for missing execution is semantically correct and simplifies client behavior.
+
+### What worked
+
+- Integration tests passed with updated expected contract.
+- Full test suite remained green.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Small typed error additions can remove broad error-class ambiguity with minimal code churn.
+
+### What was tricky to build
+
+- Ensuring mapping consistency required touching model, store, transport, and test layers together; partial changes would have produced inconsistent behavior.
+
+### What warrants a second pair of eyes
+
+- Confirm whether API docs/guides should explicitly enumerate the new `EXECUTION_NOT_FOUND` error code.
+
+### What should be done in the future
+
+- Apply same typed-error discipline to any remaining generic `INTERNAL` fallback cases that are really contract-level errors.
+
+### Code review instructions
+
+- Check error declaration in:
+  - `pkg/vmmodels/models.go`
+- Check store mapping in:
+  - `pkg/vmstore/vmstore.go`
+- Check HTTP mapping in:
+  - `pkg/vmtransport/http/server.go`
+- Check test assertion in:
+  - `pkg/vmtransport/http/server_executions_integration_test.go`
+
+### Technical details
+
+- Contract change:
+  - before: missing execution -> `500 INTERNAL`
+  - after: missing execution -> `404 EXECUTION_NOT_FOUND`
