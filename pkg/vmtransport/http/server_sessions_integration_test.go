@@ -40,6 +40,14 @@ func TestSessionLifecycleEndpoints(t *testing.T) {
 	sessionA := createSession("ws-a")
 	sessionB := createSession("ws-b")
 
+	summary := struct {
+		ActiveSessions int `json:"active_sessions"`
+	}{}
+	getJSON(t, client, server.URL+"/api/v1/runtime/summary", &summary)
+	if summary.ActiveSessions != 2 {
+		t.Fatalf("expected 2 active sessions after creation, got %d", summary.ActiveSessions)
+	}
+
 	listAll := []struct {
 		ID string `json:"id"`
 	}{}
@@ -75,6 +83,10 @@ func TestSessionLifecycleEndpoints(t *testing.T) {
 	if closed.Status != "closed" {
 		t.Fatalf("expected closed status after close, got %q", closed.Status)
 	}
+	getJSON(t, client, server.URL+"/api/v1/runtime/summary", &summary)
+	if summary.ActiveSessions != 1 {
+		t.Fatalf("expected 1 active session after closing one, got %d", summary.ActiveSessions)
+	}
 
 	deleted := struct {
 		ID     string `json:"id"`
@@ -84,6 +96,10 @@ func TestSessionLifecycleEndpoints(t *testing.T) {
 	getJSON(t, client, fmt.Sprintf("%s/api/v1/sessions/%s", server.URL, sessionB), &deleted)
 	if deleted.Status != "closed" {
 		t.Fatalf("expected closed status after delete alias, got %q", deleted.Status)
+	}
+	getJSON(t, client, server.URL+"/api/v1/runtime/summary", &summary)
+	if summary.ActiveSessions != 0 {
+		t.Fatalf("expected 0 active sessions after closing all, got %d", summary.ActiveSessions)
 	}
 
 	closedSessions := []struct {
