@@ -15,15 +15,6 @@ type VMStore struct {
 	db *sql.DB
 }
 
-// mustMarshalJSON marshals a value to JSON, returning empty array on error
-func mustMarshalJSON(v interface{}) string {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return "[]"
-	}
-	return string(data)
-}
-
 // NewVMStore creates a new VMStore
 func NewVMStore(dbPath string) (*VMStore, error) {
 	db, err := sql.Open("sqlite3", dbPath)
@@ -150,7 +141,7 @@ func (s *VMStore) CreateVM(vm *vmmodels.VM) error {
 	_, err := s.db.Exec(`
 		INSERT INTO vm (id, name, engine, is_active, exposed_modules_json, libraries_json, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, vm.ID, vm.Name, vm.Engine, vm.IsActive, mustMarshalJSON(vm.ExposedModules), mustMarshalJSON(vm.Libraries), vm.CreatedAt.Unix(), vm.UpdatedAt.Unix())
+	`, vm.ID, vm.Name, vm.Engine, vm.IsActive, string(vmmodels.MarshalJSONWithFallback(vm.ExposedModules, json.RawMessage("[]"))), string(vmmodels.MarshalJSONWithFallback(vm.Libraries, json.RawMessage("[]"))), vm.CreatedAt.Unix(), vm.UpdatedAt.Unix())
 	return err
 }
 
@@ -219,7 +210,7 @@ func (s *VMStore) UpdateVM(vm *vmmodels.VM) error {
 	_, err := s.db.Exec(`
 		UPDATE vm SET name = ?, engine = ?, is_active = ?, exposed_modules_json = ?, libraries_json = ?, updated_at = ?
 		WHERE id = ?
-	`, vm.Name, vm.Engine, vm.IsActive, mustMarshalJSON(vm.ExposedModules), mustMarshalJSON(vm.Libraries), vm.UpdatedAt.Unix(), vm.ID)
+	`, vm.Name, vm.Engine, vm.IsActive, string(vmmodels.MarshalJSONWithFallback(vm.ExposedModules, json.RawMessage("[]"))), string(vmmodels.MarshalJSONWithFallback(vm.Libraries, json.RawMessage("[]"))), vm.UpdatedAt.Unix(), vm.ID)
 	return err
 }
 

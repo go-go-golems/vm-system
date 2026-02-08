@@ -125,3 +125,16 @@ Task 10: Introduced shared JSON marshal fallback utility in vmmodels with explic
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/json_helpers.go — New shared JSON helper with explicit fallback behavior
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 10 complete
 
+
+## 2026-02-08
+
+Task 11: Migrated vmstore and vmcontrol call sites to the single shared vmmodels JSON fallback helper and removed duplicated local mustMarshalJSON implementations (clean cut, no compatibility wrapper layer).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service.go — Switched template settings marshaling to shared vmmodels helper
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/types.go — Removed duplicated local mustMarshalJSON helper
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/json_helpers.go — Removed string-wrapper helper to enforce single shared helper API
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmstore/vmstore.go — Replaced local helper usage with direct vmmodels.MarshalJSONWithFallback calls
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 11 complete
+

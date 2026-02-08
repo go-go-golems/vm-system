@@ -16,9 +16,3 @@ func MarshalJSONWithFallback(v interface{}, fallback json.RawMessage) json.RawMe
 	copy(out, fallback)
 	return out
 }
-
-// MarshalJSONStringWithFallback marshals v into a JSON string value.
-// If marshalling fails, fallback is returned.
-func MarshalJSONStringWithFallback(v interface{}, fallback json.RawMessage) string {
-	return string(MarshalJSONWithFallback(v, fallback))
-}

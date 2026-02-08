@@ -12,7 +12,7 @@
 - [x] Refactor `ExecuteRunFile` to the pipeline helper chain and delete duplicated logic blocks
 - [x] Decide and implement explicit contract for run-file result/value events vs REPL value events (documented behavior, no compatibility shims)
 - [x] Consolidate duplicated JSON helper behavior (`mustMarshalJSON`) into one shared utility with explicit fallback semantics
-- [ ] Remove helper duplication between `vmstore` and `vmcontrol` by migrating call sites to shared helper API
+- [x] Remove helper duplication between `vmstore` and `vmcontrol` by migrating call sites to shared helper API
 - [ ] Verify config model single-source boundary (`vmmodels` as source) and remove any residual duplicated declarations/helpers
 - [ ] Add focused tests for shared helper fallback behavior and config JSON marshalling expectations
 - [ ] Add tests for persistence-failure paths (CreateExecution/AddEvent/UpdateExecution failures) to ensure deterministic error outcomes

@@ -2,6 +2,7 @@ package vmcontrol
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,23 +41,23 @@ func (s *TemplateService) Create(_ context.Context, input CreateTemplateInput) (
 
 	settings := &vmmodels.VMSettings{
 		VMID: vm.ID,
-		Limits: mustMarshalJSON(LimitsConfig{
+		Limits: vmmodels.MarshalJSONWithFallback(vmmodels.LimitsConfig{
 			CPUMs:       2000,
 			WallMs:      5000,
 			MemMB:       128,
 			MaxEvents:   50000,
 			MaxOutputKB: 256,
-		}, "{}"),
-		Resolver: mustMarshalJSON(ResolverConfig{
+		}, json.RawMessage("{}")),
+		Resolver: vmmodels.MarshalJSONWithFallback(vmmodels.ResolverConfig{
 			Roots:                    []string{"."},
 			Extensions:               []string{".js", ".mjs"},
 			AllowAbsoluteRepoImports: true,
-		}, "{}"),
-		Runtime: mustMarshalJSON(RuntimeConfig{
+		}, json.RawMessage("{}")),
+		Runtime: vmmodels.MarshalJSONWithFallback(vmmodels.RuntimeConfig{
 			ESM:     true,
 			Strict:  true,
 			Console: true,
-		}, "{}"),
+		}, json.RawMessage("{}")),
 	}
 	if err := s.store.SetVMSettings(settings); err != nil {
 		return nil, err

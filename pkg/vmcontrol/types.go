@@ -1,10 +1,6 @@
 package vmcontrol
 
-import (
-	"encoding/json"
-
-	"github.com/go-go-golems/vm-system/pkg/vmmodels"
-)
+import "github.com/go-go-golems/vm-system/pkg/vmmodels"
 
 // CreateTemplateInput is the public input model for template creation.
 type CreateTemplateInput struct {
@@ -44,11 +40,3 @@ type RuntimeSummary struct {
 type LimitsConfig = vmmodels.LimitsConfig
 type ResolverConfig = vmmodels.ResolverConfig
 type RuntimeConfig = vmmodels.RuntimeConfig
-
-func mustMarshalJSON(v interface{}, fallback string) json.RawMessage {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return json.RawMessage(fallback)
-	}
-	return data
-}

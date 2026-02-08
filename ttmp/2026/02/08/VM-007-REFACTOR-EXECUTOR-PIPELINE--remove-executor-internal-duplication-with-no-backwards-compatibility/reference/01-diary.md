@@ -8,6 +8,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmcontrol/template_service.go
+      Note: Task 11 vmcontrol template settings migration to shared helper
+    - Path: pkg/vmcontrol/types.go
+      Note: Task 11 removed duplicated local helper
     - Path: pkg/vmexec/executor.go
       Note: |-
         Task 3 shared session preparation helper extraction
@@ -22,7 +26,11 @@ RelatedFiles:
         Task 2 vmexec regression test coverage
         Task 9 updated vmexec regression expectations
     - Path: pkg/vmmodels/json_helpers.go
-      Note: Task 10 shared marshal-with-fallback helper
+      Note: |-
+        Task 10 shared marshal-with-fallback helper
+        Task 11 removed wrapper layer; single helper API
+    - Path: pkg/vmstore/vmstore.go
+      Note: Task 11 vmstore migration to single shared JSON helper
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
       Note: |-
         Task 1 baseline contract coverage for execution endpoints and event envelopes
@@ -41,6 +49,7 @@ RelatedFiles:
         Task 8 changelog entry
         Task 9 changelog entry
         Task 10 changelog entry
+        Task 11 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -56,12 +65,14 @@ RelatedFiles:
         Task 8 checklist update
         Task 9 checklist update
         Task 10 checklist update
+        Task 11 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -808,13 +819,12 @@ This is intentionally additive for this step: legacy helpers remain until Task 1
 
 **Inferred user intent:** Eliminate helper drift by defining one canonical fallback-marshalling implementation.
 
-**Commit (code):** Pending for Step 10 commit creation.
+**Commit (code):** 7efa95a — "vm007: add shared JSON fallback helper (task 10)"
 
 ### What I did
 
 - Added `pkg/vmmodels/json_helpers.go` with:
   - `MarshalJSONWithFallback(v interface{}, fallback json.RawMessage) json.RawMessage`
-  - `MarshalJSONStringWithFallback(v interface{}, fallback json.RawMessage) string`
 - Defined explicit fallback behavior:
   - return marshaled JSON when marshal succeeds
   - return fallback verbatim when marshal fails
@@ -831,7 +841,7 @@ Task 10 creates one authoritative helper contract so vmstore/vmcontrol no longer
 ### What worked
 
 - Helper compiled cleanly and package tests passed.
-- Function shapes cover both raw-message and string callsite needs.
+- Shared helper compiled cleanly and provided one central fallback-marshalling behavior.
 
 ### What didn't work
 
@@ -839,7 +849,7 @@ Task 10 creates one authoritative helper contract so vmstore/vmcontrol no longer
 
 ### What I learned
 
-- Splitting raw-message and string-return variants makes migration straightforward without changing storage-layer SQL callsites yet.
+- Keeping the helper focused on a single raw-message API keeps semantics explicit and avoids compatibility-style wrapper layering.
 
 ### What was tricky to build
 
@@ -862,4 +872,80 @@ The key detail was making fallback behavior explicit for empty fallback input. I
 
 ### Technical details
 
-- `MarshalJSONStringWithFallback` is a thin wrapper around `MarshalJSONWithFallback` for storage-layer string fields.
+- The shared helper returns fallback verbatim (or `null` if empty fallback) when marshaling fails.
+
+## Step 11: Migrate vmstore/vmcontrol to single shared helper (clean cut, no wrappers)
+
+I migrated all vmstore and vmcontrol callsites to the single `vmmodels.MarshalJSONWithFallback` helper and removed duplicated local marshal helpers. After your explicit direction ("no backwards compatibility / wrappers"), I also removed the extra wrapper layer so only one helper API remains.
+
+This completed the helper deduplication with a clean cut and no compatibility shim functions.
+
+### Prompt Context
+
+**User prompt (verbatim):** "no backwards compatibility / wrappers btw, clean cut"
+
+**Assistant interpretation:** Remove wrapper-style helper layers and complete migration directly to one shared helper API.
+
+**Inferred user intent:** Enforce a strict deduplication boundary with no compatibility abstractions left behind.
+
+**Commit (code):** Pending for Step 11 commit creation.
+
+### What I did
+
+- Updated `pkg/vmstore/vmstore.go`:
+  - switched VM JSON serialization callsites to `string(vmmodels.MarshalJSONWithFallback(...))`
+  - removed local helper usage
+- Updated `pkg/vmcontrol/template_service.go`:
+  - switched template settings marshaling to `vmmodels.MarshalJSONWithFallback(...)`
+- Updated `pkg/vmcontrol/types.go`:
+  - removed duplicated local `mustMarshalJSON` helper entirely
+- Updated `pkg/vmmodels/json_helpers.go`:
+  - removed wrapper function so only one shared helper API remains
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmstore ./pkg/vmcontrol ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+- Marked Task 11 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 11 is where helper duplication is actually eliminated at callsites. Removing wrapper layering honors the no-backwards-compatibility requirement and keeps the helper contract singular.
+
+### What worked
+
+- All updated packages compiled and tests passed.
+- Callsite migration was straightforward with explicit `string(...)` conversion where needed.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- One raw-message helper API is enough; string callsites can convert explicitly without dedicated wrapper functions.
+
+### What was tricky to build
+
+The subtle part was preserving storage-layer string behavior while removing helper wrappers. I handled this by converting at callsites (`string(...)`) instead of retaining abstraction indirection.
+
+### What warrants a second pair of eyes
+
+- Confirm there are no remaining private marshal-fallback helpers outside `vmmodels`.
+
+### What should be done in the future
+
+- Continue with Task 12 to verify config model single-source boundaries and remove any remaining duplication artifacts.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmstore/vmstore.go`
+  - `pkg/vmcontrol/template_service.go`
+  - `pkg/vmcontrol/types.go`
+  - `pkg/vmmodels/json_helpers.go`
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmstore ./pkg/vmcontrol ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- There is now one marshal-fallback helper API: `vmmodels.MarshalJSONWithFallback`.
