@@ -76,6 +76,11 @@ func (s *templateStoreStub) ListVMs() ([]*vmmodels.VM, error) {
 	return nil, errors.New("not implemented")
 }
 
+func (s *templateStoreStub) UpdateVM(vm *vmmodels.VM) error {
+	s.vm = vm
+	return nil
+}
+
 func (s *templateStoreStub) DeleteVM(id string) error {
 	return errors.New("not implemented")
 }

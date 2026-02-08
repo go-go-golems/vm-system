@@ -33,6 +33,12 @@ func NewHandler(core *vmcontrol.Core) stdhttp.Handler {
 	mux.HandleFunc("DELETE /api/v1/templates/{template_id}", s.handleTemplateDelete)
 	mux.HandleFunc("GET /api/v1/templates/{template_id}/capabilities", s.handleTemplateListCapabilities)
 	mux.HandleFunc("POST /api/v1/templates/{template_id}/capabilities", s.handleTemplateAddCapability)
+	mux.HandleFunc("GET /api/v1/templates/{template_id}/modules", s.handleTemplateListModules)
+	mux.HandleFunc("POST /api/v1/templates/{template_id}/modules", s.handleTemplateAddModule)
+	mux.HandleFunc("DELETE /api/v1/templates/{template_id}/modules/{module_name}", s.handleTemplateRemoveModule)
+	mux.HandleFunc("GET /api/v1/templates/{template_id}/libraries", s.handleTemplateListLibraries)
+	mux.HandleFunc("POST /api/v1/templates/{template_id}/libraries", s.handleTemplateAddLibrary)
+	mux.HandleFunc("DELETE /api/v1/templates/{template_id}/libraries/{library_name}", s.handleTemplateRemoveLibrary)
 	mux.HandleFunc("GET /api/v1/templates/{template_id}/startup-files", s.handleTemplateListStartupFiles)
 	mux.HandleFunc("POST /api/v1/templates/{template_id}/startup-files", s.handleTemplateAddStartupFile)
 
@@ -219,6 +225,138 @@ func (s *Server) handleTemplateListCapabilities(w stdhttp.ResponseWriter, r *std
 		return
 	}
 	writeJSON(w, stdhttp.StatusOK, caps)
+}
+
+type addTemplateModuleRequest struct {
+	Name string `json:"name"`
+}
+
+func (s *Server) handleTemplateListModules(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	modules, err := s.core.Templates.ListModules(r.Context(), templateID.String())
+	if err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+	writeJSON(w, stdhttp.StatusOK, modules)
+}
+
+func (s *Server) handleTemplateAddModule(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+
+	var req addTemplateModuleRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "INVALID_REQUEST", err.Error(), nil)
+		return
+	}
+	if req.Name == "" {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "name is required", nil)
+		return
+	}
+
+	if err := s.core.Templates.AddModule(r.Context(), templateID.String(), req.Name); err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusCreated, map[string]string{
+		"template_id": templateID.String(),
+		"name":        req.Name,
+	})
+}
+
+func (s *Server) handleTemplateRemoveModule(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	moduleName := r.PathValue("module_name")
+	if moduleName == "" {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "module_name is required", nil)
+		return
+	}
+
+	if err := s.core.Templates.RemoveModule(r.Context(), templateID.String(), moduleName); err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+	writeJSON(w, stdhttp.StatusOK, map[string]string{
+		"status":      "ok",
+		"template_id": templateID.String(),
+		"name":        moduleName,
+	})
+}
+
+type addTemplateLibraryRequest struct {
+	Name string `json:"name"`
+}
+
+func (s *Server) handleTemplateListLibraries(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	libraries, err := s.core.Templates.ListLibraries(r.Context(), templateID.String())
+	if err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+	writeJSON(w, stdhttp.StatusOK, libraries)
+}
+
+func (s *Server) handleTemplateAddLibrary(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+
+	var req addTemplateLibraryRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, stdhttp.StatusBadRequest, "INVALID_REQUEST", err.Error(), nil)
+		return
+	}
+	if req.Name == "" {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "name is required", nil)
+		return
+	}
+
+	if err := s.core.Templates.AddLibrary(r.Context(), templateID.String(), req.Name); err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+
+	writeJSON(w, stdhttp.StatusCreated, map[string]string{
+		"template_id": templateID.String(),
+		"name":        req.Name,
+	})
+}
+
+func (s *Server) handleTemplateRemoveLibrary(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	templateID, ok := parseTemplateIDOrWriteValidationError(w, r.PathValue("template_id"))
+	if !ok {
+		return
+	}
+	libraryName := r.PathValue("library_name")
+	if libraryName == "" {
+		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "library_name is required", nil)
+		return
+	}
+
+	if err := s.core.Templates.RemoveLibrary(r.Context(), templateID.String(), libraryName); err != nil {
+		writeCoreError(w, err, map[string]string{"template_id": templateID.String()})
+		return
+	}
+	writeJSON(w, stdhttp.StatusOK, map[string]string{
+		"status":      "ok",
+		"template_id": templateID.String(),
+		"name":        libraryName,
+	})
 }
 
 type addStartupFileRequest struct {

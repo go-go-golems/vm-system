@@ -22,3 +22,16 @@ Task 1: Finalized VM-008 terminology contract to enforce template-centric user-f
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md — Added finalized terminology contract section
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 1 complete
 
+
+## 2026-02-08
+
+Task 2: Added template module/library API endpoints for add/remove/list operations under /api/v1/templates/{template_id}/(modules|libraries), backed by template service logic so CLI no longer requires direct DB mutation paths for these operations.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/ports.go — Extended template store port for VM updates required by module/library mutations
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service.go — Added template module/library add/remove/list domain methods
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service_test.go — Updated test stub for new port method requirement
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — Added template module/library routes and handlers
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 2 complete
+

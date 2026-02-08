@@ -101,3 +101,101 @@ func (s *TemplateService) AddStartupFile(_ context.Context, file *vmmodels.VMSta
 func (s *TemplateService) ListStartupFiles(_ context.Context, templateID string) ([]*vmmodels.VMStartupFile, error) {
 	return s.store.ListStartupFiles(templateID)
 }
+
+func (s *TemplateService) ListModules(_ context.Context, templateID string) ([]string, error) {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return nil, err
+	}
+	modules := make([]string, len(template.ExposedModules))
+	copy(modules, template.ExposedModules)
+	return modules, nil
+}
+
+func (s *TemplateService) AddModule(_ context.Context, templateID, moduleName string) error {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return err
+	}
+
+	for _, existing := range template.ExposedModules {
+		if existing == moduleName {
+			return nil
+		}
+	}
+
+	template.ExposedModules = append(template.ExposedModules, moduleName)
+	return s.store.UpdateVM(template)
+}
+
+func (s *TemplateService) RemoveModule(_ context.Context, templateID, moduleName string) error {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]string, 0, len(template.ExposedModules))
+	changed := false
+	for _, existing := range template.ExposedModules {
+		if existing == moduleName {
+			changed = true
+			continue
+		}
+		filtered = append(filtered, existing)
+	}
+	if !changed {
+		return nil
+	}
+
+	template.ExposedModules = filtered
+	return s.store.UpdateVM(template)
+}
+
+func (s *TemplateService) ListLibraries(_ context.Context, templateID string) ([]string, error) {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return nil, err
+	}
+	libraries := make([]string, len(template.Libraries))
+	copy(libraries, template.Libraries)
+	return libraries, nil
+}
+
+func (s *TemplateService) AddLibrary(_ context.Context, templateID, libraryName string) error {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return err
+	}
+
+	for _, existing := range template.Libraries {
+		if existing == libraryName {
+			return nil
+		}
+	}
+
+	template.Libraries = append(template.Libraries, libraryName)
+	return s.store.UpdateVM(template)
+}
+
+func (s *TemplateService) RemoveLibrary(_ context.Context, templateID, libraryName string) error {
+	template, err := s.store.GetVM(templateID)
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]string, 0, len(template.Libraries))
+	changed := false
+	for _, existing := range template.Libraries {
+		if existing == libraryName {
+			changed = true
+			continue
+		}
+		filtered = append(filtered, existing)
+	}
+	if !changed {
+		return nil
+	}
+
+	template.Libraries = filtered
+	return s.store.UpdateVM(template)
+}

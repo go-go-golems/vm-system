@@ -11,6 +11,7 @@ type TemplateStorePort interface {
 	CreateVM(vm *vmmodels.VM) error
 	GetVM(id string) (*vmmodels.VM, error)
 	ListVMs() ([]*vmmodels.VM, error)
+	UpdateVM(vm *vmmodels.VM) error
 	DeleteVM(id string) error
 	SetVMSettings(settings *vmmodels.VMSettings) error
 	GetVMSettings(vmID string) (*vmmodels.VMSettings, error)
