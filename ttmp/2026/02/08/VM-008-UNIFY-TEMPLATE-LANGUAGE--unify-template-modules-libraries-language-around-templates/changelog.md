@@ -35,3 +35,13 @@ Task 2: Added template module/library API endpoints for add/remove/list operatio
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — Added template module/library routes and handlers
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 2 complete
 
+
+## 2026-02-08
+
+Task 4: Extended vmclient template client with module/library add/remove/list operations on new template routes to support CLI migration off direct DB writes.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/templates_client.go — Added template module/library request/response types and CRUD client methods
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 4 complete
+

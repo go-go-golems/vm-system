@@ -78,6 +78,20 @@ type AddTemplateStartupFileRequest struct {
 	Mode       string `json:"mode"`
 }
 
+type AddTemplateModuleRequest struct {
+	Name string `json:"name"`
+}
+
+type AddTemplateLibraryRequest struct {
+	Name string `json:"name"`
+}
+
+type TemplateNamedResourceResponse struct {
+	TemplateID string `json:"template_id"`
+	Name       string `json:"name"`
+	Status     string `json:"status,omitempty"`
+}
+
 func (c *Client) AddTemplateStartupFile(ctx context.Context, templateID string, request AddTemplateStartupFileRequest) (*vmmodels.VMStartupFile, error) {
 	var startup vmmodels.VMStartupFile
 	path := fmt.Sprintf("/api/v1/templates/%s/startup-files", templateID)
@@ -94,4 +108,58 @@ func (c *Client) ListTemplateStartupFiles(ctx context.Context, templateID string
 		return nil, err
 	}
 	return startupFiles, nil
+}
+
+func (c *Client) ListTemplateModules(ctx context.Context, templateID string) ([]string, error) {
+	var modules []string
+	path := fmt.Sprintf("/api/v1/templates/%s/modules", templateID)
+	if err := c.do(ctx, "GET", path, nil, &modules); err != nil {
+		return nil, err
+	}
+	return modules, nil
+}
+
+func (c *Client) AddTemplateModule(ctx context.Context, templateID string, request AddTemplateModuleRequest) (*TemplateNamedResourceResponse, error) {
+	var response TemplateNamedResourceResponse
+	path := fmt.Sprintf("/api/v1/templates/%s/modules", templateID)
+	if err := c.do(ctx, "POST", path, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (c *Client) RemoveTemplateModule(ctx context.Context, templateID, moduleName string) (*TemplateNamedResourceResponse, error) {
+	var response TemplateNamedResourceResponse
+	path := fmt.Sprintf("/api/v1/templates/%s/modules/%s", templateID, moduleName)
+	if err := c.do(ctx, "DELETE", path, nil, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (c *Client) ListTemplateLibraries(ctx context.Context, templateID string) ([]string, error) {
+	var libraries []string
+	path := fmt.Sprintf("/api/v1/templates/%s/libraries", templateID)
+	if err := c.do(ctx, "GET", path, nil, &libraries); err != nil {
+		return nil, err
+	}
+	return libraries, nil
+}
+
+func (c *Client) AddTemplateLibrary(ctx context.Context, templateID string, request AddTemplateLibraryRequest) (*TemplateNamedResourceResponse, error) {
+	var response TemplateNamedResourceResponse
+	path := fmt.Sprintf("/api/v1/templates/%s/libraries", templateID)
+	if err := c.do(ctx, "POST", path, request, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (c *Client) RemoveTemplateLibrary(ctx context.Context, templateID, libraryName string) (*TemplateNamedResourceResponse, error) {
+	var response TemplateNamedResourceResponse
+	path := fmt.Sprintf("/api/v1/templates/%s/libraries/%s", templateID, libraryName)
+	if err := c.do(ctx, "DELETE", path, nil, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
 }

@@ -9,6 +9,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmclient/templates_client.go
+      Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
       Note: Task 2 template store port extension
     - Path: pkg/vmcontrol/template_service.go
@@ -22,6 +24,7 @@ RelatedFiles:
         Task-level change record
         Task 1 changelog entry
         Task 2 changelog entry
+        Task 4 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -31,12 +34,14 @@ RelatedFiles:
         Task checklist progress tracking
         Task 1 checklist update
         Task 2 checklist update
+        Task 4 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -120,7 +125,7 @@ I intentionally placed module/library mutation operations under template routes 
 
 **Inferred user intent:** Replace legacy mixed command/control behavior with template-first API semantics before CLI migration.
 
-**Commit (code):** Pending for Step 2 commit creation.
+**Commit (code):** 786d482 — "vm008: add template module/library API endpoints (task 2)"
 
 ### What I did
 
@@ -183,3 +188,77 @@ The main design choice was deciding where mutation semantics should live. I plac
 ### Technical details
 
 - Service add/remove operations are idempotent: adding an existing item or removing a missing item is a no-op success.
+
+## Step 3: Extend vmclient template routes for module/library operations
+
+I added template module/library client operations to `pkg/vmclient/templates_client.go` so command layers can call daemon template routes directly rather than writing datastore mutation logic in CLI commands.
+
+This step keeps route contracts aligned between daemon and client and sets up the remaining CLI migration tasks to stay API-first with no legacy mutation wrappers.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Continue VM-008 by adding vmclient coverage for the newly added template module/library endpoints.
+
+**Inferred user intent:** Ensure module/library operations are available through standard client pathways before replacing legacy command code.
+
+**Commit (code):** Pending for Step 3 commit creation.
+
+### What I did
+
+- Added request models:
+  - `AddTemplateModuleRequest`
+  - `AddTemplateLibraryRequest`
+- Added shared response model:
+  - `TemplateNamedResourceResponse`
+- Added client methods:
+  - `ListTemplateModules`, `AddTemplateModule`, `RemoveTemplateModule`
+  - `ListTemplateLibraries`, `AddTemplateLibrary`, `RemoveTemplateLibrary`
+- Verified task-relevant test loops:
+  - `GOWORK=off go test ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 4 requires explicit vmclient coverage so CLI/task workflows can depend on a consistent API abstraction and not introduce direct store writes or route duplication.
+
+### What worked
+
+- The client extension integrated cleanly with existing `Client.do` request plumbing.
+- Existing route contracts from Task 2 mapped directly with straightforward request/response structures.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- A small shared response type (`template_id`, `name`, optional `status`) keeps add/remove flows symmetric and reduces future parsing drift.
+
+### What was tricky to build
+
+The key point was keeping method naming and route composition strictly template-centric while preserving compatibility with existing client conventions (context-first signatures, `Client.do` delegation, and concrete response decoding).
+
+### What warrants a second pair of eyes
+
+- Confirm response payload expectations for DELETE routes remain stable (`status` field optionality).
+
+### What should be done in the future
+
+- Continue with CLI migration so all module/library operations flow through these vmclient methods.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmclient/templates_client.go`
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- Methods target:
+  - `/api/v1/templates/{template_id}/modules`
+  - `/api/v1/templates/{template_id}/libraries`
+- DELETE methods target resource-name path variants and decode into `TemplateNamedResourceResponse`.
