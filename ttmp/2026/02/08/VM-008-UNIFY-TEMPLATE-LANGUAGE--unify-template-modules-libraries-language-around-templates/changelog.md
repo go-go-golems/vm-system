@@ -86,3 +86,14 @@ Task 7: Completed remaining CLI wording cleanup for template-targeted identifier
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_session.go — Renamed user-facing VM ID labels to Template ID
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 7 complete
 
+
+## 2026-02-08
+
+Task 8: Expanded integration coverage for template module/library routes and added CLI command-surface test coverage for template module/library command paths, replacing legacy assumptions about modules command usage.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_test.go — Added template command-path registration test
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_templates_integration_test.go — Added module/library nested resource integration assertions
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 8 complete
+

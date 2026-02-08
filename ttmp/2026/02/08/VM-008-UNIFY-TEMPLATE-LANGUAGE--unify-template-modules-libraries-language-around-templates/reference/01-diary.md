@@ -17,6 +17,8 @@ RelatedFiles:
       Note: Task 7 template wording cleanup for session output labels
     - Path: cmd/vm-system/cmd_template.go
       Note: Task 5 template module/library and catalog subcommands
+    - Path: cmd/vm-system/cmd_template_test.go
+      Note: Task 8 template command-path coverage
     - Path: cmd/vm-system/main.go
       Note: Task 6 removed modules command registration
     - Path: pkg/vmclient/templates_client.go
@@ -29,6 +31,8 @@ RelatedFiles:
       Note: Task 2 test stub update for port change
     - Path: pkg/vmtransport/http/server.go
       Note: Task 2 template module/library API endpoints
+    - Path: pkg/vmtransport/http/server_templates_integration_test.go
+      Note: Task 8 template module/library endpoint integration coverage
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/changelog.md
       Note: |-
         Task-level change record
@@ -39,6 +43,7 @@ RelatedFiles:
         Task 5 changelog entry
         Task 6 changelog entry
         Task 7 changelog entry
+        Task 8 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -53,12 +58,14 @@ RelatedFiles:
         Task 5 checklist update
         Task 6 checklist update
         Task 7 checklist update
+        Task 8 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -518,7 +525,7 @@ At this point, template command surfaces use template terminology and do not exp
 
 **Inferred user intent:** Eliminate user-facing terminology drift so template resources are consistently named.
 
-**Commit (code):** Pending for Step 7 commit creation.
+**Commit (code):** 02bb4fb — "vm008: align template-id wording in CLI output (task 7)"
 
 ### What I did
 
@@ -572,3 +579,82 @@ The subtle part was distinguishing true runtime VM wording from template-targete
 ### Technical details
 
 - Change scope is label-only; API fields and model names remain unchanged.
+
+## Step 8: Expand integration coverage for template module/library routes and command paths
+
+I extended integration tests to explicitly cover template module/library route lifecycle (add/list/delete) and added command-surface tests to verify template module/library subcommands are registered.
+
+This ensures VM-008 endpoint and CLI-path migration is backed by tests rather than relying only on manual smoke checks.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Complete Task 8 by updating integration tests to follow template module/library paths and avoid legacy modules command assumptions.
+
+**Inferred user intent:** Lock in the cleanup with durable tests that would fail if legacy paths or missing template command coverage regressed.
+
+**Commit (code):** Pending for Step 8 commit creation.
+
+### What I did
+
+- Updated `pkg/vmtransport/http/server_templates_integration_test.go`:
+  - added module and library POST cases under template routes
+  - validated module/library presence in template detail response
+  - added explicit GET assertions for `/modules` and `/libraries`
+  - added DELETE assertions for module/library path routes and post-delete empty-list checks
+- Added `cmd/vm-system/cmd_template_test.go`:
+  - verifies template command includes:
+    - `add/remove/list` for modules
+    - `add/remove/list` for libraries
+    - `list-available-modules`
+    - `list-available-libraries`
+- Ran:
+  - `gofmt -w pkg/vmtransport/http/server_templates_integration_test.go`
+- Validated with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 8 requires integration-level confidence for the migrated template module/library routes and command surfaces after removing legacy modules command pathways.
+
+### What worked
+
+- Existing template integration test scaffold made it straightforward to extend nested resource coverage.
+- New command registration test is fast and guards against accidental removal of template subcommands.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Adding endpoint assertions in the same template lifecycle test gives strong signal with minimal extra test runtime cost.
+
+### What was tricky to build
+
+The subtle part was balancing endpoint coverage depth without making tests brittle. I focused on concrete lifecycle semantics (create/list/delete and detail reflection) instead of over-asserting response envelope internals.
+
+### What warrants a second pair of eyes
+
+- Confirm this level of command-path coverage is sufficient, or whether reviewer wants end-to-end CLI invocation tests as a follow-up.
+
+### What should be done in the future
+
+- Proceed with Task 9 script migration to remove remaining legacy `modules add-*` usage in shell test surfaces.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmtransport/http/server_templates_integration_test.go`
+  - `cmd/vm-system/cmd_template_test.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- New route coverage includes:
+  - `POST/GET/DELETE /api/v1/templates/{template_id}/modules[/{module_name}]`
+  - `POST/GET/DELETE /api/v1/templates/{template_id}/libraries[/{library_name}]`

@@ -66,6 +66,20 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 				"mode":        "eval",
 			},
 		},
+		{
+			name: "add module",
+			path: fmt.Sprintf("/api/v1/templates/%s/modules", template.ID),
+			body: map[string]interface{}{
+				"name": "console",
+			},
+		},
+		{
+			name: "add library",
+			path: fmt.Sprintf("/api/v1/templates/%s/libraries", template.ID),
+			body: map[string]interface{}{
+				"name": "lodash-4.17.21",
+			},
+		},
 	}
 
 	for _, tc := range cases {
@@ -77,7 +91,9 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 
 	detail := struct {
 		Template struct {
-			ID string `json:"id"`
+			ID             string   `json:"id"`
+			ExposedModules []string `json:"exposed_modules"`
+			Libraries      []string `json:"libraries"`
 		} `json:"template"`
 		Settings     map[string]interface{} `json:"settings"`
 		Capabilities []struct {
@@ -100,6 +116,12 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 	if len(detail.StartupFiles) != 1 || detail.StartupFiles[0].Path != "runtime/startup.js" {
 		t.Fatalf("expected one startup file in detail response")
 	}
+	if len(detail.Template.ExposedModules) != 1 || detail.Template.ExposedModules[0] != "console" {
+		t.Fatalf("expected one console module in detail response")
+	}
+	if len(detail.Template.Libraries) != 1 || detail.Template.Libraries[0] != "lodash-4.17.21" {
+		t.Fatalf("expected one lodash library in detail response")
+	}
 
 	capabilities := []struct {
 		Name string `json:"name"`
@@ -115,6 +137,33 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/startup-files", server.URL, template.ID), &startupFiles)
 	if len(startupFiles) != 1 {
 		t.Fatalf("expected one startup file, got %d", len(startupFiles))
+	}
+
+	modules := []string{}
+	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/modules", server.URL, template.ID), &modules)
+	if len(modules) != 1 || modules[0] != "console" {
+		t.Fatalf("expected modules list [console], got %#v", modules)
+	}
+
+	libraries := []string{}
+	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/libraries", server.URL, template.ID), &libraries)
+	if len(libraries) != 1 || libraries[0] != "lodash-4.17.21" {
+		t.Fatalf("expected libraries list [lodash-4.17.21], got %#v", libraries)
+	}
+
+	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s/modules/%s", server.URL, template.ID, "console"), nil, http.StatusOK, nil)
+	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s/libraries/%s", server.URL, template.ID, "lodash-4.17.21"), nil, http.StatusOK, nil)
+
+	modules = nil
+	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/modules", server.URL, template.ID), &modules)
+	if len(modules) != 0 {
+		t.Fatalf("expected no modules after delete, got %#v", modules)
+	}
+
+	libraries = nil
+	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/libraries", server.URL, template.ID), &libraries)
+	if len(libraries) != 0 {
+		t.Fatalf("expected no libraries after delete, got %#v", libraries)
 	}
 
 	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s", server.URL, template.ID), nil, http.StatusOK, nil)
