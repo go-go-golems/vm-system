@@ -1,130 +1,119 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== VM System End-to-End Test ==="
+echo "=== VM System End-to-End Test (Daemon-First) ==="
 echo ""
 
-# Clean up previous test artifacts
-rm -f vm-system-test.db
-rm -rf test-workspace
+DB_PATH="vm-system-test.db"
+WORKTREE="test-workspace"
+SERVER_ADDR="127.0.0.1:3327"
+SERVER_URL="http://$SERVER_ADDR"
+CLI="./vm-system --server-url $SERVER_URL --db $DB_PATH"
+DAEMON_PID=""
 
-# Create test workspace
-echo "1. Creating test workspace..."
-mkdir -p test-workspace/runtime
-cat > test-workspace/runtime/init.js << 'EOF'
-console.log("Startup: init.js loaded");
-globalThis.testGlobal = "initialized";
-EOF
+cleanup() {
+  if [[ -n "${DAEMON_PID}" ]]; then
+    kill "$DAEMON_PID" >/dev/null 2>&1 || true
+    wait "$DAEMON_PID" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
-cat > test-workspace/runtime/bootstrap.js << 'EOF'
-console.log("Startup: bootstrap.js loaded");
-EOF
+echo "1. Cleaning previous artifacts..."
+rm -f "$DB_PATH"
+rm -rf "$WORKTREE"
 
-cat > test-workspace/test.js << 'EOF'
-console.log("Hello from test.js!");
-const result = 1 + 2;
-console.log("Result:", result);
-result;
-EOF
 
-cat > test-workspace/calc.js << 'EOF'
-console.log("Calculator starting...");
-const a = 10;
-const b = 20;
-const sum = a + b;
-console.log("Sum:", sum);
-sum;
-EOF
+echo "2. Creating test workspace..."
+mkdir -p "$WORKTREE/runtime"
+cat > "$WORKTREE/runtime/init.js" <<'JS'
+console.log("Startup: init.js loaded")
+globalThis.testGlobal = "initialized"
+JS
 
-echo "✓ Test workspace created"
+cat > "$WORKTREE/runtime/bootstrap.js" <<'JS'
+console.log("Startup: bootstrap.js loaded")
+JS
+
+cat > "$WORKTREE/test.js" <<'JS'
+console.log("Hello from test.js")
+const result = testGlobal + "-ok"
+console.log("Result:", result)
+result
+JS
+
+echo "✓ Workspace ready"
 echo ""
 
-# Build the binary
-echo "2. Building vm-system..."
-export PATH=/usr/local/go/bin:$PATH
-CGO_ENABLED=1 go build -o vm-system ./cmd/vm-system
+
+echo "3. Building vm-system..."
+GOWORK=off go build -o vm-system ./cmd/vm-system
 echo "✓ Build successful"
 echo ""
 
-# Create VM profile
-echo "3. Creating VM profile..."
-./vm-system --db vm-system-test.db vm create --name "test-vm" --engine goja
-echo "✓ VM profile created"
+
+echo "4. Starting daemon..."
+./vm-system serve --db "$DB_PATH" --listen "$SERVER_ADDR" >/tmp/vm-system-e2e.log 2>&1 &
+DAEMON_PID=$!
+sleep 1
+curl -sS "$SERVER_URL/api/v1/health" >/dev/null
+echo "✓ Daemon started"
 echo ""
 
-# Get VM ID
-VM_ID=$(./vm-system --db vm-system-test.db vm list | tail -1 | awk '{print $1}')
-echo "VM ID: $VM_ID"
+
+echo "5. Creating template..."
+CREATE_OUTPUT=$($CLI template create --name "test-template" --engine goja)
+TEMPLATE_ID=$(echo "$CREATE_OUTPUT" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
+echo "$CREATE_OUTPUT"
+echo "Template ID: $TEMPLATE_ID"
 echo ""
 
-# Add capabilities
-echo "4. Adding capabilities..."
-./vm-system --db vm-system-test.db vm add-capability $VM_ID --kind module --name "console" --enabled
-./vm-system --db vm-system-test.db vm add-capability $VM_ID --kind module --name "fetch" --enabled --config '{"allowHosts":["api.example.com"]}'
-echo "✓ Capabilities added"
-echo ""
 
-# Add startup files
-echo "5. Adding startup files..."
-./vm-system --db vm-system-test.db vm add-startup $VM_ID --path "runtime/init.js" --order 10 --mode eval
-./vm-system --db vm-system-test.db vm add-startup $VM_ID --path "runtime/bootstrap.js" --order 20 --mode eval
+echo "6. Adding startup files..."
+$CLI template add-startup "$TEMPLATE_ID" --path "runtime/init.js" --order 10 --mode eval
+$CLI template add-startup "$TEMPLATE_ID" --path "runtime/bootstrap.js" --order 20 --mode eval
 echo "✓ Startup files added"
 echo ""
 
-# Show VM details
-echo "6. VM Profile Details:"
-./vm-system --db vm-system-test.db vm get $VM_ID
-echo ""
 
-# List all VMs
-echo "7. Listing all VMs:"
-./vm-system --db vm-system-test.db vm list
-echo ""
-
-# List capabilities
-echo "8. Listing capabilities:"
-./vm-system --db vm-system-test.db vm list-capabilities $VM_ID
-echo ""
-
-# List startup files
-echo "9. Listing startup files:"
-./vm-system --db vm-system-test.db vm list-startup $VM_ID
-echo ""
-
-# Create session
-echo "10. Creating VM session..."
-WORKTREE_PATH=$(pwd)/test-workspace
-./vm-system --db vm-system-test.db session create \
-  --vm-id $VM_ID \
+echo "7. Creating session..."
+WORKTREE_PATH="$(pwd)/$WORKTREE"
+SESSION_OUTPUT=$($CLI session create \
+  --template-id "$TEMPLATE_ID" \
   --workspace-id ws-test-1 \
   --base-commit abc123 \
-  --worktree-path $WORKTREE_PATH
-echo "✓ Session created"
-echo ""
-
-# Get session ID
-SESSION_ID=$(./vm-system --db vm-system-test.db session list | tail -1 | awk '{print $1}')
+  --worktree-path "$WORKTREE_PATH")
+SESSION_ID=$(echo "$SESSION_OUTPUT" | awk '/Created session:/ {print $3}')
+echo "$SESSION_OUTPUT"
 echo "Session ID: $SESSION_ID"
 echo ""
 
-# List sessions
-echo "11. Listing sessions:"
-./vm-system --db vm-system-test.db session list
+
+echo "8. Executing REPL snippet..."
+$CLI exec repl "$SESSION_ID" '1 + 2'
 echo ""
 
-# Get session details
-echo "12. Session details:"
-./vm-system --db vm-system-test.db session get $SESSION_ID
+
+echo "9. Executing run-file..."
+$CLI exec run-file "$SESSION_ID" 'test.js'
 echo ""
 
-echo "=== All Tests Passed ==="
+
+echo "10. Listing sessions and executions..."
+$CLI session list
+$CLI exec list "$SESSION_ID"
+echo ""
+
+
+echo "11. Runtime summary..."
+curl -sS "$SERVER_URL/api/v1/runtime/summary"
+echo ""
+
+
+echo "=== All E2E Steps Passed ==="
 echo ""
 echo "Summary:"
-echo "- VM profile created and configured"
-echo "- Capabilities and startup files added"
-echo "- Session created successfully with startup scripts executed"
-echo "- All database operations working correctly"
-echo ""
-echo "Note: REPL and run-file execution require a persistent session manager,"
-echo "which would be implemented in a server mode. The current CLI demonstrates"
-echo "the complete VM profile and session management system."
+echo "- Template created over daemon API"
+echo "- Startup files executed during session creation"
+echo "- Session persisted in daemon"
+echo "- REPL and run-file executions succeeded via API client mode"

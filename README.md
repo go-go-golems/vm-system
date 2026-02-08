@@ -1,48 +1,69 @@
-# VM System: JavaScript VM with Goja
+# vm-system
 
-A Go implementation of a JavaScript VM system using goja that integrates with the dual-storage (Git+SQLite) filesystem subsystem.
+`vm-system` is a daemon-first JavaScript runtime service built on goja.
 
-## Overview
+## What It Provides
 
-This project implements a VM subsystem that:
-- Manages VM profiles (configurations) with module exposure control
-- Creates and manages VM sessions (runtime instances)
-- Executes code via REPL, run-file, and startup scripts
-- Captures and persists complete execution logs
-- Integrates with dual-storage workspaces for code access
+- `template` management API/CLI for runtime policy and startup configuration.
+- Long-lived `session` runtime ownership inside a daemon process.
+- `exec` APIs for REPL and run-file execution with persisted event logs.
+- A reusable orchestration core in `pkg/vmcontrol` shared by daemon + transports.
 
-## Architecture
+## Architecture (v2)
 
-### Core Components
+- `pkg/vmcontrol`: transport-agnostic orchestration core (templates, sessions, executions, runtime registry).
+- `pkg/vmdaemon`: process host/lifecycle wrapper.
+- `pkg/vmtransport/http`: REST adapter under `/api/v1`.
+- `pkg/vmclient`: shared REST client used by CLI commands.
 
-1. **VM Store**: Database layer for VM profiles, capabilities, and startup files
-2. **VM Session Manager**: Creates and manages VM runtime instances
-3. **Execution Runner**: Executes REPL, run-file, and startup requests
-4. **Module Resolver**: Enforces module allowlist and resolves imports
-5. **Event Sink**: Captures and persists execution events
-
-### Key Features
-
-- **VM Profiles**: Template configurations for VM instances
-- **Module Exposure Control**: Deny-by-default module allowlist
-- **Session Isolation**: One execution at a time per session
-- **Complete Event Log**: All stdout/stderr/console/value/exception events
-- **Workspace Integration**: Reads code from dual-storage workspaces
-
-## Installation
+## Build
 
 ```bash
-go install github.com/go-go-golems/vm-system/cmd/vm-system@latest
+GOWORK=off go build -o vm-system ./cmd/vm-system
 ```
 
-## Usage
+## Quick Start (Daemon-First)
 
-See the CLI documentation for detailed usage instructions.
+```bash
+# 1) Start daemon
+./vm-system serve --db vm-system.db --listen 127.0.0.1:3210
 
-## Implementation Status
+# 2) In another terminal, create a template
+./vm-system --server-url http://127.0.0.1:3210 template create --name demo --engine goja
 
-This is a reference implementation following the VM subsystem specification.
+# 3) Create a session from that template
+./vm-system --server-url http://127.0.0.1:3210 session create \
+  --template-id <template-id> \
+  --workspace-id ws-1 \
+  --base-commit deadbeef \
+  --worktree-path /abs/path/to/worktree
 
-## License
+# 4) Execute code
+./vm-system --server-url http://127.0.0.1:3210 exec repl <session-id> '1+2'
+```
 
-MIT
+## API Endpoints (Current)
+
+- `GET /api/v1/health`
+- `GET /api/v1/runtime/summary`
+- `GET/POST /api/v1/templates`
+- `GET/DELETE /api/v1/templates/{template_id}`
+- `GET/POST /api/v1/templates/{template_id}/capabilities`
+- `GET/POST /api/v1/templates/{template_id}/startup-files`
+- `GET/POST /api/v1/sessions`
+- `GET /api/v1/sessions/{session_id}`
+- `POST /api/v1/sessions/{session_id}/close`
+- `DELETE /api/v1/sessions/{session_id}`
+- `GET /api/v1/executions`
+- `POST /api/v1/executions/repl`
+- `POST /api/v1/executions/run-file`
+- `GET /api/v1/executions/{execution_id}`
+- `GET /api/v1/executions/{execution_id}/events`
+
+## Tests
+
+```bash
+GOWORK=off go test ./...
+bash ./smoke-test.sh
+bash ./test-e2e.sh
+```
