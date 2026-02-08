@@ -22,3 +22,13 @@ Expanded VM-007 scope to explicitly include finding 8 (core model/helper duplica
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/index.md - Updated ticket title/summary/scope to include finding 8 + 9
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md - Added core helper/model duplication analysis and implementation phases
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md - Added concrete tasks for shared JSON helper/model deduplication
+
+## 2026-02-08
+
+Task 1: Added execution API contract baseline integration coverage (status codes, envelopes, list/get semantics, after_seq filtering) to freeze intentional external behavior before executor internals refactor.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_execution_contracts_integration_test.go — New baseline contract test for execution endpoints and event envelopes
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 1 complete
+
