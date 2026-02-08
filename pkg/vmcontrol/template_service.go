@@ -1,0 +1,102 @@
+package vmcontrol
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+)
+
+// TemplateService owns template CRUD and policy metadata operations.
+type TemplateService struct {
+	store TemplateStorePort
+}
+
+func NewTemplateService(store TemplateStorePort) *TemplateService {
+	return &TemplateService{store: store}
+}
+
+func (s *TemplateService) Create(_ context.Context, input CreateTemplateInput) (*vmmodels.VM, error) {
+	engine := input.Engine
+	if engine == "" {
+		engine = "goja"
+	}
+
+	now := time.Now()
+	vm := &vmmodels.VM{
+		ID:        uuid.NewString(),
+		Name:      input.Name,
+		Engine:    engine,
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	if err := s.store.CreateVM(vm); err != nil {
+		return nil, err
+	}
+
+	settings := &vmmodels.VMSettings{
+		VMID: vm.ID,
+		Limits: mustMarshalJSON(LimitsConfig{
+			CPUMs:       2000,
+			WallMs:      5000,
+			MemMB:       128,
+			MaxEvents:   50000,
+			MaxOutputKB: 256,
+		}, "{}"),
+		Resolver: mustMarshalJSON(ResolverConfig{
+			Roots:                    []string{"."},
+			Extensions:               []string{".js", ".mjs"},
+			AllowAbsoluteRepoImports: true,
+		}, "{}"),
+		Runtime: mustMarshalJSON(RuntimeConfig{
+			ESM:     true,
+			Strict:  true,
+			Console: true,
+		}, "{}"),
+	}
+	if err := s.store.SetVMSettings(settings); err != nil {
+		return nil, err
+	}
+
+	return vm, nil
+}
+
+func (s *TemplateService) List(_ context.Context) ([]*vmmodels.VM, error) {
+	return s.store.ListVMs()
+}
+
+func (s *TemplateService) Get(_ context.Context, templateID string) (*vmmodels.VM, error) {
+	return s.store.GetVM(templateID)
+}
+
+func (s *TemplateService) Delete(_ context.Context, templateID string) error {
+	return s.store.DeleteVM(templateID)
+}
+
+func (s *TemplateService) SetSettings(_ context.Context, settings *vmmodels.VMSettings) error {
+	return s.store.SetVMSettings(settings)
+}
+
+func (s *TemplateService) GetSettings(_ context.Context, templateID string) (*vmmodels.VMSettings, error) {
+	return s.store.GetVMSettings(templateID)
+}
+
+func (s *TemplateService) AddCapability(_ context.Context, cap *vmmodels.VMCapability) error {
+	return s.store.AddCapability(cap)
+}
+
+func (s *TemplateService) ListCapabilities(_ context.Context, templateID string) ([]*vmmodels.VMCapability, error) {
+	return s.store.ListCapabilities(templateID)
+}
+
+func (s *TemplateService) AddStartupFile(_ context.Context, file *vmmodels.VMStartupFile) error {
+	return s.store.AddStartupFile(file)
+}
+
+func (s *TemplateService) ListStartupFiles(_ context.Context, templateID string) ([]*vmmodels.VMStartupFile, error) {
+	return s.store.ListStartupFiles(templateID)
+}
