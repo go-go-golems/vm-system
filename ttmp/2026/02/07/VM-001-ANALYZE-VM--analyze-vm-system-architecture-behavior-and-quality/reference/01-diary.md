@@ -34,6 +34,8 @@ RelatedFiles:
       Note: Daemon host implementation for long-lived runtime ownership
     - Path: pkg/vmdaemon/config.go
       Note: Daemon runtime configuration and defaults
+    - Path: pkg/vmmodels/models.go
+      Note: Core error contracts used by transport and client layers
     - Path: pkg/vmsession/session.go
       Note: Experiment-backed session continuity failures
     - Path: pkg/vmtransport/http/server.go
@@ -50,6 +52,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -955,6 +958,82 @@ The implementation reused the new daemon client layer, so template operations no
 ### Technical details
 
 - Template command handlers are thin adapters over `vmclient` and share the same REST error handling path used by session/exec commands.
+
+## Step 13: Add Core Safety Hooks (Path Guard + Limits Scaffolding)
+
+This step introduced baseline runtime safety hooks in the reusable core execution service. The first hook enforces run-file path normalization to block directory traversal outside the session worktree. The second hook adds limit-check scaffolding by loading template limits and validating post-execution event/output volume.
+
+I also wired new error mapping at the HTTP layer so invalid path attempts return a structured `422 INVALID_PATH` response.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue task-by-task implementation by adding hardening hooks in core execution flow.
+
+**Inferred user intent:** Improve baseline safety guarantees before broadening usage and automation.
+
+**Commit (code):** a645a4a87190a3ead23d35b8c9de8395369409f0 — "feat(core): add path traversal guard and limits scaffolding"
+
+### What I did
+
+- Added `ErrPathTraversal` in `pkg/vmmodels/models.go`.
+- Refactored `pkg/vmcontrol/execution_service.go` to:
+- normalize and validate run-file paths against session worktree root.
+- reject absolute and escaping relative paths.
+- load template limit settings for the session.
+- add post-execution checks for `max_events` and `max_output_kb` scaffolding.
+- Updated `pkg/vmcontrol/core.go` wiring so `ExecutionService` receives session/template stores for policy checks.
+- Updated `pkg/vmtransport/http/server.go` error mapping:
+- `ErrPathTraversal` -> `422 INVALID_PATH`
+- `ErrOutputLimitExceeded` -> `422 OUTPUT_LIMIT_EXCEEDED`
+- Validated live behavior:
+- valid run-file path returns `201`.
+- escaping path (`../etc/passwd`) returns `422` with structured error envelope.
+
+### Why
+
+- File path traversal is a direct trust-boundary risk for run-file execution.
+- Limit scaffolding creates a clear insertion point for stronger time/memory/output enforcement without blocking current rollout.
+
+### What worked
+
+- Path traversal attempts are now blocked and surfaced with deterministic API errors.
+- Existing valid run-file execution remained functional.
+- All packages compiled/tests passed after core service changes.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- Core-level validation is the right layer for path policy because all transports can share it with no duplicate checks.
+
+### What was tricky to build
+
+- The subtle part was preserving compatibility with existing executor behavior while adding guardrails. I validated this by normalizing requested paths relative to worktree and only returning the safe relative path downstream, which avoided changing executor internals.
+
+### What warrants a second pair of eyes
+
+- Confirm whether limit scaffolding should mutate persisted execution status when limits are exceeded, rather than returning an API error post-hoc.
+
+### What should be done in the future
+
+- Extend enforcement to wall-time and memory limits with cooperative cancellation in executor/runtime paths.
+
+### Code review instructions
+
+- Start with guard + limits logic in `pkg/vmcontrol/execution_service.go`.
+- Review new error type in `pkg/vmmodels/models.go`.
+- Review API error mapping in `pkg/vmtransport/http/server.go`.
+- Validate with:
+- `GOWORK=off go test ./...`
+- daemon run-file API checks for valid path and traversal path.
+
+### Technical details
+
+- Traversal guard uses `filepath.Clean`, absolute-path rejection, and `filepath.Rel` containment check against `worktree_path`.
 
 ## Related
 

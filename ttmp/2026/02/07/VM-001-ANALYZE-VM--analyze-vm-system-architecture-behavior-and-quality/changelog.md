@@ -125,3 +125,15 @@ Step 12: completed hard CLI naming cutover from vm to template and removed vm co
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/templates_client.go — Template REST client wrappers
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 12 diary entry
 
+
+## 2026-02-08
+
+Step 13: added core run-file path traversal protection and execution limit scaffolding, with HTTP error mapping updates (commit a645a4a87190a3ead23d35b8c9de8395369409f0).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/execution_service.go — Path normalization guard and post-execution limits scaffolding
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/models.go — Added ErrPathTraversal error contract
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — Mapped new core safety errors to API response codes
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 13 diary entry
+
