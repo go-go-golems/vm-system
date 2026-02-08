@@ -133,3 +133,15 @@ Uploaded revised VM-006 report bundle to reMarkable and verified that both origi
 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/design-doc/01-comprehensive-vm-system-implementation-quality-review.md - Uploaded revised report
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Uploaded revised diary and recorded verification output
+
+## 2026-02-08
+
+Completed script-surface follow-up by migrating legacy `vm` command usage in library scripts to daemon-first `template/session/exec` flows and validating all three scripts pass end-to-end.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-loading.sh - Replaced removed `vm` commands with daemon-first template/session/exec workflow and runtime validation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-requirements.sh - Migrated command surface, added daemon harness, and validated with/without library execution behavior
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-goja-library-execution.sh - Migrated to daemon-first flow and temporary worktree setup to avoid mutating tracked test workspace
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Added and completed script-surface follow-up task
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 14 implementation diary entry

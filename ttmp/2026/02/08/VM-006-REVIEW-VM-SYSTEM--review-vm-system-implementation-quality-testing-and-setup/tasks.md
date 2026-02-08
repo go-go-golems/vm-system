@@ -24,3 +24,7 @@
 - [x] Introduce typed ID wrappers/parsers (`TemplateID`, `SessionID`, `ExecutionID`) with unit tests
 - [x] Enforce typed ID validation at HTTP boundary (path/body/query) and extend integration tests for malformed IDs
 - [x] Revise VM-006 review/improvement report to reflect implemented type-system hardening and updated risk profile
+
+## Script Surface Follow-Up
+
+- [x] Migrate failing legacy script `vm` command flows to daemon-first `template/session/exec` command surface and validate script matrix

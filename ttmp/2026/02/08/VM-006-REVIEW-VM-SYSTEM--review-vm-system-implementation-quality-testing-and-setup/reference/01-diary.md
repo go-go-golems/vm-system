@@ -44,7 +44,7 @@ RelatedFiles:
         Final report authored from diary evidence
 ExternalSources: []
 Summary: Detailed implementation diary for VM-006 covering discovery, dynamic validation, deep code review, report authoring, and upload workflow.
-LastUpdated: 2026-02-08T12:00:41-05:00
+LastUpdated: 2026-02-08T12:09:34-05:00
 WhatFor: Preserve exact commands, findings, failures, and review procedure for VM-006.
 WhenToUse: Use when auditing VM-006 findings, reproducing discovered defects, or reviewing review-method quality.
 ---
@@ -1164,3 +1164,90 @@ After report revision, I completed delivery by uploading a revised report+diary 
 - Upload verification listing:
   - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary`
   - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary (Revised)`
+
+## Step 14: Script-surface follow-up - migrate legacy `vm` commands to daemon-first flow
+
+I added and completed a new VM-006 follow-up task focused on the three legacy library scripts that were still failing with removed `vm` command usage. The implementation migrated these scripts to the daemon-first `template/session/exec` command surface and validated they now run end-to-end.
+
+I also moved the goja script workflow to a temporary worktree to avoid mutating tracked repository fixtures during test runs.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Clean up the failing vm commands to use the new system. Add task, and work it off."
+
+**Assistant interpretation:** Replace stale script command usage with current daemon-first command surface, add the work as a tracked task, execute and verify it, then document the outcome.
+
+**Inferred user intent:** Remove known script breakage and keep VM-006 follow-up work auditable in ticket docs.
+
+**Commit (code):** `4193704000f70be3dc598ad6c0b08dc5f3f5d421` - `test(scripts): migrate legacy vm command flows to daemon-first api`
+
+### What I did
+
+- Migrated script command surfaces:
+  - `test-library-loading.sh`
+  - `test-library-requirements.sh`
+  - `test-goja-library-execution.sh`
+- Replaced removed `vm` commands with:
+  - `template create/get`
+  - `session create --template-id ... --worktree-path ...`
+  - `exec run-file <session-id> <relative-path>`
+- Added daemon harness in each script:
+  - ephemeral DB path
+  - ephemeral HTTP port and `--server-url`
+  - daemon startup + health check + cleanup trap
+- Updated goja execution script to use `mktemp` worktree and local git init, removing tracked workspace mutation behavior.
+- Fixed runtime library ID mismatch by resolving downloaded cache IDs dynamically (e.g. `lodash-4.17.21`) before `modules add-library`.
+- Ran:
+  - `GOWORK=off go build -o vm-system ./cmd/vm-system`
+  - `./test-library-loading.sh`
+  - `./test-library-requirements.sh`
+  - `./test-goja-library-execution.sh`
+
+### Why
+
+- The scripts were still part of the repository’s test/setup surface and were failing immediately on removed commands, which caused setup confusion and contradicted current daemon-first usage.
+
+### What worked
+
+- All three migrated scripts now pass with the new command flow.
+- End-to-end goja script verifies library-backed runtime execution via daemon API.
+
+### What didn't work
+
+- First pass failed during session create with:
+  - `library lodash not found in cache ... stat .vm-cache/libraries/lodash.js: no such file or directory`
+- Root cause: loader expects `<library-id>.js` while `libs download` stores versioned filenames (for example `lodash-4.17.21.js`).
+- Fix: derive library IDs from cache filenames and pass those IDs to `modules add-library`.
+
+### What I learned
+
+- Command-surface migration alone was not enough; script reliability also depended on aligning library IDs with current cache naming conventions.
+
+### What was tricky to build
+
+- The key sharp edge was that old scripts assumed simple IDs like `lodash`, while runtime loading uses the exact configured ID as filename stem. This was resolved by computing IDs from downloaded cache artifacts rather than hardcoding assumptions.
+
+### What warrants a second pair of eyes
+
+- The library-ID contract between `libs download`, `modules add-library`, and `loadLibraries` is still implicit; a typed/validated shared contract would reduce future drift.
+
+### What should be done in the future
+
+- Consider enforcing/validating library IDs when adding libraries to templates so unsupported IDs fail early with explicit guidance.
+
+### Code review instructions
+
+- Review migrated scripts:
+  - `test-library-loading.sh`
+  - `test-library-requirements.sh`
+  - `test-goja-library-execution.sh`
+- Re-run script matrix:
+  - `./test-library-loading.sh`
+  - `./test-library-requirements.sh`
+  - `./test-goja-library-execution.sh`
+
+### Technical details
+
+- New script behavior uses daemon-first command topology and temporary test assets:
+  - `vm-system serve` + API client commands for template/session/exec
+  - `modules`/`libs` still DB-backed but now integrated in daemon-first workflow.
