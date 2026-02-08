@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -14,224 +14,220 @@ TESTS_FAILED=0
 
 # Helper functions
 log_info() {
-    echo -e "${YELLOW}[INFO]${NC} $1"
+  echo -e "${YELLOW}[INFO]${NC} $1"
 }
 
 log_success() {
-    echo -e "${GREEN}[PASS]${NC} $1"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
+  echo -e "${GREEN}[PASS]${NC} $1"
+  TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 log_error() {
-    echo -e "${RED}[FAIL]${NC} $1"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
+  echo -e "${RED}[FAIL]${NC} $1"
+  TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 run_test() {
-    TESTS_RUN=$((TESTS_RUN + 1))
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "Test $TESTS_RUN: $1"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  TESTS_RUN=$((TESTS_RUN + 1))
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "Test $TESTS_RUN: $1"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
-# Setup
-log_info "Testing Library Configuration Requirements"
-log_info "Cleaning up test environment..."
+extract_template_id() {
+  echo "$1" | sed -n 's/.*(ID: \(.*\)).*/\1/p'
+}
 
-# Clean up any previous test data
-rm -f test-library-req.db
-rm -rf test-workspace-lib
-mkdir -p test-workspace-lib
+RUN_ID="$(date +%s)-$$"
+DB_PATH="${TMPDIR:-/tmp}/test-library-req-${RUN_ID}.db"
+WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/test-workspace-lib-${RUN_ID}-XXXX")"
+SERVER_PORT="$(
+python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+SERVER_ADDR="127.0.0.1:${SERVER_PORT}"
+SERVER_URL="http://${SERVER_ADDR}"
+CLI="./vm-system --db ${DB_PATH} --server-url ${SERVER_URL}"
+DAEMON_PID=""
 
-# Set test database
-export DB_PATH="test-library-req.db"
-CLI="./vm-system --db $DB_PATH"
+cleanup() {
+  if [[ -n "${DAEMON_PID}" ]]; then
+    kill "${DAEMON_PID}" >/dev/null 2>&1 || true
+    wait "${DAEMON_PID}" >/dev/null 2>&1 || true
+  fi
+  rm -f "${DB_PATH}" >/dev/null 2>&1 || true
+  rm -rf "${WORKTREE}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+log_info "Testing Library Configuration Requirements (Daemon-First)"
+log_info "Starting daemon..."
+./vm-system serve --db "${DB_PATH}" --listen "${SERVER_ADDR}" >/tmp/vm-system-library-requirements.log 2>&1 &
+DAEMON_PID=$!
+sleep 1
+curl -sS "${SERVER_URL}/api/v1/health" >/dev/null
 
 # ============================================================================
 # TEST 1: Download libraries first
 # ============================================================================
 run_test "Download all libraries"
-if $CLI libs download; then
-    log_success "Libraries downloaded"
-else
-    log_error "Failed to download libraries"
+if ${CLI} libs download; then
+  LODASH_LIB_ID="$(basename "$(ls .vm-cache/libraries/lodash*.js | head -n 1)" .js)"
+  RAMDA_LIB_ID="$(basename "$(ls .vm-cache/libraries/ramda*.js | head -n 1)" .js)"
+  ZUSTAND_LIB_ID="$(basename "$(ls .vm-cache/libraries/zustand*.js | head -n 1)" .js)"
+  if [[ -z "${LODASH_LIB_ID}" || -z "${RAMDA_LIB_ID}" || -z "${ZUSTAND_LIB_ID}" ]]; then
+    log_error "Failed to resolve downloaded library IDs from cache"
     exit 1
+  fi
+  log_success "Libraries downloaded"
+else
+  log_error "Failed to download libraries"
+  exit 1
 fi
 
 # ============================================================================
-# TEST 2: Create VM WITHOUT libraries configured
+# TEST 2: Create template WITHOUT libraries configured
 # ============================================================================
-run_test "Create VM without library configuration"
-OUTPUT=$($CLI vm create --name "NoLibsVM" --engine goja)
-if echo "$OUTPUT" | grep -q "Created VM"; then
-    log_success "VM created without libraries"
-    VM_NO_LIBS=$(echo "$OUTPUT" | grep -oP 'ID: \K[a-zA-Z0-9_-]+')
-    log_info "VM ID: $VM_NO_LIBS"
+run_test "Create template without library configuration"
+OUTPUT=$(${CLI} template create --name "NoLibsTemplate" --engine goja)
+TEMPLATE_NO_LIBS=$(extract_template_id "${OUTPUT}")
+if [[ -n "${TEMPLATE_NO_LIBS}" ]]; then
+  log_success "Template created without libraries"
+  log_info "Template ID: ${TEMPLATE_NO_LIBS}"
 else
-    log_error "Failed to create VM"
-    exit 1
+  log_error "Failed to create template"
+  exit 1
 fi
 
-# Add basic modules but NO libraries
-$CLI modules add-module --vm-id "$VM_NO_LIBS" --module-id console
+${CLI} modules add-module --vm-id "${TEMPLATE_NO_LIBS}" --module-id console
 
 # ============================================================================
-# TEST 3: Create VM WITH Lodash library configured
+# TEST 3: Create template WITH Lodash library configured
 # ============================================================================
-run_test "Create VM with Lodash library"
-OUTPUT=$($CLI vm create --name "LodashVM" --engine goja)
-if echo "$OUTPUT" | grep -q "Created VM"; then
-    log_success "VM created for Lodash"
-    VM_LODASH=$(echo "$OUTPUT" | grep -oP 'ID: \K[a-zA-Z0-9_-]+')
-    log_info "VM ID: $VM_LODASH"
+run_test "Create template with Lodash library"
+OUTPUT=$(${CLI} template create --name "LodashTemplate" --engine goja)
+TEMPLATE_LODASH=$(extract_template_id "${OUTPUT}")
+if [[ -n "${TEMPLATE_LODASH}" ]]; then
+  log_success "Template created for Lodash"
+  log_info "Template ID: ${TEMPLATE_LODASH}"
 else
-    log_error "Failed to create VM"
-    exit 1
+  log_error "Failed to create template"
+  exit 1
 fi
 
-# Add console module and Lodash library
-$CLI modules add-module --vm-id "$VM_LODASH" --module-id console
-$CLI modules add-library --vm-id "$VM_LODASH" --library-id lodash
+${CLI} modules add-module --vm-id "${TEMPLATE_LODASH}" --module-id console
+${CLI} modules add-library --vm-id "${TEMPLATE_LODASH}" --library-id "${LODASH_LIB_ID}"
 
 # ============================================================================
-# TEST 4: Verify library is in VM configuration
+# TEST 4: Verify library is in template configuration
 # ============================================================================
-run_test "Verify Lodash is in VM configuration"
-OUTPUT=$($CLI vm get "$VM_LODASH")
-log_info "VM config output:"
-echo "$OUTPUT"
+run_test "Verify Lodash is in template configuration"
+OUTPUT=$(${CLI} template get "${TEMPLATE_LODASH}")
+if echo "${OUTPUT}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"; then
+  log_success "Template reports Lodash in Loaded Libraries"
+else
+  log_error "Template missing Lodash in Loaded Libraries"
+fi
 
 # ============================================================================
 # TEST 5: Create test code that requires Lodash
 # ============================================================================
 run_test "Create test code that requires Lodash"
-cat > test-workspace-lib/test-lodash.js << 'EOF'
-// This code REQUIRES Lodash to be loaded
+cat > "${WORKTREE}/test-lodash.js" <<'JS'
 if (typeof _ === 'undefined') {
-    console.log("ERROR: Lodash not loaded!");
-    throw new Error('Lodash library not available');
+  throw new Error('Lodash library not available');
 }
-
 const users = [
-    { name: 'Alice', age: 30 },
-    { name: 'Bob', age: 25 },
-    { name: 'Charlie', age: 35 }
+  { name: 'Alice', age: 30 },
+  { name: 'Bob', age: 25 },
+  { name: 'Charlie', age: 35 }
 ];
-
-// Use Lodash function
 const names = _.map(users, 'name');
-console.log("SUCCESS: Lodash is working!");
-console.log("Names:", names);
-EOF
-
-log_success "Test code created"
+console.log("SUCCESS_LODASH", JSON.stringify(names));
+JS
+log_success "Lodash test code created"
 
 # ============================================================================
-# TEST 6: Test that code FAILS without library configured
+# TEST 6: Verify code fails without library configured
 # ============================================================================
-run_test "Verify code fails on VM without Lodash"
-log_info "This test should FAIL because Lodash is not configured"
+run_test "Verify code fails on template without Lodash"
+SESSION_NO_LIBS=$(${CLI} session create \
+  --template-id "${TEMPLATE_NO_LIBS}" \
+  --workspace-id "ws-no-libs" \
+  --base-commit "deadbeef" \
+  --worktree-path "${WORKTREE}" | awk '/Created session:/ {print $3}')
 
-# Note: This would require actual goja execution which isn't implemented yet
-# For now, we document the expected behavior
-log_info "Expected: Code execution should throw 'Lodash library not available'"
-log_info "Actual: (Execution not yet implemented in CLI)"
-log_success "Test documented - implementation pending"
-
-# ============================================================================
-# TEST 7: Test that code SUCCEEDS with library configured
-# ============================================================================
-run_test "Verify code succeeds on VM with Lodash"
-log_info "This test should SUCCEED because Lodash is configured"
-log_info "Expected: Code execution should print 'SUCCESS: Lodash is working!'"
-log_info "Actual: (Execution not yet implemented in CLI)"
-log_success "Test documented - implementation pending"
-
-# ============================================================================
-# TEST 8: Test module configuration requirements
-# ============================================================================
-run_test "Create code that requires console module"
-cat > test-workspace-lib/test-console.js << 'EOF'
-// This code REQUIRES console module
-if (typeof console === 'undefined') {
-    throw new Error('Console module not available');
-}
-
-console.log("Console module is working!");
-console.warn("This is a warning");
-console.error("This is an error");
-EOF
-
-log_success "Console test code created"
-
-# ============================================================================
-# TEST 9: Verify library can be added post-hoc
-# ============================================================================
-run_test "Add library to existing VM (post-hoc configuration)"
-
-# Create a new VM
-OUTPUT=$($CLI vm create --name "PostHocVM" --engine goja)
-VM_POSTHOC=$(echo "$OUTPUT" | grep -oP 'ID: \K[a-zA-Z0-9_-]+')
-
-# First add just console
-$CLI modules add-module --vm-id "$VM_POSTHOC" --module-id console
-log_info "VM created with only console module"
-
-# Now add Lodash later
-if $CLI modules add-library --vm-id "$VM_POSTHOC" --library-id lodash; then
-    log_success "Library added post-hoc successfully"
+if ${CLI} exec run-file "${SESSION_NO_LIBS}" "test-lodash.js" >/tmp/test-no-libs.out 2>&1; then
+  if grep -q "Error" /tmp/test-no-libs.out; then
+    log_success "Execution failed as expected without Lodash"
+  else
+    log_error "Execution unexpectedly succeeded without Lodash"
+  fi
 else
-    log_error "Failed to add library post-hoc"
-fi
-
-# Verify it's there
-OUTPUT=$($CLI vm get "$VM_POSTHOC")
-if echo "$OUTPUT" | grep -q "lodash"; then
-    log_success "Post-hoc library configuration persisted"
-else
-    log_error "Post-hoc library configuration not found"
+  log_success "Execution command returned non-zero without Lodash as expected"
 fi
 
 # ============================================================================
-# TEST 10: Test removing a library
+# TEST 7: Verify code succeeds with library configured
 # ============================================================================
-run_test "Remove library from VM"
-log_info "Attempting to remove Lodash from PostHocVM"
+run_test "Verify code succeeds on template with Lodash"
+SESSION_LODASH=$(${CLI} session create \
+  --template-id "${TEMPLATE_LODASH}" \
+  --workspace-id "ws-lodash" \
+  --base-commit "deadbeef" \
+  --worktree-path "${WORKTREE}" | awk '/Created session:/ {print $3}')
 
-# Check if remove command exists
-if $CLI modules remove-library --vm-id "$VM_POSTHOC" --library-id lodash 2>/dev/null; then
-    log_success "Library removed successfully"
-    
-    # Verify it's gone
-    OUTPUT=$($CLI vm get "$VM_POSTHOC")
-    if ! echo "$OUTPUT" | grep -q "lodash"; then
-        log_success "Library removal persisted"
-    else
-        log_error "Library still appears in configuration"
-    fi
+OUTPUT=$(${CLI} exec run-file "${SESSION_LODASH}" "test-lodash.js")
+if echo "${OUTPUT}" | grep -q "SUCCESS_LODASH"; then
+  log_success "Execution succeeded with Lodash configured"
 else
-    log_info "Remove command not implemented yet - this is expected"
-    log_success "Test documented - implementation pending"
+  log_error "Execution output missing Lodash success marker"
 fi
 
 # ============================================================================
-# TEST 11: Test multiple libraries on same VM
+# TEST 8: Add library to existing template (post-hoc)
 # ============================================================================
-run_test "Add multiple libraries to VM"
-OUTPUT=$($CLI vm create --name "MultiLibVM" --engine goja)
-VM_MULTI=$(echo "$OUTPUT" | grep -oP 'ID: \K[a-zA-Z0-9_-]+')
+run_test "Add library to existing template (post-hoc configuration)"
+OUTPUT=$(${CLI} template create --name "PostHocTemplate" --engine goja)
+TEMPLATE_POSTHOC=$(extract_template_id "${OUTPUT}")
+${CLI} modules add-module --vm-id "${TEMPLATE_POSTHOC}" --module-id console
 
-$CLI modules add-module --vm-id "$VM_MULTI" --module-id console
-$CLI modules add-library --vm-id "$VM_MULTI" --library-id lodash
-$CLI modules add-library --vm-id "$VM_MULTI" --library-id ramda
-$CLI modules add-library --vm-id "$VM_MULTI" --library-id zustand
-
-OUTPUT=$($CLI vm get "$VM_MULTI")
-if echo "$OUTPUT" | grep -q "lodash" && echo "$OUTPUT" | grep -q "ramda" && echo "$OUTPUT" | grep -q "zustand"; then
-    log_success "Multiple libraries configured successfully"
+if ${CLI} modules add-library --vm-id "${TEMPLATE_POSTHOC}" --library-id "${LODASH_LIB_ID}"; then
+  log_success "Library added post-hoc successfully"
 else
-    log_error "Not all libraries found in configuration"
+  log_error "Failed to add library post-hoc"
+fi
+
+OUTPUT=$(${CLI} template get "${TEMPLATE_POSTHOC}")
+if echo "${OUTPUT}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"; then
+  log_success "Post-hoc library configuration persisted"
+else
+  log_error "Post-hoc library configuration not found"
+fi
+
+# ============================================================================
+# TEST 9: Add multiple libraries to one template
+# ============================================================================
+run_test "Add multiple libraries to template"
+OUTPUT=$(${CLI} template create --name "MultiLibTemplate" --engine goja)
+TEMPLATE_MULTI=$(extract_template_id "${OUTPUT}")
+
+${CLI} modules add-module --vm-id "${TEMPLATE_MULTI}" --module-id console
+${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${LODASH_LIB_ID}"
+${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${RAMDA_LIB_ID}"
+${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${ZUSTAND_LIB_ID}"
+
+OUTPUT=$(${CLI} template get "${TEMPLATE_MULTI}")
+if echo "${OUTPUT}" | grep -q "lodash" && echo "${OUTPUT}" | grep -q "ramda" && echo "${OUTPUT}" | grep -q "zustand"; then
+  log_success "Multiple libraries configured successfully"
+else
+  log_error "Not all libraries found in configuration"
 fi
 
 # ============================================================================
@@ -242,40 +238,38 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "                      TEST SUMMARY"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Tests Run:    $TESTS_RUN"
-echo -e "${GREEN}Tests Passed: $TESTS_PASSED${NC}"
-if [ $TESTS_FAILED -gt 0 ]; then
-    echo -e "${RED}Tests Failed: $TESTS_FAILED${NC}"
+echo "Tests Run:    ${TESTS_RUN}"
+echo -e "${GREEN}Tests Passed: ${TESTS_PASSED}${NC}"
+if [ "${TESTS_FAILED}" -gt 0 ]; then
+  echo -e "${RED}Tests Failed: ${TESTS_FAILED}${NC}"
 else
-    echo "Tests Failed: $TESTS_FAILED"
+  echo "Tests Failed: ${TESTS_FAILED}"
 fi
 echo ""
 
-# Calculate success rate
-SUCCESS_RATE=$((TESTS_PASSED * 100 / TESTS_RUN))
-echo "Success Rate: $SUCCESS_RATE%"
+EFFECTIVE_PASSED=${TESTS_PASSED}
+if [ "${EFFECTIVE_PASSED}" -gt "${TESTS_RUN}" ]; then
+  EFFECTIVE_PASSED=${TESTS_RUN}
+fi
+SUCCESS_RATE=$((EFFECTIVE_PASSED * 100 / TESTS_RUN))
+echo "Success Rate: ${SUCCESS_RATE}%"
 echo ""
 
 echo "KEY FINDINGS:"
-echo "1. Libraries CAN be configured post-hoc (after VM creation)"
-echo "2. Multiple libraries can be added to the same VM"
-echo "3. Library configuration persists across CLI invocations"
-echo "4. Actual code execution with library loading needs goja integration"
+echo "1. Libraries can be configured post-hoc (after template creation)"
+echo "2. Multiple libraries can be added to the same template"
+echo "3. Library configuration persists across daemon/API operations"
+echo "4. Runtime execution behavior now validated for with/without library configuration"
 echo ""
 
-# Cleanup
-log_info "Cleaning up test environment..."
-rm -f test-library-req.db
-rm -rf test-workspace-lib
-
-if [ $TESTS_FAILED -eq 0 ]; then
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}           ALL TESTS PASSED! ✓${NC}"
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    exit 0
+if [ "${TESTS_FAILED}" -eq 0 ]; then
+  echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${GREEN}           ALL TESTS PASSED! ✓${NC}"
+  echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 0
 else
-    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${RED}           SOME TESTS FAILED ✗${NC}"
-    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    exit 1
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${RED}           SOME TESTS FAILED ✗${NC}"
+  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  exit 1
 fi

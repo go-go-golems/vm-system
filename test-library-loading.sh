@@ -1,126 +1,110 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "           LIBRARY LOADING TEST"
+echo "           LIBRARY LOADING TEST (Daemon-First)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Setup
-export VM_DB="test-lib-loading.db"
-export TEST_WORKSPACE="test-lib-workspace"
+RUN_ID="$(date +%s)-$$"
+DB_PATH="${TMPDIR:-/tmp}/test-lib-loading-${RUN_ID}.db"
+WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/test-lib-worktree-${RUN_ID}-XXXX")"
+SERVER_PORT="$(
+python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+SERVER_ADDR="127.0.0.1:${SERVER_PORT}"
+SERVER_URL="http://${SERVER_ADDR}"
+CLI="./vm-system --server-url ${SERVER_URL} --db ${DB_PATH}"
+DAEMON_PID=""
 
-echo "[INFO] Cleaning up previous test environment..."
-rm -f "$VM_DB"
-rm -rf "$TEST_WORKSPACE"
+cleanup() {
+  if [[ -n "${DAEMON_PID}" ]]; then
+    kill "${DAEMON_PID}" >/dev/null 2>&1 || true
+    wait "${DAEMON_PID}" >/dev/null 2>&1 || true
+  fi
+  rm -f "${DB_PATH}" >/dev/null 2>&1 || true
+  rm -rf "${WORKTREE}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
-echo "[INFO] Creating test workspace..."
-mkdir -p "$TEST_WORKSPACE"
+echo "[INFO] Starting daemon..."
+./vm-system serve --db "${DB_PATH}" --listen "${SERVER_ADDR}" >/tmp/vm-system-lib-loading.log 2>&1 &
+DAEMON_PID=$!
+sleep 1
+curl -sS "${SERVER_URL}/api/v1/health" >/dev/null
 
-# Test 1: Create VM without libraries
+echo "[INFO] Creating test script..."
+cat > "${WORKTREE}/test-lodash.js" <<'JS'
+if (typeof _ === 'undefined') {
+  throw new Error('Lodash library not available');
+}
+const doubled = _.map([1, 2, 3], n => n * 2);
+console.log("LODASH_OK", JSON.stringify(doubled));
+JS
+
 echo ""
-echo "[TEST 1] Creating VM without libraries..."
-TIMESTAMP=$(date +%s)
-CREATE_OUTPUT=$(./vm-system vm create --name "test-vm-$TIMESTAMP")
-VM_ID=$(echo "$CREATE_OUTPUT" | grep -oP 'ID: \K[a-f0-9-]+')
-echo "$CREATE_OUTPUT"
-echo "✓ Created VM: $VM_ID"
+echo "[TEST 1] Creating template..."
+CREATE_OUTPUT=$(${CLI} template create --name "test-template-lib-loading" --engine goja)
+TEMPLATE_ID=$(echo "${CREATE_OUTPUT}" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
+echo "${CREATE_OUTPUT}"
+[[ -n "${TEMPLATE_ID}" ]]
+echo "✓ Created template: ${TEMPLATE_ID}"
 
-# Test 2: Download libraries
 echo ""
 echo "[TEST 2] Downloading libraries to cache..."
-./vm-system libs download
+${CLI} libs download
+LODASH_LIB_ID="$(basename "$(ls .vm-cache/libraries/lodash*.js | head -n 1)" .js)"
+if [[ -z "${LODASH_LIB_ID}" ]]; then
+  echo "[FAIL] Could not resolve downloaded Lodash library ID"
+  exit 1
+fi
 echo "✓ Libraries downloaded"
 
-# Test 3: Add Lodash library to VM
 echo ""
-echo "[TEST 3] Adding Lodash library to VM..."
-./vm-system modules add-library --vm-id "$VM_ID" --library-id lodash
-echo "✓ Lodash added to VM configuration"
+echo "[TEST 3] Adding console module + Lodash library to template..."
+${CLI} modules add-module --vm-id "${TEMPLATE_ID}" --module-id console
+${CLI} modules add-library --vm-id "${TEMPLATE_ID}" --library-id "${LODASH_LIB_ID}"
+echo "✓ Template configured"
 
-# Test 4: Verify library is configured
 echo ""
-echo "[TEST 4] Verifying library configuration..."
-./vm-system vm get "$VM_ID" | grep -A 5 "Loaded Libraries"
-echo "✓ Library configuration verified"
+echo "[TEST 4] Verifying template library configuration..."
+${CLI} template get "${TEMPLATE_ID}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"
+echo "✓ Lodash configuration verified"
 
-# Test 5: Create test script that uses Lodash
 echo ""
-echo "[TEST 5] Creating test script that uses Lodash..."
-cat > "$TEST_WORKSPACE/test-lodash.js" << 'EOF'
-// Test Lodash functionality
-const numbers = [1, 2, 3, 4, 5];
-const doubled = _.map(numbers, n => n * 2);
-console.log("Original:", numbers);
-console.log("Doubled:", doubled);
+echo "[TEST 5] Creating session..."
+SESSION_OUTPUT=$(${CLI} session create \
+  --template-id "${TEMPLATE_ID}" \
+  --workspace-id "ws-lib-loading" \
+  --base-commit "deadbeef" \
+  --worktree-path "${WORKTREE}")
+SESSION_ID=$(echo "${SESSION_OUTPUT}" | awk '/Created session:/ {print $3}')
+echo "${SESSION_OUTPUT}"
+[[ -n "${SESSION_ID}" ]]
+echo "✓ Session created: ${SESSION_ID}"
 
-const users = [
-  { name: 'Alice', age: 30 },
-  { name: 'Bob', age: 25 },
-  { name: 'Charlie', age: 35 }
-];
-
-const sorted = _.sortBy(users, 'age');
-console.log("Sorted by age:", sorted);
-
-const names = _.map(users, 'name');
-console.log("Names:", names);
-
-console.log("Lodash is working!");
-EOF
-echo "✓ Test script created"
-
-# Test 6: Create session and run script
 echo ""
-echo "[TEST 6] Creating session and executing Lodash test..."
-echo "[INFO] This will test if Lodash is actually loaded into the goja runtime"
-echo ""
+echo "[TEST 6] Executing Lodash test run-file..."
+EXEC_OUTPUT=$(${CLI} exec run-file "${SESSION_ID}" "test-lodash.js")
+echo "${EXEC_OUTPUT}"
+echo "${EXEC_OUTPUT}" | grep -q "LODASH_OK"
+echo "✓ Lodash executed successfully in goja runtime"
 
-# Note: This requires implementing session creation with worktree
-# For now, we'll create a simpler inline test
-
-# Test 7: Create inline execution test
-echo ""
-echo "[TEST 7] Creating inline Lodash test..."
-cat > "$TEST_WORKSPACE/inline-test.js" << 'EOF'
-if (typeof _ === 'undefined') {
-  console.log("ERROR: Lodash (_ ) is not defined!");
-} else {
-  console.log("SUCCESS: Lodash is loaded!");
-  console.log("Testing _.chunk([1,2,3,4,5], 2):", _.chunk([1,2,3,4,5], 2));
-}
-EOF
-
-echo "✓ Inline test created"
-
-# Test 8: Test without library configured
-echo ""
-echo "[TEST 8] Testing VM without Lodash configured (should fail)..."
-VM_ID_NO_LIB=$(./vm-system vm create --name "test-vm-no-lodash-$TIMESTAMP" | grep -oP 'ID: \K[a-f0-9-]+')
-echo "Created VM without libraries: $VM_ID_NO_LIB"
-
-# Summary
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "                      TEST SUMMARY"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "✓ VM created and configured with Lodash library"
-echo "✓ Libraries downloaded to cache"
-echo "✓ Test scripts created in $TEST_WORKSPACE"
-echo ""
-echo "KEY FINDINGS:"
-echo "1. Library configuration is stored in database"
-echo "2. Libraries are cached locally in .vm-cache/libraries/"
-echo "3. Session creation will load libraries into goja runtime"
-echo "4. Test scripts are ready for execution"
-echo ""
-echo "[INFO] To test actual execution, create a session with:"
-echo "  ./vm-system session create --vm-id $VM_ID --workspace test-workspace"
-echo ""
-echo "[INFO] Cleaning up test environment..."
-rm -f "$VM_DB"
-rm -rf "$TEST_WORKSPACE"
+echo "✓ Template created via daemon API"
+echo "✓ Libraries downloaded and template configured"
+echo "✓ Session created via daemon API"
+echo "✓ run-file executed with Lodash loaded"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "           ALL TESTS PASSED! ✓"
