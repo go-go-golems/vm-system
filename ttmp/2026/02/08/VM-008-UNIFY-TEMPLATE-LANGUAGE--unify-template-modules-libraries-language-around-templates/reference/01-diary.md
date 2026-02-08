@@ -24,7 +24,9 @@ RelatedFiles:
     - Path: cmd/vm-system/main.go
       Note: Task 6 removed modules command registration
     - Path: docs/getting-started-from-first-vm-to-contributor-guide.md
-      Note: Task 10 template-only guide cleanup
+      Note: |-
+        Task 10 template-only guide cleanup
+        Task 12 final doc walkthrough verification
     - Path: pkg/vmclient/templates_client.go
       Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
@@ -38,7 +40,11 @@ RelatedFiles:
     - Path: pkg/vmtransport/http/server_templates_integration_test.go
       Note: Task 8 template module/library endpoint integration coverage
     - Path: smoke-test.sh
-      Note: Task 11 final legacy-term guard cleanup
+      Note: |-
+        Task 11 final legacy-term guard cleanup
+        Task 12 final matrix validation target
+    - Path: test-e2e.sh
+      Note: Task 12 final matrix validation target
     - Path: test-goja-library-execution.sh
       Note: Task 9 template command migration for script flow
     - Path: test-library-loading.sh
@@ -59,6 +65,7 @@ RelatedFiles:
         Task 9 changelog entry
         Task 10 changelog entry
         Task 11 changelog entry
+        Task 12 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -77,12 +84,14 @@ RelatedFiles:
         Task 9 checklist update
         Task 10 checklist update
         Task 11 checklist update
+        Task 12 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -859,7 +868,7 @@ I also documented intentional exceptions: historical ticket/design/diary documen
 
 **Inferred user intent:** Verify cleanup quality with explicit evidence and avoid silent regressions in user-facing command language.
 
-**Commit (code):** Pending for Step 11 commit creation.
+**Commit (code):** a545f77 — "vm008: finalize legacy-term guard cleanup (task 11)"
 
 ### What I did
 
@@ -922,3 +931,76 @@ The nuanced part was distinguishing active user-facing content from historical r
 ### Technical details
 
 - Intentional exceptions preserve historical context and are not part of active user-facing command guidance.
+
+## Step 12: Run full validation matrix and final doc walkthrough
+
+I executed the full VM-008 validation baseline and confirmed all matrix items pass with the new template-first command/API/doc surfaces.
+
+I also performed a final walkthrough of the getting-started guide to ensure examples and phrasing match the implemented template vocabulary and command flows.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Close Task 12 by running full tests/scripts and validating docs end-to-end before ticket wrap-up.
+
+**Inferred user intent:** Finish VM-008 with objective evidence and no unresolved checklist items.
+
+**Commit (code):** Pending for Step 12 commit creation.
+
+### What I did
+
+- Ran required validation matrix:
+  - `GOWORK=off go test ./... -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+- Verified docs walkthrough for template-first language:
+  - `docs/getting-started-from-first-vm-to-contributor-guide.md`
+- Confirmed all VM-008 tasks are checked complete in `tasks.md`.
+
+### Why
+
+Task 12 requires final ticket confidence via full matrix execution and end-to-end documentation review.
+
+### What worked
+
+- All matrix commands passed successfully.
+- Smoke and e2e scripts ran end-to-end with template-first command surfaces.
+- Guide walkthrough remained aligned with current CLI/API behavior.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Full-matrix script validation is the best final confirmation after terminology and command-surface refactors because it exercises both interface and runtime behavior.
+
+### What was tricky to build
+
+The challenge was maintaining clean task-scoped commits while also preserving enough cross-step validation context to make final evidence unambiguous. Recording exact matrix commands and outcomes in diary/changelog solved this.
+
+### What warrants a second pair of eyes
+
+- Reviewers may want a follow-up decision on whether to harden nil/undefined run-file result handling in executor core despite script fixture stabilization.
+
+### What should be done in the future
+
+- Close ticket after review, or open a follow-up hardening ticket for executor nil-result serialization if reviewer deems it necessary.
+
+### Code review instructions
+
+- Start with:
+  - `ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md`
+  - `ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/changelog.md`
+  - `docs/getting-started-from-first-vm-to-contributor-guide.md`
+- Re-run:
+  - `GOWORK=off go test ./... -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+
+### Technical details
+
+- Final matrix includes both package-level and script-level verification to cover API contracts, command surfaces, and daemon-first runtime behavior.

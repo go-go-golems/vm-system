@@ -129,3 +129,15 @@ Task 11: Ran final search guard for legacy user-facing terms and cleaned remaini
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/smoke-test.sh — Replaced legacy modules list command with template list-available-modules
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 11 complete
 
+
+## 2026-02-08
+
+Task 12: Completed full validation matrix (go test all, vmtransport/http tests, smoke-test, and e2e script) and verified getting-started guide reflects template-first vocabulary and flows end-to-end.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/docs/getting-started-from-first-vm-to-contributor-guide.md — Final doc walkthrough verification for template-first language
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/smoke-test.sh — Validated in final matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-e2e.sh — Validated in final matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 12 complete
+

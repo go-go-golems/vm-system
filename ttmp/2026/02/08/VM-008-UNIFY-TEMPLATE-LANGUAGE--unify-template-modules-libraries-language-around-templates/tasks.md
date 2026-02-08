@@ -13,4 +13,4 @@
 - [x] Update script surfaces (`test-library-*.sh`, other helpers) to template-first commands only
 - [x] Update `docs/getting-started-from-first-vm-to-contributor-guide.md` to remove legacy caveats and present only template vocabulary and flows
 - [x] Run final search guard and cleanup pass for user-facing legacy terms (`vm create`, `vm get`, `--vm-id`, `modules add-*`) and document any intentional exceptions
-- [ ] Validate full matrix: `go test ./... -count=1`, smoke/e2e scripts, and doc review of getting-started walkthrough end-to-end
+- [x] Validate full matrix: `go test ./... -count=1`, smoke/e2e scripts, and doc review of getting-started walkthrough end-to-end
