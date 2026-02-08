@@ -3,10 +3,12 @@ package vmcontrol
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	"github.com/go-go-golems/vm-system/pkg/vmpath"
 )
 
 // ExecutionService owns REPL and run-file orchestration.
@@ -68,28 +70,36 @@ func (s *ExecutionService) Events(_ context.Context, executionID string, afterSe
 }
 
 func normalizeRunFilePath(worktreePath, requestedPath string) (string, error) {
-	if filepath.IsAbs(requestedPath) {
-		return "", vmmodels.ErrPathTraversal
-	}
-
-	cleanRelative := filepath.Clean(requestedPath)
-	if cleanRelative == "." {
-		return "", vmmodels.ErrFileNotFound
-	}
-	if strings.HasPrefix(cleanRelative, "..") {
-		return "", vmmodels.ErrPathTraversal
-	}
-
-	fullPath := filepath.Join(worktreePath, cleanRelative)
-	relativeToRoot, err := filepath.Rel(worktreePath, fullPath)
+	root, err := vmpath.NewWorktreeRoot(worktreePath)
 	if err != nil {
-		return "", vmmodels.ErrPathTraversal
+		return "", err
 	}
-	if strings.HasPrefix(relativeToRoot, "..") {
+
+	relPath, err := vmpath.ParseRelWorktreePath(requestedPath)
+	if err != nil {
+		switch {
+		case errors.Is(err, vmpath.ErrEmptyRelativePath):
+			return "", vmmodels.ErrFileNotFound
+		case errors.Is(err, vmpath.ErrAbsoluteRelativePath), errors.Is(err, vmpath.ErrTraversalRelativePath):
+			return "", vmmodels.ErrPathTraversal
+		default:
+			return "", err
+		}
+	}
+
+	resolved, err := root.Resolve(relPath)
+	if err != nil {
+		if errors.Is(err, vmpath.ErrPathEscapesRoot) {
+			return "", vmmodels.ErrPathTraversal
+		}
+		return "", err
+	}
+
+	if strings.HasPrefix(resolved.Relative(), "..") || filepath.IsAbs(resolved.Relative()) {
 		return "", vmmodels.ErrPathTraversal
 	}
 
-	return relativeToRoot, nil
+	return resolved.Relative(), nil
 }
 
 func (s *ExecutionService) enforceLimits(sessionID, executionID string) error {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -27,6 +28,21 @@ func TestSafetyPathTraversalAndOutputLimitEnforcement(t *testing.T) {
 	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/run-file", map[string]interface{}{
 		"session_id": sessionID,
 		"path":       "../etc/passwd",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "INVALID_PATH",
+	})
+
+	outsideDir := t.TempDir()
+	outsideFile := filepath.Join(outsideDir, "outside.js")
+	if err := os.WriteFile(outsideFile, []byte("40 + 2"), 0o644); err != nil {
+		t.Fatalf("write outside file: %v", err)
+	}
+	if err := os.Symlink(outsideFile, filepath.Join(worktree, "escape-link.js")); err != nil {
+		t.Fatalf("create symlink: %v", err)
+	}
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/run-file", map[string]interface{}{
+		"session_id": sessionID,
+		"path":       "escape-link.js",
 	}, http.StatusUnprocessableEntity, map[string]string{
 		"code": "INVALID_PATH",
 	})

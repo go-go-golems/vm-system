@@ -562,3 +562,83 @@ This is the foundation for replacing string-based path checks in execution and s
   - `ErrAbsoluteRelativePath`
   - `ErrTraversalRelativePath`
   - `ErrPathEscapesRoot`
+
+## Step 7: Task 2 - run-file typed resolver integration and symlink-escape test
+
+After introducing typed path primitives, I integrated them into run-file normalization so execution uses canonicalized, validated relative paths. I paired this with an integration test extension that verifies symlink escapes are rejected with `INVALID_PATH`.
+
+This step directly addresses one of the highest-severity findings from VM-006 by moving symlink handling into a typed resolver path instead of ad-hoc string checks.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Apply the new type-safe path model in real runtime logic and prove it with tests.
+
+**Inferred user intent:** Ensure type-system improvements are practical and close real security gaps.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Updated `pkg/vmcontrol/execution_service.go`:
+  - `normalizeRunFilePath` now uses:
+    - `vmpath.NewWorktreeRoot`
+    - `vmpath.ParseRelWorktreePath`
+    - `WorktreeRoot.Resolve`
+  - mapped typed path errors to domain errors:
+    - absolute/traversal -> `vmmodels.ErrPathTraversal`
+    - empty relative path -> `vmmodels.ErrFileNotFound`
+    - resolved escape -> `vmmodels.ErrPathTraversal`
+- Extended safety integration coverage in:
+  - `pkg/vmtransport/http/server_safety_integration_test.go`
+  - added symlink escape case:
+    - symlink inside worktree -> file outside worktree
+    - expected API response: `422 INVALID_PATH`
+- Ran:
+  - `gofmt -w pkg/vmcontrol/execution_service.go pkg/vmtransport/http/server_safety_integration_test.go`
+  - `GOWORK=off go test ./pkg/vmtransport/http -run TestSafetyPathTraversalAndOutputLimitEnforcement -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- String-prefix traversal checks do not protect against symlink indirection.
+- Integrating typed resolver in the run-file path is the minimal high-impact change to close this class of escape.
+
+### What worked
+
+- All tests passed after integration.
+- Safety integration now verifies both direct traversal and symlink traversal behavior.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Canonicalization plus root-relative validation is straightforward to compose once path parsing is strongly typed.
+
+### What was tricky to build
+
+- Error mapping required care to preserve existing API semantics (`INVALID_PATH` vs `FILE_NOT_FOUND`) while moving to typed resolver errors.
+
+### What warrants a second pair of eyes
+
+- Confirm domain-error mapping policy for empty relative paths (`.`/blank) should remain `FILE_NOT_FOUND` rather than `INVALID_PATH`.
+
+### What should be done in the future
+
+- Apply same typed resolver path to startup file execution and startup-path admission checks (next task).
+
+### Code review instructions
+
+- Review normalization flow in:
+  - `pkg/vmcontrol/execution_service.go`
+- Review new safety assertion in:
+  - `pkg/vmtransport/http/server_safety_integration_test.go`
+- Re-run:
+  - `GOWORK=off go test ./pkg/vmtransport/http -run TestSafetyPathTraversalAndOutputLimitEnforcement -count=1`
+
+### Technical details
+
+- New test branch validates a symlink named `escape-link.js` in worktree pointing to an external JS file and asserts `code: INVALID_PATH`.

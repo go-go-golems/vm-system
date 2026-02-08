@@ -38,3 +38,14 @@ Reopened VM-006 for type-system follow-up and completed Task 1 by introducing a 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmpath/path_test.go - Unit tests for parse/resolve invariants and symlink escape rejection
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Added and updated type-system follow-up task checklist
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 6 implementation diary entry
+
+## 2026-02-08
+
+Completed Task 2 by integrating typed path resolution into run-file normalization and extending HTTP safety integration coverage to reject symlink escapes.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/execution_service.go - Replaced string-based run-file normalization with typed resolver path
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_safety_integration_test.go - Added symlink escape rejection integration assertion
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Task 2 complete
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 7 implementation diary entry
