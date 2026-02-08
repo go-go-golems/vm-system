@@ -28,7 +28,6 @@ func main() {
 		newTemplateCommand(),
 		newSessionCommand(),
 		newExecCommand(),
-		modulesCmd,
 		libsCmd,
 	)
 

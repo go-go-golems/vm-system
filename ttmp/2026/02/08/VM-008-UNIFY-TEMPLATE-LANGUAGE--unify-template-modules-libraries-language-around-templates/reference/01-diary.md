@@ -10,9 +10,13 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: cmd/vm-system/cmd_modules.go
-      Note: Task 3 removed command-side store mutation logic
+      Note: |-
+        Task 3 removed command-side store mutation logic
+        Task 6 legacy command deleted
     - Path: cmd/vm-system/cmd_template.go
       Note: Task 5 template module/library and catalog subcommands
+    - Path: cmd/vm-system/main.go
+      Note: Task 6 removed modules command registration
     - Path: pkg/vmclient/templates_client.go
       Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
@@ -31,6 +35,7 @@ RelatedFiles:
         Task 4 changelog entry
         Task 3 changelog entry
         Task 5 changelog entry
+        Task 6 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -43,12 +48,14 @@ RelatedFiles:
         Task 4 checklist update
         Task 3 checklist status
         Task 5 checklist update
+        Task 6 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -357,7 +364,7 @@ This introduces a complete template-first command path for module/library operat
 
 **Inferred user intent:** Make template command surface authoritative before deleting legacy command entrypoints.
 
-**Commit (code):** Pending for Step 5 commit creation.
+**Commit (code):** 2105ea1 — "vm008: add template module/library CLI subcommands (task 5)"
 
 ### What I did
 
@@ -424,3 +431,70 @@ The main constraint was preserving strict template terminology while matching ex
   - `Client.AddTemplateModule`, `Client.RemoveTemplateModule`, `Client.ListTemplateModules`
   - `Client.AddTemplateLibrary`, `Client.RemoveTemplateLibrary`, `Client.ListTemplateLibraries`
 - Catalog commands intentionally remain read-only and source built-ins from `vmmodels`.
+
+## Step 6: Remove legacy modules command file and root registration
+
+I removed the legacy modules command surface entirely by deleting `cmd_modules.go` and removing `modulesCmd` from root command registration. This leaves template commands as the only user-facing path for module/library operations.
+
+This is the clean-cut behavior change expected by VM-008: no compatibility wrappers, no alias command, and no duplicate command namespace.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Execute Task 6 by deleting the old modules command and its registration from CLI entrypoints.
+
+**Inferred user intent:** Complete hard removal of legacy command surface so command model is unambiguous.
+
+**Commit (code):** Pending for Step 6 commit creation.
+
+### What I did
+
+- Updated `cmd/vm-system/main.go`:
+  - removed `modulesCmd` from `rootCmd.AddCommand(...)`
+- Deleted `cmd/vm-system/cmd_modules.go`
+- Validated with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 6 explicitly requires removal of legacy modules command artifacts now that equivalent template commands are in place.
+
+### What worked
+
+- Deletion was mechanically clean because Task 5 already provided replacement template commands.
+- Repository tests remained green after hard removal.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Sequencing (new template commands first, then delete legacy command) avoided user-facing capability gaps while still honoring no-compatibility cleanup.
+
+### What was tricky to build
+
+The key concern was making sure no stale symbol references remained after file deletion. A quick codebase search for `modulesCmd` before and after removal ensured root wiring was clean.
+
+### What warrants a second pair of eyes
+
+- Confirm there are no external docs/scripts still invoking `vm-system modules ...` prior to script/doc cleanup tasks.
+
+### What should be done in the future
+
+- Proceed to Task 7 to remove remaining `vm-id` flag language where template resources are targeted.
+
+### Code review instructions
+
+- Start with:
+  - `cmd/vm-system/main.go`
+  - `cmd/vm-system/cmd_modules.go` (deleted)
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- CLI root command now registers `serve`, `template`, `session`, `exec`, and `libs`, with no `modules` command surface.

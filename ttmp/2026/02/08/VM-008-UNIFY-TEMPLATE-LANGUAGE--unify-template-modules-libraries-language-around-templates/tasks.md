@@ -7,7 +7,7 @@
 - [x] Extend `vmcontrol.TemplateService` and ports with explicit template module/library methods (add/remove/list) and remove ad-hoc command-side mutation logic
 - [x] Extend `vmclient/templates_client.go` with module/library operations on template routes
 - [x] Add new template CLI subcommands for module/library management and available-catalog listing
-- [ ] Delete `cmd/vm-system/cmd_modules.go` and remove `modulesCmd` registration from `cmd/vm-system/main.go`
+- [x] Delete `cmd/vm-system/cmd_modules.go` and remove `modulesCmd` registration from `cmd/vm-system/main.go`
 - [ ] Rename remaining CLI flags/wording from `vm-id` to `template-id` where template resources are targeted
 - [ ] Update integration tests for new template module/library endpoints and command paths; remove/replace tests that assume `modules` command
 - [ ] Update script surfaces (`test-library-*.sh`, other helpers) to template-first commands only

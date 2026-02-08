@@ -65,3 +65,14 @@ Task 5: Added template-native CLI subcommands for module/library add/remove/list
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — Added template module/library management and list-available commands
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 5 complete
 
+
+## 2026-02-08
+
+Task 6: Deleted the legacy modules command file and removed modules command registration from the root CLI, leaving template as the only module/library command surface.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_modules.go — Deleted legacy modules command surface
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/main.go — Removed modulesCmd root registration
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 6 complete
+
