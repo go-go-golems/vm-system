@@ -473,3 +473,92 @@ This step captures final task/checklist updates, file relations, changelog updat
   - `OK: uploaded VM-006-REVIEW-VM-SYSTEM Review + Diary.pdf -> /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM`
 - Remote verification output:
   - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary`
+
+## Step 6: Type-system follow-up kickoff and typed path primitives
+
+I reopened VM-006 for implementation follow-up and converted the path-hardening direction into concrete ticket tasks. Then I implemented the first task: introducing typed worktree path primitives in a dedicated package.
+
+This is the foundation for replacing string-based path checks in execution and startup flows with canonicalized, reusable, and testable path contracts.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Can we improve path resolution with type safety? Are there other opportunities to leverage the type system more (through types, structs, interfaces?), for simplicity and robustness?"
+
+**Assistant interpretation:** Introduce stronger types around path handling and identify/implement practical type-system upgrades that improve safety and clarity.
+
+**Inferred user intent:** Reduce fragile string-based logic and make safety-critical behavior enforced by construction.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Reopened VM-006 execution by adding a new `Type-System Follow-Up` section in:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md`
+- Marked Task 1 complete after implementation:
+  - Introduced typed path model in new package:
+    - `pkg/vmpath/path.go`
+    - `pkg/vmpath/path_test.go`
+- Added core types and constructors:
+  - `WorktreeRoot`
+  - `RelWorktreePath`
+  - `ResolvedWorktreePath`
+- Added strict parsing/canonicalization rules:
+  - reject empty/absolute/traversal relative paths
+  - canonicalize root with `EvalSymlinks`
+  - detect and reject resolved paths escaping root
+- Added unit tests for:
+  - relative-path parsing constraints
+  - symlink escape rejection
+  - canonical resolution of in-root symlink targets
+  - root directory validation
+- Ran:
+  - `gofmt -w pkg/vmpath/path.go pkg/vmpath/path_test.go`
+  - `GOWORK=off go test ./pkg/vmpath -count=1`
+
+### Why
+
+- Current path checks are duplicated and string-based in safety-critical flows.
+- A typed path package creates one authoritative place for validation + canonicalization rules.
+
+### What worked
+
+- New `vmpath` package compiled cleanly.
+- Unit tests passed and captured intended invariants.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Introducing small opaque path types substantially simplifies downstream call-site semantics and error reasoning.
+
+### What was tricky to build
+
+- The main edge case was deciding behavior when `EvalSymlinks` fails on non-existing targets. I kept resolution permissive for non-existing files (so existing `file not found` behavior can remain at execution layer) while still rejecting canonical escapes when symlinks are resolvable.
+
+### What warrants a second pair of eyes
+
+- Review whether missing-target behavior should fail earlier in resolver or remain delegated to execution-time file checks.
+
+### What should be done in the future
+
+- Wire these types into run-file and startup execution paths (next tasks in this ticket).
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmpath/path.go`
+  - `pkg/vmpath/path_test.go`
+- Validate by running:
+  - `GOWORK=off go test ./pkg/vmpath -count=1`
+
+### Technical details
+
+- New error surface in `vmpath`:
+  - `ErrInvalidRoot`
+  - `ErrRootNotDirectory`
+  - `ErrEmptyRelativePath`
+  - `ErrAbsoluteRelativePath`
+  - `ErrTraversalRelativePath`
+  - `ErrPathEscapesRoot`
