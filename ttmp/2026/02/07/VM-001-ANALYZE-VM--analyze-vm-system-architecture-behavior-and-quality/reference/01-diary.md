@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: cmd/vm-system/cmd_serve.go
+      Note: CLI command to run daemon process
     - Path: pkg/libloader/loader.go
       Note: Library cache mismatch reproduction
     - Path: pkg/vmcontrol/core.go
@@ -18,6 +20,10 @@ RelatedFiles:
       Note: Core port contracts for store/runtime separation
     - Path: pkg/vmcontrol/session_service.go
       Note: Session lifecycle service moved behind core API
+    - Path: pkg/vmdaemon/app.go
+      Note: Daemon host implementation for long-lived runtime ownership
+    - Path: pkg/vmdaemon/config.go
+      Note: Daemon runtime configuration and defaults
     - Path: pkg/vmsession/session.go
       Note: Experiment-backed session continuity failures
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md
@@ -32,6 +38,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -601,6 +608,84 @@ I added port interfaces, core wiring, and template/session/execution services th
 ### Technical details
 
 - New service APIs use `context.Context` and template-first names externally while retaining existing `vmmodels` structures internally.
+
+## Step 9: Add Daemon Host Package And serve Command
+
+This step introduced the process host that keeps runtime state alive across independent client calls. The implementation focused on daemon lifecycle concerns: startup wiring, listen configuration, signal-driven shutdown, and store/core ownership.
+
+I added a dedicated daemon package and a new root command (`vm-system serve`) to launch it. This creates the stable process boundary required before implementing full REST endpoint coverage.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue through the task list by implementing daemon hosting primitives and command entrypoint.
+
+**Inferred user intent:** Move from design-only artifacts to a runnable long-lived backend process.
+
+**Commit (code):** a89ddcedaa8a6035bfcf939550c657dcc2934483 — "feat(daemon): add serve command and daemon host lifecycle"
+
+### What I did
+
+- Added `pkg/vmdaemon/config.go` with listen and timeout configuration defaults.
+- Added `pkg/vmdaemon/app.go` with:
+- Store initialization.
+- `vmcontrol.Core` wiring.
+- HTTP server lifecycle management.
+- Graceful shutdown path on context cancellation.
+- Added `cmd/vm-system/cmd_serve.go`:
+- `serve` command with `--listen` flag.
+- Signal-aware run loop (`SIGINT`/`SIGTERM`).
+- Initial `/api/v1/health` route.
+- Registered `newServeCommand()` in `cmd/vm-system/main.go`.
+- Validated runtime behavior with build + live health probe:
+- `./vm-system serve --db /tmp/vm-system-daemon-task10.db --listen 127.0.0.1:3321`
+- `curl http://127.0.0.1:3321/api/v1/health` returned `{"status":"ok"}`.
+
+### Why
+
+- Session continuity requires one long-lived process owning runtime instances.
+- This step isolates process/lifecycle responsibilities in `pkg/vmdaemon` so transport behavior can evolve independently.
+
+### What worked
+
+- Daemon process starts, serves health checks, and shuts down cleanly.
+- `go test ./...` remains green after command/package additions.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- Most daemon host concerns can be implemented cleanly without committing to HTTP route details, which keeps the boundary clear for the next task.
+
+### What was tricky to build
+
+- The key tradeoff was handler ownership: daemon needs a server at construction time, but transport wiring should remain separate. I resolved this by allowing handler injection and exposing a `SetHandler` method for later adapter composition.
+
+### What warrants a second pair of eyes
+
+- Review timeout defaults and shutdown timeout for workloads with long-running executions.
+
+### What should be done in the future
+
+- Replace the temporary health-only mux with a full `pkg/vmtransport/http` router backed by `vmcontrol.Core`.
+
+### Code review instructions
+
+- Start with daemon lifecycle in `pkg/vmdaemon/app.go`.
+- Check config defaults in `pkg/vmdaemon/config.go`.
+- Review serve command wiring in `cmd/vm-system/cmd_serve.go` and registration in `cmd/vm-system/main.go`.
+- Validate with:
+- `GOWORK=off go test ./...`
+- `GOWORK=off go build -o ./vm-system ./cmd/vm-system`
+- `./vm-system serve --db /tmp/vm-system-daemon-task10.db --listen 127.0.0.1:3321`
+- `curl -s http://127.0.0.1:3321/api/v1/health`
+
+### Technical details
+
+- Daemon lifecycle is context-driven; `Run` returns on server error or shutdown completion, and `Close` releases the SQLite handle.
 
 ## Related
 
