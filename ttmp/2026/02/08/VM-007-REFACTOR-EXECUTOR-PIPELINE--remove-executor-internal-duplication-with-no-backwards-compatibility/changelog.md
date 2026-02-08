@@ -160,3 +160,14 @@ Task 13: Added focused tests for shared helper fallback semantics and template d
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/json_helpers_test.go — Tests for marshal fallback success/failure/null behavior
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 13 complete
 
+
+## 2026-02-08
+
+Task 14: Added deterministic persistence failure-path tests for ExecuteREPL covering CreateExecution, AddEvent, and UpdateExecution write failures with explicit wrapped error outcomes.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Introduced internal executionStore interface to enable deterministic failure-path testing without compatibility shims
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor_persistence_failures_test.go — New failure-injection tests for create/add-event/update persistence errors
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 14 complete
+

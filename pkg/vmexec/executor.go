@@ -17,8 +17,17 @@ import (
 
 // Executor executes code in VM sessions
 type Executor struct {
-	store          *vmstore.VMStore
+	store          executionStore
 	sessionManager *vmsession.SessionManager
+}
+
+type executionStore interface {
+	CreateExecution(exec *vmmodels.Execution) error
+	UpdateExecution(exec *vmmodels.Execution) error
+	AddEvent(event *vmmodels.ExecutionEvent) error
+	GetExecution(id string) (*vmmodels.Execution, error)
+	GetEvents(executionID string, afterSeq int) ([]*vmmodels.ExecutionEvent, error)
+	ListExecutions(sessionID string, limit int) ([]*vmmodels.Execution, error)
 }
 
 type executionRecordInput struct {
@@ -31,7 +40,7 @@ type executionRecordInput struct {
 }
 
 type eventRecorder struct {
-	store       *vmstore.VMStore
+	store       executionStore
 	executionID string
 	nextSeq     int
 	err         error
@@ -92,7 +101,7 @@ func (e *Executor) newExecutionRecord(in executionRecordInput) *vmmodels.Executi
 	}
 }
 
-func newEventRecorder(store *vmstore.VMStore, executionID string) *eventRecorder {
+func newEventRecorder(store executionStore, executionID string) *eventRecorder {
 	return &eventRecorder{
 		store:       store,
 		executionID: executionID,

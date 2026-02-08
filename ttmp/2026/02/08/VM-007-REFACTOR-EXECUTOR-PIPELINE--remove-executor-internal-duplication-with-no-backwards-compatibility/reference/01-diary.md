@@ -27,6 +27,9 @@ RelatedFiles:
         Task 7 pipeline helper chain and ExecuteREPL migration
         Task 8 ExecuteRunFile pipeline migration and shared helper extraction
         Task 9 run-file value/result parity behavior change
+        Task 14 internal executionStore interface for deterministic failure injection
+    - Path: pkg/vmexec/executor_persistence_failures_test.go
+      Note: Task 14 deterministic persistence failure-path tests
     - Path: pkg/vmexec/executor_test.go
       Note: |-
         Task 2 vmexec regression test coverage
@@ -60,6 +63,7 @@ RelatedFiles:
         Task 11 changelog entry
         Task 12 changelog entry
         Task 13 changelog entry
+        Task 14 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -78,12 +82,14 @@ RelatedFiles:
         Task 11 checklist update
         Task 12 checklist update
         Task 13 checklist update
+        Task 14 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -1048,7 +1054,7 @@ These tests are intentionally narrow and map directly to Task 13 acceptance crit
 
 **Inferred user intent:** Ensure helper/model dedup changes are guarded by explicit regression tests, not only by compile/test smoke.
 
-**Commit (code):** Pending for Step 13 commit creation.
+**Commit (code):** 435ca32 — "vm007: add helper/config marshalling tests (task 13)"
 
 ### What I did
 
@@ -1104,3 +1110,79 @@ The subtle part was crafting a reliable marshal-failure case for tests. Using a 
 ### Technical details
 
 - Marshal-failure tests use unsupported function-field payloads to deterministically trigger fallback behavior.
+
+## Step 14: Add deterministic persistence-failure tests for executor writes
+
+I added focused failure-path tests for persistence writes during REPL execution, covering create, event append, and finalize update failures. These tests verify deterministic wrapped error outcomes for each failure mode.
+
+To enable clean failure injection without compatibility shims, I introduced an internal `executionStore` interface in `Executor` and used a test store implementation that can force specific write failures.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1 + Step 11 note: "no backwards compatibility / wrappers btw, clean cut")
+
+**Assistant interpretation:** Add targeted persistence failure tests and keep the implementation clean-cut (no compatibility indirection layers).
+
+**Inferred user intent:** Guarantee executor persistence errors are explicit and test-locked, especially after refactor removed previously ignored writes.
+
+**Commit (code):** Pending for Step 14 commit creation.
+
+### What I did
+
+- Added `pkg/vmexec/executor_persistence_failures_test.go` with tests:
+  - `TestExecuteREPLCreateExecutionFailureReturnsDeterministicError`
+  - `TestExecuteREPLAddEventFailureReturnsDeterministicError`
+  - `TestExecuteREPLUpdateExecutionFailureReturnsDeterministicError`
+- Added internal test fixture with configurable failing store implementation to force:
+  - `CreateExecution` failure
+  - `AddEvent` failure
+  - `UpdateExecution` failure
+- Updated `pkg/vmexec/executor.go`:
+  - switched internal store field to private `executionStore` interface for deterministic failure injection in tests
+  - kept public constructor unchanged (`NewExecutor(*vmstore.VMStore, ...)`)
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http ./pkg/vmcontrol ./pkg/vmmodels -count=1`
+- Marked Task 14 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 14 ensures persistence-failure paths are no longer accidental behavior and are now explicitly validated with deterministic tests.
+
+### What worked
+
+- Failure tests are stable and assert wrapped error context.
+- Existing package tests remained green after internal store abstraction.
+
+### What didn't work
+
+- Initial test attempt imported `vmcontrol` from `pkg/vmexec` tests, which caused an import cycle (`vmcontrol` imports `vmexec`). I replaced it with direct VM/store setup in test fixture.
+
+### What I learned
+
+- For internal package tests, keeping fixtures independent of higher-level packages avoids cyclic dependency traps.
+
+### What was tricky to build
+
+The tricky part was forcing each write failure independently without altering runtime/session setup. The injected store wrapper solved this cleanly while preserving production constructor behavior.
+
+### What warrants a second pair of eyes
+
+- Confirm internal `executionStore` interface shape is minimal and appropriate for future maintenance.
+
+### What should be done in the future
+
+- Run full validation matrix and finalize ticket docs/test evidence (Task 15).
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmexec/executor_persistence_failures_test.go`
+  - `pkg/vmexec/executor.go` (`executionStore` interface usage)
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http ./pkg/vmcontrol ./pkg/vmmodels -count=1`
+
+### Technical details
+
+- Each failure-path test asserts both deterministic failure type (create/add-event/update stage) and wrapped forced error marker text.
