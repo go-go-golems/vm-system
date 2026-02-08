@@ -14,6 +14,7 @@ RelatedFiles:
         Task 4 shared execution record constructor
         Task 5 shared event recorder and AddEvent error propagation
         Task 6 finalize helpers and explicit UpdateExecution error handling
+        Task 7 pipeline helper chain and ExecuteREPL migration
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -29,6 +30,7 @@ RelatedFiles:
         Task 4 changelog entry
         Task 5 changelog entry
         Task 6 changelog entry
+        Task 7 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
@@ -38,12 +40,14 @@ RelatedFiles:
         Task 4 checklist update
         Task 5 checklist update
         Task 6 checklist update
+        Task 7 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -484,7 +488,7 @@ This step keeps external behavior stable for successful persistence while making
 
 **Inferred user intent:** Ensure no ignored persistence failures remain in executor completion paths.
 
-**Commit (code):** Pending for Step 6 commit creation.
+**Commit (code):** cb9a10c — "vm007: share execution finalization helpers (task 6)"
 
 ### What I did
 
@@ -542,3 +546,81 @@ The tricky part was preserving return semantics for runtime errors (`exec` with 
 ### Technical details
 
 - Finalize helpers wrap update failures with execution ID context to improve debugging of persistence issues.
+
+## Step 7: Move ExecuteREPL onto the shared pipeline helper chain
+
+I introduced a reusable `runExecutionPipeline` orchestration helper and migrated `ExecuteREPL` to that flow. REPL now supplies setup/run/error/success callbacks while shared lifecycle stages are handled once.
+
+This is the first full entrypoint migration to the pipeline style and removes most remaining REPL-specific lifecycle boilerplate.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Refactor ExecuteREPL to use the new internal pipeline helper chain while preserving behavior.
+
+**Inferred user intent:** Land structural deduplication incrementally, with isolated commits and stable behavior checks after each step.
+
+**Commit (code):** Pending for Step 7 commit creation.
+
+### What I did
+
+- Added `executionPipelineConfig` and `runExecutionPipeline(...)` in `pkg/vmexec/executor.go`.
+- Centralized shared pipeline stages:
+  - session preparation/unlock
+  - execution record creation/persistence
+  - event recorder creation
+  - runtime setup hook
+  - run hook
+  - recorder error check
+  - success/error finalize hooks
+- Replaced `ExecuteREPL` body with pipeline configuration callbacks:
+  - setup console + input echo
+  - execute REPL snippet
+  - map runtime errors to exception event + finalize error
+  - map runtime success to value event + finalize success
+- Kept run-file entrypoint untouched for Task 8.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 7 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 7 is the core executor internal dedup milestone for REPL. It demonstrates the target pipeline structure before applying it to run-file.
+
+### What worked
+
+- REPL behavior remained stable under existing tests.
+- Pipeline callback shape cleanly encapsulates execution-kind specifics.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- The callback-based pipeline reduces entrypoint complexity significantly without forcing behavior decisions prematurely.
+
+### What was tricky to build
+
+The tricky part was threading callback responsibilities without obscuring control flow. I kept a small config struct with explicit hooks to make phase boundaries visible and reviewable.
+
+### What warrants a second pair of eyes
+
+- Validate pipeline callback API ergonomics before run-file migration, especially hook granularity and error handling order.
+
+### What should be done in the future
+
+- Migrate `ExecuteRunFile` to the same pipeline helper chain (Task 8).
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` (`executionPipelineConfig`, `runExecutionPipeline`, updated `ExecuteREPL`).
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- `runExecutionPipeline` enforces a single lifecycle skeleton and keeps execution-kind variation in supplied hooks.

@@ -37,6 +37,15 @@ type eventRecorder struct {
 	err         error
 }
 
+type executionPipelineConfig struct {
+	sessionID     string
+	recordInput   executionRecordInput
+	setupRuntime  func(*vmsession.Session, *eventRecorder) error
+	run           func(*vmsession.Session, *eventRecorder) (goja.Value, error)
+	handleSuccess func(*vmmodels.Execution, *eventRecorder, goja.Value, time.Time) error
+	handleError   func(*vmmodels.Execution, *eventRecorder, error, time.Time) error
+}
+
 // NewExecutor creates a new Executor
 func NewExecutor(store *vmstore.VMStore, sessionManager *vmsession.SessionManager) *Executor {
 	return &Executor{
@@ -144,94 +153,108 @@ func (e *Executor) finalizeExecutionError(exec *vmmodels.Execution, endedAt time
 	return nil
 }
 
-// ExecuteREPL executes a REPL snippet
-func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
-	session, unlock, err := e.prepareSession(sessionID)
+func (e *Executor) runExecutionPipeline(cfg executionPipelineConfig) (*vmmodels.Execution, error) {
+	session, unlock, err := e.prepareSession(cfg.sessionID)
 	if err != nil {
 		return nil, err
 	}
 	defer unlock()
 
-	exec := e.newExecutionRecord(executionRecordInput{
-		sessionID: sessionID,
-		kind:      vmmodels.ExecREPL,
-		input:     input,
-	})
-	executionID := exec.ID
+	recordInput := cfg.recordInput
+	recordInput.sessionID = cfg.sessionID
 
+	exec := e.newExecutionRecord(recordInput)
 	if err := e.store.CreateExecution(exec); err != nil {
 		return nil, fmt.Errorf("failed to create execution: %w", err)
 	}
 
-	recorder := newEventRecorder(e.store, executionID)
-
-	// Override console.log to capture output
-	console := map[string]interface{}{
-		"log": func(args ...interface{}) {
-			output := fmt.Sprint(args...)
-			payload := vmmodels.ConsolePayload{
-				Level: "log",
-				Text:  output,
-			}
-			recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
-		},
-	}
-	session.Runtime.Set("console", console)
-
-	// Add input echo event
-	if err := recorder.emit(vmmodels.EventInputEcho, map[string]string{"text": input}); err != nil {
-		return nil, err
+	recorder := newEventRecorder(e.store, exec.ID)
+	if cfg.setupRuntime != nil {
+		if err := cfg.setupRuntime(session, recorder); err != nil {
+			return nil, err
+		}
 	}
 
-	// Execute code
-	value, err := session.Runtime.RunString(input)
-	endTime := time.Now()
+	value, runErr := cfg.run(session, recorder)
+	endedAt := time.Now()
 	if recorder.Err() != nil {
 		return nil, recorder.Err()
 	}
 
-	if err != nil {
-		// Create exception event
-		exceptionPayload := vmmodels.ExceptionPayload{
-			Message: err.Error(),
+	if runErr != nil {
+		if cfg.handleError != nil {
+			if err := cfg.handleError(exec, recorder, runErr, endedAt); err != nil {
+				return nil, err
+			}
+			return exec, nil
 		}
-		if gojaErr, ok := err.(*goja.Exception); ok {
-			exceptionPayload.Stack = gojaErr.String()
-		}
-		exceptionJSON, _ := json.Marshal(exceptionPayload)
-		if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
+		return nil, runErr
+	}
+
+	if cfg.handleSuccess != nil {
+		if err := cfg.handleSuccess(exec, recorder, value, endedAt); err != nil {
 			return nil, err
 		}
-
-		if err := e.finalizeExecutionError(exec, endTime, exceptionJSON); err != nil {
-			return nil, err
-		}
-
-		return exec, nil
-	}
-
-	// Create value event
-	valuePayload := vmmodels.ValuePayload{
-		Type:    value.ExportType().String(),
-		Preview: value.String(),
-	}
-
-	// Try to export as JSON
-	if exported := value.Export(); exported != nil {
-		if jsonBytes, err := json.Marshal(exported); err == nil {
-			valuePayload.JSON = jsonBytes
-		}
-	}
-	valueJSON, _ := json.Marshal(valuePayload)
-	if err := recorder.emitRaw(vmmodels.EventValue, valueJSON); err != nil {
-		return nil, err
-	}
-
-	if err := e.finalizeExecutionSuccess(exec, endTime, valueJSON); err != nil {
-		return nil, err
 	}
 
 	return exec, nil
+}
+
+// ExecuteREPL executes a REPL snippet
+func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
+	return e.runExecutionPipeline(executionPipelineConfig{
+		sessionID: sessionID,
+		recordInput: executionRecordInput{
+			kind:  vmmodels.ExecREPL,
+			input: input,
+		},
+		setupRuntime: func(session *vmsession.Session, recorder *eventRecorder) error {
+			console := map[string]interface{}{
+				"log": func(args ...interface{}) {
+					output := fmt.Sprint(args...)
+					payload := vmmodels.ConsolePayload{
+						Level: "log",
+						Text:  output,
+					}
+					recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
+				},
+			}
+			session.Runtime.Set("console", console)
+			return recorder.emit(vmmodels.EventInputEcho, map[string]string{"text": input})
+		},
+		run: func(session *vmsession.Session, _ *eventRecorder) (goja.Value, error) {
+			return session.Runtime.RunString(input)
+		},
+		handleError: func(exec *vmmodels.Execution, recorder *eventRecorder, runErr error, endedAt time.Time) error {
+			exceptionPayload := vmmodels.ExceptionPayload{
+				Message: runErr.Error(),
+			}
+			if gojaErr, ok := runErr.(*goja.Exception); ok {
+				exceptionPayload.Stack = gojaErr.String()
+			}
+			exceptionJSON, _ := json.Marshal(exceptionPayload)
+			if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
+				return err
+			}
+			return e.finalizeExecutionError(exec, endedAt, exceptionJSON)
+		},
+		handleSuccess: func(exec *vmmodels.Execution, recorder *eventRecorder, value goja.Value, endedAt time.Time) error {
+			valuePayload := vmmodels.ValuePayload{
+				Type:    value.ExportType().String(),
+				Preview: value.String(),
+			}
+			if exported := value.Export(); exported != nil {
+				if jsonBytes, err := json.Marshal(exported); err == nil {
+					valuePayload.JSON = jsonBytes
+				}
+			}
+			valueJSON, _ := json.Marshal(valuePayload)
+			if err := recorder.emitRaw(vmmodels.EventValue, valueJSON); err != nil {
+				return err
+			}
+			return e.finalizeExecutionSuccess(exec, endedAt, valueJSON)
+		},
+	})
 }
 
 // ExecuteRunFile executes a file
