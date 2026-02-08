@@ -87,3 +87,14 @@ Step 9: added daemon host package and serve command with graceful lifecycle hand
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmdaemon/config.go — Daemon listen and timeout config defaults
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 9 diary entry
 
+
+## 2026-02-08
+
+Step 10: added vmcontrol-backed REST transport with template/session/execution/event/runtime-summary endpoints and daemon wiring (commit 5046108bd0d1c3930aa4bf45fdda8714f2ac1301).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_serve.go — Daemon now installs vmhttp router
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — HTTP adapter and endpoint handlers backed by vmcontrol
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 10 diary entry
+

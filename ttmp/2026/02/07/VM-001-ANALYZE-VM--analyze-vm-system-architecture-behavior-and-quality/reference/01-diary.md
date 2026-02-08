@@ -26,6 +26,8 @@ RelatedFiles:
       Note: Daemon runtime configuration and defaults
     - Path: pkg/vmsession/session.go
       Note: Experiment-backed session continuity failures
+    - Path: pkg/vmtransport/http/server.go
+      Note: Full REST API adapter for daemon runtime operations
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md
       Note: Companion report summarized per diary step
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md
@@ -38,6 +40,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -686,6 +689,95 @@ I added a dedicated daemon package and a new root command (`vm-system serve`) to
 ### Technical details
 
 - Daemon lifecycle is context-driven; `Run` returns on server error or shutdown completion, and `Close` releases the SQLite handle.
+
+## Step 10: Implement vmcontrol-backed HTTP Transport Adapter
+
+This step added the REST adapter layer so daemon clients can drive template/session/execution workflows over HTTP while sharing the same orchestration core. The implementation intentionally kept handlers thin and delegated business logic to `vmcontrol` services.
+
+I implemented endpoint coverage for health, runtime summary, templates, sessions, executions, and events, then wired the daemon `serve` command to use this router and verified the full flow with live curl requests.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue sequential task execution by implementing API transport over the reusable core.
+
+**Inferred user intent:** Make the daemon usable as a real backend service for CLI and UI clients.
+
+**Commit (code):** 5046108bd0d1c3930aa4bf45fdda8714f2ac1301 — "feat(http): add vmcontrol-backed REST transport adapter"
+
+### What I did
+
+- Added `pkg/vmtransport/http/server.go` (package `vmhttp`) with route registration and handlers:
+- `GET /api/v1/health`
+- `GET /api/v1/runtime/summary`
+- `GET/POST /api/v1/templates`
+- `GET/DELETE /api/v1/templates/{template_id}`
+- `GET/POST /api/v1/templates/{template_id}/capabilities`
+- `GET/POST /api/v1/templates/{template_id}/startup-files`
+- `GET/POST /api/v1/sessions`
+- `GET /api/v1/sessions/{session_id}`
+- `POST /api/v1/sessions/{session_id}/close`
+- `DELETE /api/v1/sessions/{session_id}`
+- `GET /api/v1/executions`
+- `POST /api/v1/executions/repl`
+- `POST /api/v1/executions/run-file`
+- `GET /api/v1/executions/{execution_id}`
+- `GET /api/v1/executions/{execution_id}/events`
+- Implemented structured error envelope and core error mapping to status/error codes.
+- Added request-id response header middleware.
+- Updated `cmd/vm-system/cmd_serve.go` to install `vmhttp.NewHandler(app.Core())`.
+- Ran live daemon smoke flow:
+- create template
+- create session
+- execute REPL
+- fetch events
+- fetch runtime summary
+- all endpoints returned expected payloads.
+
+### Why
+
+- The daemon host from Step 9 needed a concrete transport adapter to expose reusable core services externally.
+- Keeping handler logic thin preserves the design boundary and reduces drift risk between transports.
+
+### What worked
+
+- API endpoints returned expected responses in end-to-end smoke run.
+- Session continuity worked inside daemon process across multiple HTTP requests.
+- `go test ./...` remained green.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- Go 1.22+ `http.ServeMux` method+path patterns are sufficient for this API shape and avoid adding router dependencies.
+
+### What was tricky to build
+
+- The tricky part was preserving API clarity while reusing internal `vmmodels` directly. I handled this by introducing explicit request DTOs and a stable error envelope even where response payloads still mirror internal structs.
+
+### What warrants a second pair of eyes
+
+- Review API response contracts for long-term compatibility (especially template detail payload composition and execution error bodies).
+
+### What should be done in the future
+
+- Add metadata endpoints and formal API contract tests once CLI client cutover is complete.
+
+### Code review instructions
+
+- Start with route/handler registration in `pkg/vmtransport/http/server.go`.
+- Verify daemon wiring in `cmd/vm-system/cmd_serve.go`.
+- Validate with:
+- `GOWORK=off go test ./...`
+- `GOWORK=off go build -o ./vm-system ./cmd/vm-system`
+- Run daemon and curl: health, templates create/list, sessions create/get, executions repl/events, runtime summary.
+
+### Technical details
+
+- Error responses follow `{ \"error\": { \"code\", \"message\", \"details\" } }` with mappings for known `vmmodels` errors.
 
 ## Related
 
