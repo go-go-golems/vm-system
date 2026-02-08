@@ -9,6 +9,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: cmd/vm-system/cmd_modules.go
+      Note: Task 3 removed command-side store mutation logic
     - Path: pkg/vmclient/templates_client.go
       Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
@@ -25,6 +27,7 @@ RelatedFiles:
         Task 1 changelog entry
         Task 2 changelog entry
         Task 4 changelog entry
+        Task 3 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -35,12 +38,14 @@ RelatedFiles:
         Task 1 checklist update
         Task 2 checklist update
         Task 4 checklist update
+        Task 3 checklist status
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -203,7 +208,7 @@ This step keeps route contracts aligned between daemon and client and sets up th
 
 **Inferred user intent:** Ensure module/library operations are available through standard client pathways before replacing legacy command code.
 
-**Commit (code):** Pending for Step 3 commit creation.
+**Commit (code):** a6febe2 — "vm008: extend vmclient template module/library operations (task 4)"
 
 ### What I did
 
@@ -262,3 +267,73 @@ The key point was keeping method naming and route composition strictly template-
   - `/api/v1/templates/{template_id}/modules`
   - `/api/v1/templates/{template_id}/libraries`
 - DELETE methods target resource-name path variants and decode into `TemplateNamedResourceResponse`.
+
+## Step 4: Remove modules command mutation internals and route through template client APIs
+
+I completed removal of command-local persistence mutation logic in `cmd_modules.go` by replacing add-module and add-library direct datastore updates with vmclient template API calls. This keeps mutation behavior centralized in daemon service/store code paths.
+
+This change keeps architecture consistent with VM-008 goals while preserving command behavior shape until later tasks remove the legacy `modules` command surface entirely.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Implement Task 3 by eliminating ad-hoc command-side mutation logic and rely on template service paths.
+
+**Inferred user intent:** Ensure no direct persistence mutation remains in CLI command code for template module/library operations.
+
+**Commit (code):** Pending for Step 4 commit creation.
+
+### What I did
+
+- Updated `cmd/vm-system/cmd_modules.go`:
+  - removed command-local `vmstore` update flow for `add-module`
+  - removed command-local `vmstore` update flow for `add-library`
+  - now calls:
+    - `client.AddTemplateModule(...)`
+    - `client.AddTemplateLibrary(...)`
+  - aligned success text to template wording for these command outputs
+- Validated with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmcontrol ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 3 explicitly requires removing ad-hoc command-side mutation logic so template module/library persistence flows through central service/store pathways.
+
+### What worked
+
+- Conversion to vmclient calls was straightforward because Task 4 client methods were already in place.
+- Compile and full test sweep remained green after removal.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Performing API and client foundations first made command-side cleanup a small, low-risk diff.
+
+### What was tricky to build
+
+The only tricky part was maintaining the intended no-compatibility direction while staging tasks incrementally. I kept legacy flags untouched for now because explicit flag renaming is scoped to Task 7, avoiding cross-task drift.
+
+### What warrants a second pair of eyes
+
+- Confirm that maintaining temporary legacy flag names in `cmd_modules.go` until Task 7 is acceptable sequencing for review.
+
+### What should be done in the future
+
+- Proceed with Task 5/6 to introduce template commands and remove `modules` command registration entirely.
+
+### Code review instructions
+
+- Start with:
+  - `cmd/vm-system/cmd_modules.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmcontrol ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- The command no longer imports or uses `vmstore`; mutation requests now transit through daemon template endpoints only.

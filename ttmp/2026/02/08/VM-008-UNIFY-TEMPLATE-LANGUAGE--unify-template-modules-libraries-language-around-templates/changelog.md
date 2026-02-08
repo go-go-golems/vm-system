@@ -45,3 +45,13 @@ Task 4: Extended vmclient template client with module/library add/remove/list op
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmclient/templates_client.go — Added template module/library request/response types and CRUD client methods
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 4 complete
 
+
+## 2026-02-08
+
+Task 3: Removed ad-hoc command-side mutation logic from the legacy modules command by switching add-module/add-library to vmclient template API calls, keeping mutation flow in daemon template service/store paths only.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_modules.go — Replaced direct store mutation with template API client calls
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 3 complete
+

@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
-	"github.com/spf13/cobra"
+	"github.com/go-go-golems/vm-system/pkg/vmclient"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
-	"github.com/go-go-golems/vm-system/pkg/vmstore"
+	"github.com/spf13/cobra"
 )
 
 var modulesCmd = &cobra.Command{
@@ -46,40 +47,21 @@ var addModuleCmd = &cobra.Command{
 	Use:   "add-module",
 	Short: "Add an exposed module to a VM",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		vmID, _ := cmd.Flags().GetString("vm-id")
+		templateID, _ := cmd.Flags().GetString("vm-id")
 		moduleID, _ := cmd.Flags().GetString("module-id")
 
-		if vmID == "" || moduleID == "" {
+		if templateID == "" || moduleID == "" {
 			return fmt.Errorf("--vm-id and --module-id are required")
 		}
 
-		store, err := vmstore.NewVMStore(dbPath)
-		if err != nil {
-			return err
-		}
-		defer store.Close()
-
-		// Get VM
-		vm, err := store.GetVM(vmID)
-		if err != nil {
+		client := vmclient.New(serverURL, nil)
+		if _, err := client.AddTemplateModule(context.Background(), templateID, vmclient.AddTemplateModuleRequest{
+			Name: moduleID,
+		}); err != nil {
 			return err
 		}
 
-		// Check if module is already added
-		for _, m := range vm.ExposedModules {
-			if m == moduleID {
-				fmt.Printf("Module '%s' is already added to VM '%s'\n", moduleID, vm.Name)
-				return nil
-			}
-		}
-
-		// Add module
-		vm.ExposedModules = append(vm.ExposedModules, moduleID)
-		if err := store.UpdateVM(vm); err != nil {
-			return err
-		}
-
-		fmt.Printf("Added module '%s' to VM '%s'\n", moduleID, vm.Name)
+		fmt.Printf("Added module '%s' to template '%s'\n", moduleID, templateID)
 		return nil
 	},
 }
@@ -88,40 +70,21 @@ var addLibraryCmd = &cobra.Command{
 	Use:   "add-library",
 	Short: "Add a library to a VM",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		vmID, _ := cmd.Flags().GetString("vm-id")
+		templateID, _ := cmd.Flags().GetString("vm-id")
 		libraryID, _ := cmd.Flags().GetString("library-id")
 
-		if vmID == "" || libraryID == "" {
+		if templateID == "" || libraryID == "" {
 			return fmt.Errorf("--vm-id and --library-id are required")
 		}
 
-		store, err := vmstore.NewVMStore(dbPath)
-		if err != nil {
-			return err
-		}
-		defer store.Close()
-
-		// Get VM
-		vm, err := store.GetVM(vmID)
-		if err != nil {
+		client := vmclient.New(serverURL, nil)
+		if _, err := client.AddTemplateLibrary(context.Background(), templateID, vmclient.AddTemplateLibraryRequest{
+			Name: libraryID,
+		}); err != nil {
 			return err
 		}
 
-		// Check if library is already added
-		for _, l := range vm.Libraries {
-			if l == libraryID {
-				fmt.Printf("Library '%s' is already added to VM '%s'\n", libraryID, vm.Name)
-				return nil
-			}
-		}
-
-		// Add library
-		vm.Libraries = append(vm.Libraries, libraryID)
-		if err := store.UpdateVM(vm); err != nil {
-			return err
-		}
-
-		fmt.Printf("Added library '%s' to VM '%s'\n", libraryID, vm.Name)
+		fmt.Printf("Added library '%s' to template '%s'\n", libraryID, templateID)
 		return nil
 	},
 }
