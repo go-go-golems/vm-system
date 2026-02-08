@@ -11,7 +11,7 @@
 - [x] Design daemonized runtime host architecture with REST API and CLI client model
 - [x] Publish daemon architecture document and upload to reMarkable
 - [x] Define v2 implementation backlog for daemon/core/template cutover
-- [ ] Create pkg/vmcontrol reusable core with explicit ports and service wiring
+- [x] Create pkg/vmcontrol reusable core with explicit ports and service wiring
 - [ ] Implement pkg/vmdaemon process host and add vm-system serve command
 - [ ] Implement pkg/vmtransport/http REST adapter for health, templates, sessions, executions, events, and runtime summary
 - [ ] Implement pkg/vmclient REST client and switch CLI runtime commands to client mode by default

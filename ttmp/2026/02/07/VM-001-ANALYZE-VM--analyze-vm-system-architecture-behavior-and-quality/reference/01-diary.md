@@ -10,6 +10,14 @@ Owners: []
 RelatedFiles:
     - Path: pkg/libloader/loader.go
       Note: Library cache mismatch reproduction
+    - Path: pkg/vmcontrol/core.go
+      Note: Reusable core constructor used by daemon and adapters
+    - Path: pkg/vmcontrol/execution_service.go
+      Note: Execution orchestration service behind core API
+    - Path: pkg/vmcontrol/ports.go
+      Note: Core port contracts for store/runtime separation
+    - Path: pkg/vmcontrol/session_service.go
+      Note: Session lifecycle service moved behind core API
     - Path: pkg/vmsession/session.go
       Note: Experiment-backed session continuity failures
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md
@@ -24,6 +32,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -520,6 +529,78 @@ Create a detailed list of tasks in the ticket, and then work on them one by one,
 ### Technical details
 
 - Commands run: `docmgr task add`, `docmgr task check`, `docmgr task list`, `docmgr doc list`.
+
+## Step 8: Implement Reusable vmcontrol Core Package
+
+This step delivered the first code artifact of the daemonized redesign: a transport-agnostic orchestration layer under `pkg/vmcontrol`. The implementation goal was to establish explicit service boundaries before introducing daemon hosting and HTTP adapters.
+
+I added port interfaces, core wiring, and template/session/execution services that wrap existing runtime/store behavior. This creates a stable center that daemon and future in-process consumers can share.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Start implementing the architecture by extracting shared orchestration logic into a reusable package.
+
+**Inferred user intent:** Ensure runtime lifecycle logic is no longer coupled to one-shot CLI command handlers.
+
+**Commit (code):** a257a5a6b3e9eba9ac9b4aaf90a5b5eff46d03b4 — "feat(core): add vmcontrol reusable orchestration layer"
+
+### What I did
+
+- Created `pkg/vmcontrol` with:
+- `ports.go` for store/runtime interfaces.
+- `core.go` for constructor wiring.
+- `template_service.go`, `session_service.go`, `execution_service.go` for orchestration APIs.
+- `runtime_registry.go` for in-memory runtime summary exposure.
+- `types.go` for input and config payload types.
+- Wired `NewCore` to existing concrete adapters (`vmstore`, `vmsession`, `vmexec`) and exposed `NewCoreWithPorts` for embedding/tests.
+- Ran `GOWORK=off go test ./...` to ensure compile/runtime integrity after extraction.
+
+### Why
+
+- The architecture requires daemon and HTTP layers to depend on a shared core, not the reverse.
+- This package introduces that dependency direction without changing external behavior yet.
+
+### What worked
+
+- New package compiled cleanly and integrated with existing concrete implementations.
+- Build/test remained green after introducing the new core boundary.
+
+### What didn't work
+
+- N/A
+
+### What I learned
+
+- Current session/execution APIs are already close to service-oriented boundaries, so wrapping them behind ports was low-risk.
+
+### What was tricky to build
+
+- The main edge was constructor design: `SessionManager` and `Executor` currently need concrete `*vmstore.VMStore`. The solution was to provide both `NewCore` (concrete wiring) and `NewCoreWithPorts` (custom adapter injection) to keep reuse/test flexibility without refactoring all internals yet.
+
+### What warrants a second pair of eyes
+
+- Review whether `StorePort` method surface should be further split before API hardening to reduce accidental coupling.
+
+### What should be done in the future
+
+- Route daemon HTTP handlers and CLI client behavior through `vmcontrol.Core` next so this package becomes the single orchestration path.
+
+### Code review instructions
+
+- Start at `pkg/vmcontrol/core.go` for wiring.
+- Review `pkg/vmcontrol/ports.go` for boundary definitions.
+- Review services in:
+- `pkg/vmcontrol/template_service.go`
+- `pkg/vmcontrol/session_service.go`
+- `pkg/vmcontrol/execution_service.go`
+- Validate with:
+- `GOWORK=off go test ./...`
+
+### Technical details
+
+- New service APIs use `context.Context` and template-first names externally while retaining existing `vmmodels` structures internally.
 
 ## Related
 

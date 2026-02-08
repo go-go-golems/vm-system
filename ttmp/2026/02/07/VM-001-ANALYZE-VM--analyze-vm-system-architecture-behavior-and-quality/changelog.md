@@ -61,3 +61,17 @@ Added detailed v2 implementation task backlog and completed Task 8 to begin sequ
 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Recorded Step 7 with prompt context and planning rationale
 
+
+## 2026-02-08
+
+Step 8: added reusable vmcontrol core package with explicit ports, service wiring, and runtime registry (commit a257a5a6b3e9eba9ac9b4aaf90a5b5eff46d03b4).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/core.go — Core constructor and dependency wiring
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/execution_service.go — Execution orchestration service
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/ports.go — Transport-agnostic store/runtime interfaces
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/session_service.go — Session lifecycle orchestration service
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service.go — Template orchestration service
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 8 implementation diary
+
