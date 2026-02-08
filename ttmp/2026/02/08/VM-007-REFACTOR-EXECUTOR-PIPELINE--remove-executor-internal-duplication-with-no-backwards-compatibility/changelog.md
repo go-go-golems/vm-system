@@ -149,3 +149,14 @@ Task 12: Removed residual vmcontrol config-type alias duplication so vmmodels is
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/types.go — Removed config alias declarations to eliminate residual duplication boundary
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 12 complete
 
+
+## 2026-02-08
+
+Task 13: Added focused tests for shared helper fallback semantics and template default config JSON marshalling expectations.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service_test.go — Tests template default settings JSON marshalling into vmmodels config structs
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/json_helpers_test.go — Tests for marshal fallback success/failure/null behavior
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 13 complete
+

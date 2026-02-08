@@ -12,6 +12,8 @@ RelatedFiles:
       Note: Task 12 direct vmmodels.LimitsConfig usage
     - Path: pkg/vmcontrol/template_service.go
       Note: Task 11 vmcontrol template settings migration to shared helper
+    - Path: pkg/vmcontrol/template_service_test.go
+      Note: Task 13 config JSON marshalling expectation tests
     - Path: pkg/vmcontrol/types.go
       Note: |-
         Task 11 removed duplicated local helper
@@ -33,6 +35,8 @@ RelatedFiles:
       Note: |-
         Task 10 shared marshal-with-fallback helper
         Task 11 removed wrapper layer; single helper API
+    - Path: pkg/vmmodels/json_helpers_test.go
+      Note: Task 13 shared helper fallback tests
     - Path: pkg/vmstore/vmstore.go
       Note: Task 11 vmstore migration to single shared JSON helper
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -55,6 +59,7 @@ RelatedFiles:
         Task 10 changelog entry
         Task 11 changelog entry
         Task 12 changelog entry
+        Task 13 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -72,12 +77,14 @@ RelatedFiles:
         Task 10 checklist update
         Task 11 checklist update
         Task 12 checklist update
+        Task 13 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -971,7 +978,7 @@ This keeps the codebase on a clean-cut model contract with no shadow aliases.
 
 **Inferred user intent:** Ensure no residual duplicate model/helper declarations remain after dedup refactor.
 
-**Commit (code):** Pending for Step 12 commit creation.
+**Commit (code):** c9ba191 — "vm007: remove residual vmcontrol config aliases (task 12)"
 
 ### What I did
 
@@ -1026,3 +1033,74 @@ This step was mostly mechanical; the main care point was updating any remaining 
 ### Technical details
 
 - `ExecutionService.loadSessionLimits` now unmarshals limits into `vmmodels.LimitsConfig` directly.
+
+## Step 13: Add focused fallback and config-marshalling tests
+
+I added targeted tests for the shared marshal-fallback helper and for template default config JSON marshalling. This locks the helper semantics and the default config payload contract in executable tests.
+
+These tests are intentionally narrow and map directly to Task 13 acceptance criteria.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1 + Step 11 note: "no backwards compatibility / wrappers btw, clean cut")
+
+**Assistant interpretation:** Add focused tests that freeze shared helper fallback behavior and config JSON marshalling expectations after dedup migration.
+
+**Inferred user intent:** Ensure helper/model dedup changes are guarded by explicit regression tests, not only by compile/test smoke.
+
+**Commit (code):** Pending for Step 13 commit creation.
+
+### What I did
+
+- Added `pkg/vmmodels/json_helpers_test.go` with tests for:
+  - successful marshal path
+  - marshal failure fallback path
+  - empty-fallback-to-`null` behavior
+- Added `pkg/vmcontrol/template_service_test.go` with focused test:
+  - `TemplateService.Create` default settings are valid JSON and unmarshal into expected `vmmodels` config structs/values
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmmodels ./pkg/vmcontrol -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+- Marked Task 13 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 13 freezes the expected behavior of the newly centralized helper contract and verifies config defaults are still serialized as intended after refactor.
+
+### What worked
+
+- New tests run quickly and are deterministic.
+- Template-service test validates real JSON payload contents, not only non-empty blobs.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- A small store stub is sufficient to verify template-service marshalling behavior without full integration scaffolding.
+
+### What was tricky to build
+
+The subtle part was crafting a reliable marshal-failure case for tests. Using a struct with function fields provided a deterministic unsupported-type failure path.
+
+### What warrants a second pair of eyes
+
+- Confirm expected default values in template-service test match product expectations and not just implementation defaults.
+
+### What should be done in the future
+
+- Implement Task 14 persistence failure-path tests for executor write operations.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmmodels/json_helpers_test.go`
+  - `pkg/vmcontrol/template_service_test.go`
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmmodels ./pkg/vmcontrol -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- Marshal-failure tests use unsupported function-field payloads to deterministically trigger fallback behavior.
