@@ -1,0 +1,475 @@
+---
+Title: Diary
+Ticket: VM-006-REVIEW-VM-SYSTEM
+Status: complete
+Topics:
+    - backend
+DocType: reference
+Intent: long-term
+Owners: []
+RelatedFiles:
+    - Path: vm-system/vm-system/pkg/vmcontrol/execution_service.go
+      Note: Path normalization and post-execution limit enforcement checks analyzed and dynamically validated
+    - Path: vm-system/vm-system/pkg/vmexec/executor.go
+      Note: Execution event/status persistence behavior analyzed for duplication and contract drift
+    - Path: vm-system/vm-system/pkg/vmsession/session.go
+      Note: Startup flow and session runtime map behavior analyzed and dynamically validated
+    - Path: vm-system/vm-system/pkg/vmstore/vmstore.go
+      Note: Error typing and JSON decoding behavior analyzed
+    - Path: vm-system/vm-system/pkg/vmtransport/http/server.go
+      Note: API validation/error mapping surface analyzed and exercised
+    - Path: vm-system/vm-system/smoke-test.sh
+      Note: |-
+        Daemon-first smoke workflow executed and validated
+        Executed daemon-first smoke workflow
+    - Path: vm-system/vm-system/test-e2e.sh
+      Note: |-
+        Daemon-first e2e workflow executed and validated
+        Executed daemon-first end-to-end workflow
+    - Path: vm-system/vm-system/test-goja-library-execution.sh
+      Note: |-
+        Legacy script executed and failed; stale command contract evidence captured
+        Executed and captured stale command failure
+    - Path: vm-system/vm-system/test-library-loading.sh
+      Note: |-
+        Legacy script executed and failed; stale command contract evidence captured
+        Executed and captured stale command failure
+    - Path: vm-system/vm-system/test-library-requirements.sh
+      Note: |-
+        Legacy script executed and failed; stale command contract evidence captured
+        Executed and captured stale command failure
+    - Path: vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/design-doc/01-comprehensive-vm-system-implementation-quality-review.md
+      Note: |-
+        Final detailed review report
+        Final report authored from diary evidence
+ExternalSources: []
+Summary: Detailed implementation diary for VM-006 covering discovery, dynamic validation, deep code review, report authoring, and upload workflow.
+LastUpdated: 2026-02-08T11:15:28.600040763-05:00
+WhatFor: Preserve exact commands, findings, failures, and review procedure for VM-006.
+WhenToUse: Use when auditing VM-006 findings, reproducing discovered defects, or reviewing review-method quality.
+---
+
+
+# Diary
+
+## Goal
+
+This diary captures the complete execution trail for VM-006: how I reviewed vm-system quality in the context of VM-001, VM-004, and VM-005, which dynamic checks I ran, what failed, what worked, and how the final report was produced.
+
+The intent is reproducibility and auditability. Every major finding in the report has a command or source reference here so another maintainer can independently verify it.
+
+## Step 1: Scope anchoring and ticket setup
+
+I began by loading the skill instructions relevant to this request (`code-quality-review-cleanup`, `docmgr`, `diary`, `remarkable-upload`) and then enumerated repo/docmgr context so the review stayed anchored to the right ticket line.
+
+I verified that VM-001, VM-004, and VM-005 existed in docmgr with full ticket IDs and collected their design/task/changelog context before touching implementation behavior.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Go over the code we create in vm-system in the context of docmgr VM-004 and VM-001 and VM-005 and do a deep detailed review and assessment of the quality of the implementation and its testig and its setup, especially wrt duplicated code, code structure, deprecated code, confusing APIs, missing abstractions, unidiomatic code, etc...
+
+Write a detailed report as part of VM-006-REVIEW-VM-SYSTEM and keep a detailed diary. Feel free to compile and run and explore things dynamically, not just on the basis of code.
+
+Upload the document to remarkable when done"
+
+**Assistant interpretation:** Build a deep, evidence-backed implementation review tied to VM-001/004/005, document it under a new VM-006 ticket, keep a detailed diary, and upload the final document to reMarkable.
+
+**Inferred user intent:** Obtain a trustworthy quality assessment that combines static review and live behavior checks, not a superficial code scan.
+
+**Commit (code):** N/A (documentation/review workflow only)
+
+### What I did
+
+- Loaded and read applicable skills from:
+  - `/home/manuel/.codex/skills/code-quality-review-cleanup/SKILL.md`
+  - `/home/manuel/.codex/skills/docmgr/SKILL.md`
+  - `/home/manuel/.codex/skills/diary/SKILL.md`
+  - `/home/manuel/.codex/skills/remarkable-upload/SKILL.md`
+- Enumerated files and ticket/doc state with:
+  - `rg --files`
+  - `docmgr status --summary-only`
+  - `docmgr ticket list`
+  - `docmgr doc list`
+- Read VM-001/VM-004/VM-005 ticket artifacts (index/tasks/design/changelog/tutorial) to cross-check review targets.
+- Created ticket workspace:
+  - `docmgr ticket create-ticket --ticket VM-006-REVIEW-VM-SYSTEM --title "Review vm-system implementation quality, testing, and setup" --topics backend`
+- Added report and diary documents:
+  - `docmgr doc add --ticket VM-006-REVIEW-VM-SYSTEM --doc-type design-doc --title "Comprehensive vm-system implementation quality review"`
+  - `docmgr doc add --ticket VM-006-REVIEW-VM-SYSTEM --doc-type reference --title "Diary"`
+
+### Why
+
+Without ticket/context anchoring first, review conclusions could drift from the explicit commitments and caveats already recorded in VM-001/004/005.
+
+### What worked
+
+- Docmgr ticket/doc creation workflow worked cleanly.
+- Existing VM-001/004/005 docs provided enough baseline to evaluate implementation promises against current behavior.
+
+### What didn't work
+
+- Short-form ticket queries like `docmgr ticket list --ticket VM-001` returned `No tickets found.` because full ticket IDs are required.
+
+### What I learned
+
+- The workspace stores VM ticket IDs with full slugs, not short prefixes, so scriptable review tooling should prefer `docmgr ticket list` and then match full IDs.
+
+### What was tricky to build
+
+The ticket paths are long and similarly named; the main risk was accidentally writing VM-006 documents into the wrong workspace. I mitigated this by collecting explicit `Path:` outputs from docmgr creation commands before editing files.
+
+### What warrants a second pair of eyes
+
+- Verify VM-006 ticket naming and location conventions are acceptable for your docmgr taxonomy.
+
+### What should be done in the future
+
+- Add a small helper script under `ttmp/.../scripts` for selecting tickets by prefix safely if this is a recurring workflow.
+
+### Code review instructions
+
+- Start with VM-006 ticket root:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup`
+- Validate ticket setup commands by replaying `docmgr ticket list` and `docmgr doc list`.
+
+### Technical details
+
+- Key command for orientation:
+  - `docmgr ticket list`
+- Created ticket path:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup`
+
+## Step 2: Baseline tests and script-surface validation
+
+After context setup, I ran baseline test and script surfaces to classify where reliability currently exists and where setup drift appears. I intentionally ran both supported daemon-first scripts and legacy library scripts.
+
+This step quickly showed an important split: daemon-first path is healthy, while library-focused scripts are stale/broken.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Validate behavior dynamically, not only statically, and include test/setup quality in the review.
+
+**Inferred user intent:** Ensure quality claims are grounded in actual command execution outcomes.
+
+**Commit (code):** N/A
+
+### What I did
+
+Executed:
+
+- `GOWORK=off go test ./... -count=1`
+- `./smoke-test.sh`
+- `./test-e2e.sh`
+- `./test-library-loading.sh`
+- `./test-library-requirements.sh`
+- `./test-goja-library-execution.sh`
+- `GOWORK=off go test -race ./pkg/vmtransport/http -count=1`
+- `GOWORK=off go vet ./...`
+- `GOWORK=off go test ./... -cover -count=1`
+
+### Why
+
+I needed runtime evidence for implementation/test/setup quality, especially to validate VM-004 claims and detect setup regressions affecting day-to-day contributors.
+
+### What worked
+
+- `go test ./...` passed.
+- `smoke-test.sh` passed all 10 checks.
+- `test-e2e.sh` passed full daemon-first workflow.
+- `go test -race` and `go vet` passed for current exercised paths.
+
+### What didn't work
+
+All three library scripts failed immediately on removed commands:
+
+- `test-library-loading.sh`:
+  - `Error: unknown command "vm" for "vm-system"`
+- `test-library-requirements.sh`:
+  - `Error: unknown command "vm" for "vm-system"`
+- `test-goja-library-execution.sh`:
+  - `Error: unknown command "vm" for "vm-system"`
+
+Coverage output revealed major skew:
+
+- `pkg/vmtransport/http`: `72.6%`
+- all other packages: `0.0%`
+
+### What I learned
+
+- VM-004 significantly strengthened HTTP integration tests.
+- Core packages (`vmcontrol`, `vmsession`, `vmexec`, `vmstore`) remain largely untested directly.
+- Legacy script surface is now a source of breakage rather than confidence.
+
+### What was tricky to build
+
+Balancing signal from passing integration tests with failing legacy scripts required explicit separation: "supported path healthy" vs "repo test/setup surface inconsistent." Without that distinction, conclusions would be misleading.
+
+### What warrants a second pair of eyes
+
+- Decide whether failing library scripts should be migrated immediately or archived as legacy artifacts.
+
+### What should be done in the future
+
+- Add CI policy that only maintained scripts are treated as test gates.
+
+### Code review instructions
+
+- Re-run script matrix exactly:
+  - `smoke-test.sh`, `test-e2e.sh`, `test-library-loading.sh`, `test-library-requirements.sh`, `test-goja-library-execution.sh`
+- Confirm coverage skew with:
+  - `GOWORK=off go test ./... -cover -count=1`
+
+### Technical details
+
+- Coverage output:
+  - `pkg/vmtransport/http 72.6%`
+  - others `0.0%`
+
+## Step 3: Dynamic edge-case probing for correctness and safety
+
+With baseline established, I ran targeted behavior probes to verify potential high-risk concerns discovered during code reading. I focused on session lifecycle consistency, error contracts, path boundaries, and limits behavior.
+
+This step produced the strongest defect evidence for the final report: boundary bypasses and contract mismatches were reproducible with minimal setups.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Go beyond tests and intentionally explore dynamic edge conditions to uncover hidden quality issues.
+
+**Inferred user intent:** Catch issues that static review or happy-path tests may miss.
+
+**Commit (code):** N/A
+
+### What I did
+
+Ran custom command sequences to probe:
+
+1. close semantics and missing execution status mapping
+- first close -> `200`
+- second close -> `404 SESSION_NOT_FOUND`
+- missing execution get -> `500 INTERNAL`
+
+2. run-file symlink escape
+- created symlink inside worktree pointing to JS file outside worktree
+- `/api/v1/executions/run-file` returned `201` and executed outside file
+
+3. startup file traversal
+- added startup file path `../outside-startup.js`
+- startup accepted (`201`), session created, and external startup value visible in REPL (`99`)
+
+4. startup failure lifecycle
+- invalid startup script caused `500` on session creation
+- runtime summary still showed `active_sessions:1`
+
+5. limit-enforcement persistence mismatch
+- forced tight limits via DB update
+- repl request returned `422 OUTPUT_LIMIT_EXCEEDED`
+- executions list showed persisted execution `status:"ok"` with result
+
+### Why
+
+These probes directly test security and contract boundaries that were not comprehensively covered by current integration tests.
+
+### What worked
+
+- The custom probes reliably reproduced the same behavior multiple times.
+- The observed outputs mapped cleanly back to specific code paths.
+
+### What didn't work
+
+One intermediate limits test failed due DB storage-type mismatch after manual SQL update:
+
+- `failed to get VM settings: sql: Scan error on column index 1, name "limits_json": unsupported Scan, storing driver.Value type string into type *json.RawMessage`
+
+I corrected this by casting the JSON literal to `BLOB` in sqlite update.
+
+### What I learned
+
+- Current run-file protection is string/relative-path based, not canonical-path safe.
+- Startup path policy is less strict than run-file policy.
+- Session startup error handling has map-lifecycle leak side effects.
+
+### What was tricky to build
+
+The limits probe required care around SQLite value typing because direct SQL updates produced `TEXT` values that failed scanning into `json.RawMessage`. The workaround (`CAST(... AS BLOB)`) restored parity with the application write path.
+
+### What warrants a second pair of eyes
+
+- Security review specifically on path-canonicalization and symlink handling.
+- Product/API decision on close idempotency and limit-exceeded persistence semantics.
+
+### What should be done in the future
+
+- Add regression tests for:
+  - startup traversal rejection
+  - symlink escape rejection
+  - startup-failure runtime-summary consistency
+  - execution-limit result/status contract
+
+### Code review instructions
+
+- Reproduce each probe in isolated temp DB/worktree.
+- Compare runtime responses with implementation at:
+  - `pkg/vmcontrol/execution_service.go`
+  - `pkg/vmsession/session.go`
+  - `pkg/vmexec/executor.go`
+
+### Technical details
+
+Observed outputs (representative):
+
+- second close:
+  - `{"error":{"code":"SESSION_NOT_FOUND",...}}` with `404`
+- missing execution:
+  - `{"error":{"code":"INTERNAL","message":"execution not found"...}}` with `500`
+- symlink run-file:
+  - `status=201`, execution `status:"ok"`
+- startup traversal:
+  - startup add `201`, REPL result preview `99`
+- limit mismatch:
+  - request `422 OUTPUT_LIMIT_EXCEEDED`, list shows stored `status:"ok"`
+
+## Step 4: Static deep review synthesis and report authoring
+
+After dynamic probes, I completed package-by-package static inspection and merged code evidence with runtime evidence into the final report document.
+
+The report was structured to prioritize defects by severity and include concrete remediation sketches rather than only critiques.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Deliver a deep detailed quality assessment covering duplication, structure, deprecated code, confusing APIs, missing abstractions, and unidiomatic patterns.
+
+**Inferred user intent:** Get a practical quality blueprint for cleanup and stabilization, not only an issue list.
+
+**Commit (code):** N/A
+
+### What I did
+
+- Inspected all main backend packages and command surfaces.
+- Quantified duplication hotspots (for example, repeated `vmclient.New(...)` usage and duplicated executor pipelines).
+- Authored the full report in:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/design-doc/01-comprehensive-vm-system-implementation-quality-review.md`
+
+### Why
+
+A useful review should tie each claim to location and runtime implications, then convert findings into a prioritized cleanup sequence.
+
+### What worked
+
+- Static and dynamic evidence aligned on major issues.
+- Report format captures both immediate risks and phased cleanup plan.
+
+### What didn't work
+
+- N/A (no tooling blockers in this phase)
+
+### What I learned
+
+- The architecture is structurally promising, but safety and legacy cleanup are the dominant next-leverage tasks.
+- VM-005 docs already acknowledge several weak spots; the highest-value next work is implementation alignment, not more broad analysis.
+
+### What was tricky to build
+
+The main challenge was separating "architectural direction is good" from "current behavior still unsafe/confusing in important edges" without flattening nuance. I resolved this by ordering findings by impact and explicitly listing strengths separately.
+
+### What warrants a second pair of eyes
+
+- Severity ranking for close idempotency and legacy modules command treatment.
+- Prioritization of phase-1 fixes if only one sprint is available.
+
+### What should be done in the future
+
+- Spin follow-up implementation tickets directly from report phases (safety first, then surface cleanup, then refactor/test-balance).
+
+### Code review instructions
+
+- Read report sections in order:
+  1. Findings (severity ordered)
+  2. Alignment with VM-001/004/005
+  3. Prioritized cleanup plan
+- For each high-severity issue, verify runtime evidence in this diary Step 3.
+
+### Technical details
+
+- Duplication count example:
+  - `vmclient.New(serverURL, nil)` appears 17 times across command handlers.
+
+## Step 5: Docmgr bookkeeping and reMarkable upload
+
+This step captures final task/checklist updates, file relations, changelog updates, and reMarkable upload outputs.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Finalize VM-006 deliverables in docmgr and upload to reMarkable.
+
+**Inferred user intent:** Ensure review output is documented, traceable, and delivered to reading device.
+
+**Commit (code):** N/A
+
+### What I did
+
+- Marked remaining VM-006 task complete in `tasks.md`.
+- Updated ticket `index.md` and `changelog.md` with completion status and delivery notes.
+- Verified upload prerequisites:
+  - `remarquee status` -> `remarquee: ok`
+  - `remarquee cloud account --non-interactive` -> `user=wesen@ruinwesen.com sync_version=1.5`
+  - `which pandoc && which xelatex` confirmed both present.
+- Ran upload dry-run:
+  - `remarquee upload bundle --dry-run <report> <diary> --name "VM-006-REVIEW-VM-SYSTEM Review + Diary" --remote-dir "/ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM" --toc-depth 2`
+- Ran real upload:
+  - `remarquee upload bundle <report> <diary> --name "VM-006-REVIEW-VM-SYSTEM Review + Diary" --remote-dir "/ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM" --toc-depth 2`
+- Verified remote listing:
+  - `remarquee cloud ls /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM --long --non-interactive`
+
+### Why
+
+- Ticket artifacts should be complete and discoverable, with explicit delivery confirmation.
+
+### What worked
+
+- Dry-run and real upload succeeded on first attempt.
+- Remote verification showed expected uploaded bundle document.
+
+### What didn't work
+
+- Initial `docmgr doc relate --doc ...` call failed with:
+  - `expected exactly 1 doc for --doc "...", got 0`
+- Root cause was path selection; command succeeded when retried with absolute doc paths.
+
+### What I learned
+
+- For this docmgr setup, absolute `--doc` paths are the safest choice for scripted relation updates.
+- Bundle upload gives a cleaner reMarkable reading artifact than separate single-doc uploads for long review material.
+
+### What was tricky to build
+
+- The report and diary are both long and include many code paths; bundling them while preserving a usable table of contents required using `upload bundle` with `--toc-depth 2` and a stable ticket folder path.
+
+### What warrants a second pair of eyes
+
+- Confirm uploaded document naming and remote folder convention.
+
+### What should be done in the future
+
+- Keep a stable ticket-based remote upload path convention for archive consistency.
+
+### Code review instructions
+
+- Verify docmgr task/changelog/related-file updates.
+- Verify remote listing after upload.
+
+### Technical details
+
+- Dry-run output confirmed include paths and render target:
+  - `DRY: upload VM-006-REVIEW-VM-SYSTEM Review + Diary.pdf -> /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM`
+- Real upload output:
+  - `OK: uploaded VM-006-REVIEW-VM-SYSTEM Review + Diary.pdf -> /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM`
+- Remote verification output:
+  - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary`
