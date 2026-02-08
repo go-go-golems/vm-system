@@ -88,3 +88,15 @@ Completed Task 5 by removing duplicated VM settings config structs from `vmcontr
 ## 2026-02-08
 
 Type-system follow-up completed; all VM-006 tasks closed.
+
+## 2026-02-08
+
+Reopened VM-006 for Type-System Follow-Up 2 and completed Task 1 by adding typed UUID-backed ID wrappers/parsers for template/session/execution IDs with unit test coverage.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/ids.go - Added typed ID wrappers and parse helpers
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/ids_test.go - Added unit tests for typed ID parse/validation behavior
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Added follow-up 2 task block and marked Task 1 complete
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/index.md - Reopened ticket status for continued implementation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 11 implementation diary entry

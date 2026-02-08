@@ -18,3 +18,9 @@
 - [x] Validate and resolve startup file paths through typed path model (API + session runtime) and add traversal/symlink safety tests
 - [x] Add typed `ErrExecutionNotFound` contract end-to-end (store + transport + integration tests)
 - [x] Remove duplicated VM settings config structs from `vmcontrol` by reusing `vmmodels` types
+
+## Type-System Follow-Up 2
+
+- [x] Introduce typed ID wrappers/parsers (`TemplateID`, `SessionID`, `ExecutionID`) with unit tests
+- [ ] Enforce typed ID validation at HTTP boundary (path/body/query) and extend integration tests for malformed IDs
+- [ ] Revise VM-006 review/improvement report to reflect implemented type-system hardening and updated risk profile

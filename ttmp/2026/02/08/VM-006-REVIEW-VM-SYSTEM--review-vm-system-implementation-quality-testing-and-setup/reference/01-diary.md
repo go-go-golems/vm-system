@@ -886,3 +886,86 @@ This keeps one authoritative schema for limits/resolver/runtime settings and red
 ### Technical details
 
 - This step changed type declarations only; runtime behavior remains unchanged except reduced duplication risk.
+
+## Step 11: Type-system follow-up 2 kickoff and typed ID primitives
+
+I started the second follow-up wave by introducing typed ID wrappers/parsers in `vmmodels` for template/session/execution IDs. This establishes a reusable boundary-validation primitive before wiring it into HTTP handlers.
+
+The implementation intentionally uses UUID parsing and normalized string output so call sites can trust canonical ID representation.
+
+### Prompt Context
+
+**User prompt (verbatim):** "continue, same way, add tasks, etc... Then revise the review and improvement document."
+
+**Assistant interpretation:** Continue the same task-by-task implementation workflow with commits and diary updates, then update the review document to reflect new improvements.
+
+**Inferred user intent:** Keep iterating on robustness improvements with disciplined ticket bookkeeping.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Added new task block (`Type-System Follow-Up 2`) in ticket tasks.
+- Reopened ticket status in index to active/in-progress for this wave.
+- Added typed ID implementation:
+  - `pkg/vmmodels/ids.go`
+  - `TemplateID`, `SessionID`, `ExecutionID`
+  - parse functions:
+    - `ParseTemplateID`
+    - `ParseSessionID`
+    - `ParseExecutionID`
+  - panic helpers for strict call sites:
+    - `MustTemplateID`
+    - `MustSessionID`
+    - `MustExecutionID`
+  - typed validation errors:
+    - `ErrInvalidTemplateID`
+    - `ErrInvalidSessionID`
+    - `ErrInvalidExecutionID`
+- Added unit tests:
+  - `pkg/vmmodels/ids_test.go`
+  - valid/invalid parsing checks + panic helper checks
+- Ran:
+  - `gofmt -w pkg/vmmodels/ids.go pkg/vmmodels/ids_test.go`
+  - `GOWORK=off go test ./pkg/vmmodels -count=1`
+
+### Why
+
+- IDs are currently mostly raw strings at boundaries; typed wrappers reduce accidental misuse and make validation intent explicit.
+
+### What worked
+
+- New typed ID package compiled cleanly.
+- Unit tests passed.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- A thin type layer around UUID parsing gives strong value with low integration risk.
+
+### What was tricky to build
+
+- Error design needed to balance typed domain errors with detailed underlying parse context; I used wrapped typed errors so `errors.Is` remains useful.
+
+### What warrants a second pair of eyes
+
+- Confirm whether `Must*ID` helpers should stay (panic-based) or be removed to enforce error-return-only style.
+
+### What should be done in the future
+
+- Wire these parsers into HTTP boundary validation for path/query/body IDs (next task).
+
+### Code review instructions
+
+- Review new files:
+  - `pkg/vmmodels/ids.go`
+  - `pkg/vmmodels/ids_test.go`
+- Re-run:
+  - `GOWORK=off go test ./pkg/vmmodels -count=1`
+
+### Technical details
+
+- IDs are normalized to canonical UUID string representation through `uuid.Parse(...).String()`.

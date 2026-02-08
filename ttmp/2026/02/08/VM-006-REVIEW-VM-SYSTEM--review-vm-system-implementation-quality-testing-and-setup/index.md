@@ -1,7 +1,7 @@
 ---
 Title: Review vm-system implementation quality, testing, and setup
 Ticket: VM-006-REVIEW-VM-SYSTEM
-Status: complete
+Status: active
 Topics:
     - backend
 DocType: index
@@ -32,9 +32,9 @@ This ticket delivers a deep implementation quality review of `vm-system` using b
 
 ## Status
 
-Current status: **complete**
+Current status: **active**
 
-Task status: **all tasks completed**
+Task status: **type-system follow-up 2 in progress**
 
 ## Topics
 
