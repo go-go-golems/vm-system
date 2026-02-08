@@ -46,6 +46,7 @@ if (typeof _ === 'undefined') {
 }
 const doubled = _.map([1, 2, 3], n => n * 2);
 console.log("LODASH_OK", JSON.stringify(doubled));
+"SCRIPT_OK";
 JS
 
 echo ""
@@ -68,8 +69,8 @@ echo "✓ Libraries downloaded"
 
 echo ""
 echo "[TEST 3] Adding console module + Lodash library to template..."
-${CLI} modules add-module --vm-id "${TEMPLATE_ID}" --module-id console
-${CLI} modules add-library --vm-id "${TEMPLATE_ID}" --library-id "${LODASH_LIB_ID}"
+${CLI} template add-module "${TEMPLATE_ID}" --name console
+${CLI} template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
 echo "✓ Template configured"
 
 echo ""

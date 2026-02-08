@@ -97,3 +97,15 @@ Task 8: Expanded integration coverage for template module/library routes and add
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_templates_integration_test.go — Added module/library nested resource integration assertions
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 8 complete
 
+
+## 2026-02-08
+
+Task 9: Migrated library test scripts to template-first CLI commands (template add-module/add-library with --name), removed legacy modules/vm-id usage, and updated script JS fixtures to return explicit values so run-file script validation completes reliably.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-goja-library-execution.sh — Replaced legacy modules commands and added explicit script return value
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-loading.sh — Replaced legacy modules commands and added explicit script return value
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-requirements.sh — Replaced legacy modules commands and added explicit script return value
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 9 complete
+

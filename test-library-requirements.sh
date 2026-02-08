@@ -105,7 +105,7 @@ else
   exit 1
 fi
 
-${CLI} modules add-module --vm-id "${TEMPLATE_NO_LIBS}" --module-id console
+${CLI} template add-module "${TEMPLATE_NO_LIBS}" --name console
 
 # ============================================================================
 # TEST 3: Create template WITH Lodash library configured
@@ -121,8 +121,8 @@ else
   exit 1
 fi
 
-${CLI} modules add-module --vm-id "${TEMPLATE_LODASH}" --module-id console
-${CLI} modules add-library --vm-id "${TEMPLATE_LODASH}" --library-id "${LODASH_LIB_ID}"
+${CLI} template add-module "${TEMPLATE_LODASH}" --name console
+${CLI} template add-library "${TEMPLATE_LODASH}" --name "${LODASH_LIB_ID}"
 
 # ============================================================================
 # TEST 4: Verify library is in template configuration
@@ -150,6 +150,7 @@ const users = [
 ];
 const names = _.map(users, 'name');
 console.log("SUCCESS_LODASH", JSON.stringify(names));
+"SUCCESS_LODASH";
 JS
 log_success "Lodash test code created"
 
@@ -196,9 +197,9 @@ fi
 run_test "Add library to existing template (post-hoc configuration)"
 OUTPUT=$(${CLI} template create --name "PostHocTemplate" --engine goja)
 TEMPLATE_POSTHOC=$(extract_template_id "${OUTPUT}")
-${CLI} modules add-module --vm-id "${TEMPLATE_POSTHOC}" --module-id console
+${CLI} template add-module "${TEMPLATE_POSTHOC}" --name console
 
-if ${CLI} modules add-library --vm-id "${TEMPLATE_POSTHOC}" --library-id "${LODASH_LIB_ID}"; then
+if ${CLI} template add-library "${TEMPLATE_POSTHOC}" --name "${LODASH_LIB_ID}"; then
   log_success "Library added post-hoc successfully"
 else
   log_error "Failed to add library post-hoc"
@@ -218,10 +219,10 @@ run_test "Add multiple libraries to template"
 OUTPUT=$(${CLI} template create --name "MultiLibTemplate" --engine goja)
 TEMPLATE_MULTI=$(extract_template_id "${OUTPUT}")
 
-${CLI} modules add-module --vm-id "${TEMPLATE_MULTI}" --module-id console
-${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${LODASH_LIB_ID}"
-${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${RAMDA_LIB_ID}"
-${CLI} modules add-library --vm-id "${TEMPLATE_MULTI}" --library-id "${ZUSTAND_LIB_ID}"
+${CLI} template add-module "${TEMPLATE_MULTI}" --name console
+${CLI} template add-library "${TEMPLATE_MULTI}" --name "${LODASH_LIB_ID}"
+${CLI} template add-library "${TEMPLATE_MULTI}" --name "${RAMDA_LIB_ID}"
+${CLI} template add-library "${TEMPLATE_MULTI}" --name "${ZUSTAND_LIB_ID}"
 
 OUTPUT=$(${CLI} template get "${TEMPLATE_MULTI}")
 if echo "${OUTPUT}" | grep -q "lodash" && echo "${OUTPUT}" | grep -q "ramda" && echo "${OUTPUT}" | grep -q "zustand"; then

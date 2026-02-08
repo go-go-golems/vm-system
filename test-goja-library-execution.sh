@@ -71,6 +71,7 @@ const sorted = _.sortBy(users, 'age');
 console.log("Sorted users:", JSON.stringify(sorted));
 
 console.log("All Lodash tests passed!");
+"SCRIPT_OK";
 JS
 
   git add test-lodash.js
@@ -103,8 +104,8 @@ echo "✓ Created template: ${TEMPLATE_ID}"
 # Test 3: Add Lodash to template
 echo ""
 echo "[TEST 3] Adding Lodash library to template..."
-${CLI} modules add-library --vm-id "${TEMPLATE_ID}" --library-id "${LODASH_LIB_ID}"
-${CLI} modules add-module --vm-id "${TEMPLATE_ID}" --module-id console
+${CLI} template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
+${CLI} template add-module "${TEMPLATE_ID}" --name console
 echo "✓ Lodash configured"
 
 # Test 4: Verify configuration

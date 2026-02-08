@@ -33,6 +33,12 @@ RelatedFiles:
       Note: Task 2 template module/library API endpoints
     - Path: pkg/vmtransport/http/server_templates_integration_test.go
       Note: Task 8 template module/library endpoint integration coverage
+    - Path: test-goja-library-execution.sh
+      Note: Task 9 template command migration for script flow
+    - Path: test-library-loading.sh
+      Note: Task 9 template command migration for script flow
+    - Path: test-library-requirements.sh
+      Note: Task 9 template command migration for script flow
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/changelog.md
       Note: |-
         Task-level change record
@@ -44,6 +50,7 @@ RelatedFiles:
         Task 6 changelog entry
         Task 7 changelog entry
         Task 8 changelog entry
+        Task 9 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -59,12 +66,14 @@ RelatedFiles:
         Task 6 checklist update
         Task 7 checklist update
         Task 8 checklist update
+        Task 9 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -594,7 +603,7 @@ This ensures VM-008 endpoint and CLI-path migration is backed by tests rather th
 
 **Inferred user intent:** Lock in the cleanup with durable tests that would fail if legacy paths or missing template command coverage regressed.
 
-**Commit (code):** Pending for Step 8 commit creation.
+**Commit (code):** 6a32665 — "vm008: expand template module/library integration tests (task 8)"
 
 ### What I did
 
@@ -658,3 +667,92 @@ The subtle part was balancing endpoint coverage depth without making tests britt
 - New route coverage includes:
   - `POST/GET/DELETE /api/v1/templates/{template_id}/modules[/{module_name}]`
   - `POST/GET/DELETE /api/v1/templates/{template_id}/libraries[/{library_name}]`
+
+## Step 9: Migrate script surfaces to template-first commands
+
+I migrated script surfaces from removed legacy `modules add-* --vm-id` commands to template-first commands and verified end-to-end script execution against the updated CLI surface.
+
+During validation I found run-file script executions panicked when script files ended with implicit undefined results, so I updated test fixture snippets in scripts to return explicit terminal string values to keep script validation deterministic.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Complete Task 9 by updating shell scripts and helpers to template-first command usage only.
+
+**Inferred user intent:** Remove remaining legacy command usage from operational test surfaces and ensure scripts still execute successfully.
+
+**Commit (code):** Pending for Step 9 commit creation.
+
+### What I did
+
+- Updated `test-goja-library-execution.sh`:
+  - replaced legacy:
+    - `modules add-library --vm-id ... --library-id ...`
+    - `modules add-module --vm-id ... --module-id ...`
+  - with:
+    - `template add-library <template-id> --name ...`
+    - `template add-module <template-id> --name ...`
+  - added explicit script terminal value (`"SCRIPT_OK";`) in generated JS fixture
+- Updated `test-library-loading.sh`:
+  - replaced legacy module/library command usage with template-first command usage
+  - added explicit script terminal value (`"SCRIPT_OK";`) in generated JS fixture
+- Updated `test-library-requirements.sh`:
+  - replaced all legacy module/library command usages with template-first command usage
+  - added explicit terminal value (`"SUCCESS_LODASH";`) in generated Lodash JS fixture
+- Verified no remaining legacy script command terms:
+  - `rg -n "modules add-|--vm-id|--module-id|--library-id" -S -g '*.sh'` (no matches)
+- Validation:
+  - `./test-library-loading.sh`
+  - `./test-goja-library-execution.sh`
+  - `./test-library-requirements.sh`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 9 explicitly targets script and helper surfaces so command migration is complete beyond Go code and docs.
+
+### What worked
+
+- Template command migration in scripts worked as intended and aligned with new CLI.
+- After explicit terminal return values were added to fixture JS, all three script suites passed.
+
+### What didn't work
+
+- Initial script validation failed with daemon EOF during `exec run-file`.
+- Root cause from daemon logs: panic in `pkg/vmexec/executor.go` `valuePayloadJSON` when run-file result was nil/undefined.
+- Mitigation used for this task scope: explicit final JS values in script fixtures to avoid nil execution result during script validation.
+
+### What I learned
+
+- Legacy command migration can uncover latent runtime assumptions in existing script fixtures, especially around execution-result serialization.
+
+### What was tricky to build
+
+The non-obvious issue was separating true command-migration failures from unrelated runtime panics. I used daemon logs to confirm command migration worked and only then adjusted script fixtures so task scope remained script-surface focused.
+
+### What warrants a second pair of eyes
+
+- Review whether the nil-result panic should be fixed in executor core as a follow-up hardening item instead of relying only on fixture explicit return values.
+
+### What should be done in the future
+
+- Continue with docs cleanup (Task 10) and final guard pass (Task 11), then run full matrix (Task 12) while deciding whether to address nil-result executor hardening in this ticket or follow-up.
+
+### Code review instructions
+
+- Start with:
+  - `test-goja-library-execution.sh`
+  - `test-library-loading.sh`
+  - `test-library-requirements.sh`
+- Validate with:
+  - `./test-library-loading.sh`
+  - `./test-goja-library-execution.sh`
+  - `./test-library-requirements.sh`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- Script command migration form:
+  - `vm-system template add-module <template-id> --name <module>`
+  - `vm-system template add-library <template-id> --name <library>`
