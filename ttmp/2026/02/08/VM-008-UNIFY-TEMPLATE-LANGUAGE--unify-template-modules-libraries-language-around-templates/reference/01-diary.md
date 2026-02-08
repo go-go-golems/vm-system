@@ -21,6 +21,8 @@ RelatedFiles:
       Note: Task 8 template command-path coverage
     - Path: cmd/vm-system/main.go
       Note: Task 6 removed modules command registration
+    - Path: docs/getting-started-from-first-vm-to-contributor-guide.md
+      Note: Task 10 template-only guide cleanup
     - Path: pkg/vmclient/templates_client.go
       Note: Task 4 vmclient template module/library methods
     - Path: pkg/vmcontrol/ports.go
@@ -51,6 +53,7 @@ RelatedFiles:
         Task 7 changelog entry
         Task 8 changelog entry
         Task 9 changelog entry
+        Task 10 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -67,12 +70,14 @@ RelatedFiles:
         Task 7 checklist update
         Task 8 checklist update
         Task 9 checklist update
+        Task 10 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -682,7 +687,7 @@ During validation I found run-file script executions panicked when script files 
 
 **Inferred user intent:** Remove remaining legacy command usage from operational test surfaces and ensure scripts still execute successfully.
 
-**Commit (code):** Pending for Step 9 commit creation.
+**Commit (code):** 3e5e4ea — "vm008: migrate script surfaces to template commands (task 9)"
 
 ### What I did
 
@@ -756,3 +761,79 @@ The non-obvious issue was separating true command-migration failures from unrela
 - Script command migration form:
   - `vm-system template add-module <template-id> --name <module>`
   - `vm-system template add-library <template-id> --name <library>`
+
+## Step 10: Update getting-started guide to template-only language and flows
+
+I updated the long-form getting-started guide to remove legacy module-command caveats and present template-only command language throughout operational and contributor reference sections.
+
+This aligns documentation with the implemented CLI/API state so contributors no longer see stale legacy-path guidance.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Complete Task 10 by rewriting guide sections that still reference legacy modules/vm-id terminology and adding current template command examples.
+
+**Inferred user intent:** Ensure onboarding and contributor docs match the clean-cut template-first implementation.
+
+**Commit (code):** Pending for Step 10 commit creation.
+
+### What I did
+
+- Updated `docs/getting-started-from-first-vm-to-contributor-guide.md`:
+  - removed legacy `modules` command mention from command group overview
+  - removed command-layer references to `cmd_modules.go`
+  - rewrote CLI/API cutover status section to template-only framing
+  - removed legacy caveat wording around `modules add-*`/`--vm-id`
+  - updated FAQ entry for `--db` wording to remove legacy direct-DB command claim
+  - expanded quick reference template workflow with:
+    - `template add-module`
+    - `template add-library`
+    - `template list-modules`
+    - `template list-libraries`
+    - `template list-available-modules`
+    - `template list-available-libraries`
+- Ran verification:
+  - `rg -n "modules add-|--vm-id|cmd_modules|legacy direct-DB|\\bmodules\\b" docs/getting-started-from-first-vm-to-contributor-guide.md -S`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 10 requires docs to present only intentional template vocabulary and flows after CLI/API cleanup.
+
+### What worked
+
+- Guide updates were localized to command-surface and contributor workflow sections and now match current command behavior.
+- Search guard on that guide returned no residual legacy command terms.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Keeping quick-reference command blocks synchronized with CLI evolution is the highest leverage way to prevent contributor confusion.
+
+### What was tricky to build
+
+The subtle part was preserving useful architecture context that still uses internal VM model terms while removing user-facing legacy command vocabulary. I limited wording changes to user-facing command/documentation contexts.
+
+### What warrants a second pair of eyes
+
+- Confirm reviewers agree with retaining internal VM runtime terminology in architecture explanation sections while enforcing template wording for user-facing command flows.
+
+### What should be done in the future
+
+- Run global search guard pass (Task 11) across CLI/docs/scripts and document any intentional exceptions.
+
+### Code review instructions
+
+- Start with:
+  - `docs/getting-started-from-first-vm-to-contributor-guide.md`
+- Validate with:
+  - `rg -n "modules add-|--vm-id|cmd_modules|legacy direct-DB|\\bmodules\\b" docs/getting-started-from-first-vm-to-contributor-guide.md -S`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- The guide now documents template module/library command flows directly in Appendix A quick reference.

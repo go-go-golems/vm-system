@@ -109,3 +109,13 @@ Task 9: Migrated library test scripts to template-first CLI commands (template a
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-requirements.sh — Replaced legacy modules commands and added explicit script return value
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 9 complete
 
+
+## 2026-02-08
+
+Task 10: Updated getting-started guide to template-only vocabulary and flows, removed legacy modules/vm-id caveats, and documented template module/library commands in quick reference.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/docs/getting-started-from-first-vm-to-contributor-guide.md — Removed legacy caveats and added template module/library command guidance
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 10 complete
+

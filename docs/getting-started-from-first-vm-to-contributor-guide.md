@@ -87,7 +87,6 @@ You should see command groups:
 - `template`
 - `session`
 - `exec`
-- `modules`
 - `libs`
 
 For daily backend work, `serve`, `template`, `session`, and `exec` are the main path.
@@ -342,13 +341,13 @@ This section explains how the implementation is structured so you can change cod
   - daemon bootstrap command
   - wires `vmdaemon` + HTTP handler
 - `cmd_template.go`
-  - template CRUD + startup/capability operations
+  - template CRUD + startup/capability/module/library operations
 - `cmd_session.go`
   - create/list/get/close semantics
 - `cmd_exec.go`
   - repl/run-file/get/list/events
-- `cmd_modules.go`, `cmd_libs.go`
-  - utility/legacy support for modules/libraries
+- `cmd_libs.go`
+  - cache utility operations for downloadable libraries
 
 ### Core orchestration (`pkg/vmcontrol`)
 
@@ -519,18 +518,15 @@ Libraries:
 Practical consequence:
 
 - there is a known mismatch risk in library loading path conventions
-- library integration tests and scripts should be treated as partially legacy until normalized
+- library integration tests and scripts use template-first command surfaces
 
 ## 7) CLI/API cutover status
 
 Current CLI runtime commands are daemon-oriented (`template`, `session`, `exec`), which is good.
 
-Still present:
+Template module/library operations are exposed through `template` subcommands and corresponding template API routes.
 
-- `modules add-module` and `modules add-library` mutate DB directly and use `--vm-id` terminology
-- this is partly legacy vocabulary and bypasses API-level validation paths
-
-As a contributor, avoid expanding legacy direct-DB command paths unless intentionally maintaining backward compatibility.
+As a contributor, keep template resource changes on the template command/API path and avoid introducing duplicate command surfaces.
 
 ## Implementation walkthrough: concrete files to read in order
 
@@ -895,6 +891,12 @@ GOWORK=off go build -o vm-system ./cmd/vm-system
 ./vm-system template list
 ./vm-system template add-capability <template-id> --kind module --name console --enabled
 ./vm-system template add-startup <template-id> --path runtime/init.js --order 10 --mode eval
+./vm-system template add-module <template-id> --name console
+./vm-system template add-library <template-id> --name lodash-4.17.21
+./vm-system template list-modules <template-id>
+./vm-system template list-libraries <template-id>
+./vm-system template list-available-modules
+./vm-system template list-available-libraries
 ./vm-system template get <template-id>
 ./vm-system template list-capabilities <template-id>
 ./vm-system template list-startup <template-id>
@@ -1619,7 +1621,7 @@ Use integration tests as reference for deterministic setup (`setTightLimitsForTe
 
 ### Q1: Why does the CLI still expose `--db` if runtime commands use daemon API?
 
-`--db` is still used by `serve` and legacy direct-DB commands. For daemon API client mode commands, `--server-url` is the primary runtime selector.
+`--db` is used by `serve` (daemon persistence). For daemon API client mode commands, `--server-url` is the primary runtime selector.
 
 ### Q2: Is this project multi-tenant or auth-enabled?
 
