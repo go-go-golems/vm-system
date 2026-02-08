@@ -4,9 +4,19 @@ set -euo pipefail
 echo "=== VM System End-to-End Test (Daemon-First) ==="
 echo ""
 
-DB_PATH="vm-system-test.db"
-WORKTREE="test-workspace"
-SERVER_ADDR="127.0.0.1:3327"
+RUN_ID="$(date +%s)-$$"
+DB_PATH="${TMPDIR:-/tmp}/vm-system-test-${RUN_ID}.db"
+WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/test-workspace-e2e-${RUN_ID}-XXXX")"
+SERVER_PORT="$(
+python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+SERVER_ADDR="127.0.0.1:${SERVER_PORT}"
 SERVER_URL="http://$SERVER_ADDR"
 CLI="./vm-system --server-url $SERVER_URL --db $DB_PATH"
 DAEMON_PID=""
@@ -16,12 +26,13 @@ cleanup() {
     kill "$DAEMON_PID" >/dev/null 2>&1 || true
     wait "$DAEMON_PID" >/dev/null 2>&1 || true
   fi
+  rm -f "$DB_PATH" >/dev/null 2>&1 || true
+  rm -rf "$WORKTREE" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
 echo "1. Cleaning previous artifacts..."
-rm -f "$DB_PATH"
-rm -rf "$WORKTREE"
+:
 
 
 echo "2. Creating test workspace..."
@@ -77,7 +88,7 @@ echo ""
 
 
 echo "7. Creating session..."
-WORKTREE_PATH="$(pwd)/$WORKTREE"
+WORKTREE_PATH="$WORKTREE"
 SESSION_OUTPUT=$($CLI session create \
   --template-id "$TEMPLATE_ID" \
   --workspace-id ws-test-1 \

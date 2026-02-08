@@ -21,9 +21,19 @@ run_test() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
-DB_PATH="test-vm-system-daemon.db"
-WORKTREE="$(pwd)/test-workspace"
-SERVER_ADDR="127.0.0.1:3326"
+RUN_ID="$(date +%s)-$$"
+DB_PATH="${TMPDIR:-/tmp}/test-vm-system-daemon-${RUN_ID}.db"
+WORKTREE="$(mktemp -d "${TMPDIR:-/tmp}/test-workspace-smoke-${RUN_ID}-XXXX")"
+SERVER_PORT="$(
+python3 - <<'PY'
+import socket
+s = socket.socket()
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+)"
+SERVER_ADDR="127.0.0.1:${SERVER_PORT}"
 SERVER_URL="http://$SERVER_ADDR"
 CLI="./vm-system --server-url $SERVER_URL --db $DB_PATH"
 DAEMON_PID=""
@@ -33,13 +43,13 @@ cleanup() {
     kill "$DAEMON_PID" >/dev/null 2>&1 || true
     wait "$DAEMON_PID" >/dev/null 2>&1 || true
   fi
+  rm -f "$DB_PATH" >/dev/null 2>&1 || true
+  rm -rf "$WORKTREE" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
 log_info "Starting daemon-first VM System smoke tests"
 log_info "Preparing workspace and database"
-rm -f "$DB_PATH"
-rm -rf "$WORKTREE"
 mkdir -p "$WORKTREE"
 
 cat > "$WORKTREE/startup.js" <<'JS'
