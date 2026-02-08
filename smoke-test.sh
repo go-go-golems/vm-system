@@ -82,7 +82,7 @@ else
 fi
 
 run_test "List available modules"
-OUTPUT=$($CLI modules list-available)
+OUTPUT=$($CLI template list-available-modules)
 if echo "$OUTPUT" | grep -q "console"; then
   log_success "Module list contains console"
 else

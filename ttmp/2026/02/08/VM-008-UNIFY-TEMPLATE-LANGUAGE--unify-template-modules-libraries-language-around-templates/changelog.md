@@ -119,3 +119,13 @@ Task 10: Updated getting-started guide to template-only vocabulary and flows, re
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/docs/getting-started-from-first-vm-to-contributor-guide.md — Removed legacy caveats and added template module/library command guidance
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 10 complete
 
+
+## 2026-02-08
+
+Task 11: Ran final search guard for legacy user-facing terms and cleaned remaining active-surface hit in smoke-test by replacing modules list command with template list-available-modules; documented intentional exceptions for historical ticket/archive docs.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/smoke-test.sh — Replaced legacy modules list command with template list-available-modules
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 11 complete
+

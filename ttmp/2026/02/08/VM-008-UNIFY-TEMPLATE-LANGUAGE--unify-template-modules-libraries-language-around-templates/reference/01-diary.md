@@ -9,6 +9,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: LIBRARY_LOADING_DIARY.md
+      Note: Task 11 intentional historical exception reference
     - Path: cmd/vm-system/cmd_modules.go
       Note: |-
         Task 3 removed command-side store mutation logic
@@ -35,6 +37,8 @@ RelatedFiles:
       Note: Task 2 template module/library API endpoints
     - Path: pkg/vmtransport/http/server_templates_integration_test.go
       Note: Task 8 template module/library endpoint integration coverage
+    - Path: smoke-test.sh
+      Note: Task 11 final legacy-term guard cleanup
     - Path: test-goja-library-execution.sh
       Note: Task 9 template command migration for script flow
     - Path: test-library-loading.sh
@@ -54,6 +58,7 @@ RelatedFiles:
         Task 8 changelog entry
         Task 9 changelog entry
         Task 10 changelog entry
+        Task 11 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -71,12 +76,14 @@ RelatedFiles:
         Task 8 checklist update
         Task 9 checklist update
         Task 10 checklist update
+        Task 11 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -776,7 +783,7 @@ This aligns documentation with the implemented CLI/API state so contributors no 
 
 **Inferred user intent:** Ensure onboarding and contributor docs match the clean-cut template-first implementation.
 
-**Commit (code):** Pending for Step 10 commit creation.
+**Commit (code):** 2b2b78c — "vm008: update getting-started guide to template-first flow (task 10)"
 
 ### What I did
 
@@ -837,3 +844,81 @@ The subtle part was preserving useful architecture context that still uses inter
 ### Technical details
 
 - The guide now documents template module/library command flows directly in Appendix A quick reference.
+
+## Step 11: Run final legacy-term search guard and clean active-surface residuals
+
+I ran the specified search guard terms across active user-facing surfaces and cleaned the remaining hit in `smoke-test.sh` by switching to the template command equivalent.
+
+I also documented intentional exceptions: historical ticket/design/diary documents that retain legacy terms for audit history rather than active user guidance.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Complete Task 11 by doing a final pass for legacy user-facing terms and recording any intentional leftovers.
+
+**Inferred user intent:** Verify cleanup quality with explicit evidence and avoid silent regressions in user-facing command language.
+
+**Commit (code):** Pending for Step 11 commit creation.
+
+### What I did
+
+- Updated `smoke-test.sh`:
+  - replaced `modules list-available` with `template list-available-modules`
+- Ran search guard on active user-facing surfaces (`cmd`, `docs`, `*.sh`, `README.md`):
+  - `rg -n "\\bvm create\\b|\\bvm get\\b|--vm-id|modules add-|modules list-available" -S cmd docs *.sh README.md`
+  - `rg -n --fixed-strings -- "--vm-id" cmd docs *.sh README.md`
+  - both returned no matches after smoke-test update
+- Ran broader repo search for evidence and intentional exceptions:
+  - `rg -n "\\bvm create\\b|\\bvm get\\b|modules add-" -S .`
+  - remaining hits are in historical archives and ticket/design/diary materials (`ttmp/...`) and `LIBRARY_LOADING_DIARY.md`
+- Validation:
+  - `GOWORK=off go test ./... -count=1`
+  - `./smoke-test.sh`
+
+### Why
+
+Task 11 requires an explicit guard pass and intentional exception accounting, not just ad-hoc cleanup.
+
+### What worked
+
+- Guard search was clean on active command/docs/script surfaces after one targeted smoke script update.
+- Smoke and go test validation passed.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- A scoped “active surfaces” search plus explicit “historical archive” exception list is the most reviewable way to close terminology cleanup tasks.
+
+### What was tricky to build
+
+The nuanced part was distinguishing active user-facing content from historical records that should remain unchanged for auditability. I treated ticket archives and historical diaries as intentional exceptions and documented them instead of rewriting history.
+
+### What warrants a second pair of eyes
+
+- Confirm the intentional exception scope is acceptable:
+  - historical materials under `ttmp/...`
+  - `LIBRARY_LOADING_DIARY.md` as retrospective historical doc
+
+### What should be done in the future
+
+- Run full final matrix (Task 12) and close the ticket with consolidated evidence and any open reviewer decisions.
+
+### Code review instructions
+
+- Start with:
+  - `smoke-test.sh`
+  - `ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md`
+  - `ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/changelog.md`
+- Validate with:
+  - `rg -n "\\bvm create\\b|\\bvm get\\b|--vm-id|modules add-|modules list-available" -S cmd docs *.sh README.md`
+  - `rg -n --fixed-strings -- "--vm-id" cmd docs *.sh README.md`
+  - `GOWORK=off go test ./... -count=1`
+  - `./smoke-test.sh`
+
+### Technical details
+
+- Intentional exceptions preserve historical context and are not part of active user-facing command guidance.
