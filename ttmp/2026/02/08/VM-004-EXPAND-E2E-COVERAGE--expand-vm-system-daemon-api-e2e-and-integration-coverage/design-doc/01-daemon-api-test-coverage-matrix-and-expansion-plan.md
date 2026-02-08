@@ -12,13 +12,23 @@ RelatedFiles:
       Note: Route surface and error contract mapping to test
     - Path: vm-system/pkg/vmtransport/http/server_integration_test.go
       Note: Existing single continuity test baseline
+    - Path: vm-system/pkg/vmtransport/http/server_templates_integration_test.go
+      Note: Template endpoint CRUD and nested-resource coverage
+    - Path: vm-system/pkg/vmtransport/http/server_sessions_integration_test.go
+      Note: Session lifecycle plus runtime summary transition coverage
+    - Path: vm-system/pkg/vmtransport/http/server_executions_integration_test.go
+      Note: Execution endpoint lifecycle coverage
+    - Path: vm-system/pkg/vmtransport/http/server_error_contracts_integration_test.go
+      Note: Validation/not-found/conflict/unprocessable error contract coverage
+    - Path: vm-system/pkg/vmtransport/http/server_safety_integration_test.go
+      Note: Path traversal and limit-enforcement safety coverage
     - Path: vm-system/smoke-test.sh
       Note: Current daemon-first smoke validation script
     - Path: vm-system/test-e2e.sh
       Note: Current daemon-first e2e script behavior and gaps
 ExternalSources: []
-Summary: Coverage matrix and implementation plan for expanding daemon/API integration tests, error-path assertions, and script reliability checks.
-LastUpdated: 2026-02-08T10:45:00-05:00
+Summary: Coverage matrix, implemented test expansion, and residual risk report for daemon/API integration and e2e behavior.
+LastUpdated: 2026-02-08T10:43:00-05:00
 WhatFor: Establish comprehensive automated coverage for vm-system daemon/API behavior and close high-risk regression gaps.
 WhenToUse: Use when implementing or reviewing test coverage for template/session/execution APIs, runtime safety checks, and smoke/e2e workflows.
 ---
@@ -71,6 +81,26 @@ Expand test coverage in three layers:
 | Error contract mapping | minimal direct assertion | Weak |
 | Safety path traversal/limits | minimal assertion | Weak |
 | Script parallel safety | fixed path/port, race-prone when parallelized | Weak |
+
+### Coverage Matrix (After Tasks 3-9)
+
+| Surface | Added coverage artifacts | Status |
+|---|---|---|
+| Template endpoints (`/templates*`) | `TestTemplateEndpointsCRUDAndNestedResources` | Strong |
+| Session endpoints (`/sessions*`) | `TestSessionLifecycleEndpoints` with status filters + close/delete | Strong |
+| Execution endpoints (`/executions*`) | `TestExecutionEndpointsLifecycle` with list/get/events/after_seq | Strong |
+| Error contracts (`400/404/409/422`) | `TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable` | Strong |
+| Safety (path traversal + limits) | `TestSafetyPathTraversalAndOutputLimitEnforcement` | Strong |
+| Runtime summary transitions | session lifecycle test asserts active session count 2 -> 1 -> 0 | Strong |
+| Script parallel safety | `smoke-test.sh` + `test-e2e.sh` use temp dirs, temp db files, dynamic ports | Strong |
+
+### Residual Risk Gaps
+
+1. Metadata endpoints (`/api/v1/metadata/*`) are not implemented yet, therefore not covered.
+2. Session recovery/restart semantics across daemon restart are not covered.
+3. Library/module command families (`modules`, `libs`) still have limited automated assertions in daemon-first context.
+4. Performance/load characteristics (large concurrent session counts) are not covered.
+5. Authentication/authorization behavior is out of scope for this phase.
 
 ## Design Decisions
 
