@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: README.md
+      Note: Daemon-first usage and API surface documentation
     - Path: cmd/vm-system/cmd_serve.go
       Note: CLI command to run daemon process
     - Path: cmd/vm-system/cmd_template.go
@@ -42,6 +44,10 @@ RelatedFiles:
       Note: Full REST API adapter for daemon runtime operations
     - Path: pkg/vmtransport/http/server_integration_test.go
       Note: Automated daemon API continuity test
+    - Path: smoke-test.sh
+      Note: Primary daemon-first smoke validation script
+    - Path: test-e2e.sh
+      Note: End-to-end daemon-first workflow validation script
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md
       Note: Companion report summarized per diary step
     - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md
@@ -54,6 +60,7 @@ LastUpdated: 2026-02-08T12:35:00-05:00
 WhatFor: Track analysis workflow, evidence collection, runtime experiments, and quality findings for vm-system.
 WhenToUse: Use when reviewing how vm-system works, what failed during validation, and what needs improvement.
 ---
+
 
 
 
@@ -1108,6 +1115,86 @@ This closes a major gap from earlier experiments, where process-local CLI sessio
 ### Technical details
 
 - Test uses `httptest.NewServer` and real JSON endpoints; no mock transports are used.
+
+## Step 15: Update Smoke/E2E Tooling And README To Daemon-First Workflow
+
+This step aligned repository operational docs and scripts with the new architecture. Legacy script assumptions (process-local runtime and `vm` command paths) were replaced with daemon-first flows using `serve`, `template`, `session`, and `exec` over REST-backed CLI mode.
+
+I rewrote the primary smoke and e2e scripts and refreshed the README to document the v2 architecture and quickstart flow.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Complete rollout work by making validation and onboarding materials reflect the new daemonized system.
+
+**Inferred user intent:** Ensure day-to-day developer and operator workflows exercise the real architecture, not deprecated command paths.
+
+**Commit (code):** 1ef14f69b4fd6612576eb592694bc9626e3c7771 — "docs(scripts): switch smoke and e2e workflows to daemon-first mode"
+
+### What I did
+
+- Rewrote `smoke-test.sh` to:
+- build binary.
+- start daemon and health-check it.
+- create template/capability/startup policy via `template` commands.
+- create session using `--template-id`.
+- execute REPL and run-file via daemon API client mode.
+- assert runtime summary endpoint values.
+- Rewrote `test-e2e.sh` to run full daemon-first integration flow end-to-end.
+- Replaced README content with v2 daemon-first architecture, quickstart, API surface, and test commands.
+- Ran validations:
+- `GOWORK=off go test ./...`
+- `bash ./smoke-test.sh` (pass)
+- `bash ./test-e2e.sh` (pass)
+- Identified one transient smoke failure when scripts were executed in parallel against shared test paths; re-ran sequentially to confirm script correctness.
+
+### Why
+
+- Scripts are executable documentation and must match real transport/runtime behavior.
+- Outdated scripts create false negatives and make regressions hard to diagnose.
+
+### What worked
+
+- Both updated scripts passed when run sequentially.
+- README now matches the implemented command and API surface.
+
+### What didn't work
+
+- Running smoke/e2e scripts in parallel caused a race on shared workspace paths and produced a startup-file-not-found error during session creation.
+- Resolution: run scripts sequentially (as intended), or isolate script workspace names when parallelization is desired.
+
+### What I learned
+
+- Daemon-first validation is much more trustworthy when scripts assert API-level health and runtime summary, not only CLI output strings.
+
+### What was tricky to build
+
+- The tricky part was avoiding stale command/flag usage while preserving script readability. I solved this by standardizing shared variables (`SERVER_URL`, `CLI`, `WORKTREE`) and writing clear step-wise sections that map to architecture layers.
+
+### What warrants a second pair of eyes
+
+- Confirm whether additional scripts (`test-goja-library-execution.sh`) should also be migrated now to template/daemon-first command conventions.
+
+### What should be done in the future
+
+- Make smoke/e2e scripts use unique temp workspace/db names automatically to be parallel-safe.
+
+### Code review instructions
+
+- Review script rewrites in:
+- `smoke-test.sh`
+- `test-e2e.sh`
+- Review architecture docs update in:
+- `README.md`
+- Validate with:
+- `GOWORK=off go test ./...`
+- `bash ./smoke-test.sh`
+- `bash ./test-e2e.sh`
+
+### Technical details
+
+- Both scripts now run daemon lifecycle in-process (`serve` in background, health check, trap-based cleanup) and invoke CLI with `--server-url`.
 
 ## Related
 

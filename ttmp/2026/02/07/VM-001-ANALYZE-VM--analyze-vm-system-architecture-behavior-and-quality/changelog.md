@@ -147,3 +147,15 @@ Step 14: added integration test proving daemon session continuity across indepen
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_integration_test.go — Cross-request session continuity integration coverage
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 14 diary entry
 
+
+## 2026-02-08
+
+Step 15: rewrote smoke/e2e scripts and README for daemon-first template/session/exec workflows, with sequential script validation (commit 1ef14f69b4fd6612576eb592694bc9626e3c7771).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/README.md — Updated v2 architecture and quickstart documentation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/smoke-test.sh — Daemon-first smoke flow with template/session/exec checks
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-e2e.sh — Daemon-first end-to-end workflow script
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added detailed Step 15 diary entry
+
