@@ -131,7 +131,7 @@ func (s *ExecutionService) enforceLimits(sessionID, executionID string) error {
 	return nil
 }
 
-func (s *ExecutionService) loadSessionLimits(sessionID string) (*LimitsConfig, error) {
+func (s *ExecutionService) loadSessionLimits(sessionID string) (*vmmodels.LimitsConfig, error) {
 	session, err := s.sessionStore.GetSession(sessionID)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (s *ExecutionService) loadSessionLimits(sessionID string) (*LimitsConfig, e
 		return nil, err
 	}
 
-	limits := &LimitsConfig{}
+	limits := &vmmodels.LimitsConfig{}
 	if err := json.Unmarshal(settings.Limits, limits); err != nil {
 		return nil, err
 	}

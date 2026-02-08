@@ -138,3 +138,14 @@ Task 11: Migrated vmstore and vmcontrol call sites to the single shared vmmodels
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmstore/vmstore.go — Replaced local helper usage with direct vmmodels.MarshalJSONWithFallback calls
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 11 complete
 
+
+## 2026-02-08
+
+Task 12: Removed residual vmcontrol config-type alias duplication so vmmodels is the sole config model source; execution service now consumes vmmodels.LimitsConfig directly.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/execution_service.go — Switched loadSessionLimits to vmmodels.LimitsConfig
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/types.go — Removed config alias declarations to eliminate residual duplication boundary
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 12 complete
+

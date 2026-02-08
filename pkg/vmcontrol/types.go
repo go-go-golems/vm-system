@@ -1,7 +1,5 @@
 package vmcontrol
 
-import "github.com/go-go-golems/vm-system/pkg/vmmodels"
-
 // CreateTemplateInput is the public input model for template creation.
 type CreateTemplateInput struct {
 	Name   string
@@ -35,8 +33,3 @@ type RuntimeSummary struct {
 	ActiveSessions  int      `json:"active_sessions"`
 	ActiveSessionID []string `json:"active_session_ids"`
 }
-
-// Re-export model config types to avoid duplicate config structs across packages.
-type LimitsConfig = vmmodels.LimitsConfig
-type ResolverConfig = vmmodels.ResolverConfig
-type RuntimeConfig = vmmodels.RuntimeConfig

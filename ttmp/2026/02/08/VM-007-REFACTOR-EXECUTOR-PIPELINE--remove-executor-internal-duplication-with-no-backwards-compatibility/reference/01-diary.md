@@ -8,10 +8,14 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmcontrol/execution_service.go
+      Note: Task 12 direct vmmodels.LimitsConfig usage
     - Path: pkg/vmcontrol/template_service.go
       Note: Task 11 vmcontrol template settings migration to shared helper
     - Path: pkg/vmcontrol/types.go
-      Note: Task 11 removed duplicated local helper
+      Note: |-
+        Task 11 removed duplicated local helper
+        Task 12 removed residual config aliases
     - Path: pkg/vmexec/executor.go
       Note: |-
         Task 3 shared session preparation helper extraction
@@ -50,6 +54,7 @@ RelatedFiles:
         Task 9 changelog entry
         Task 10 changelog entry
         Task 11 changelog entry
+        Task 12 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -66,12 +71,14 @@ RelatedFiles:
         Task 9 checklist update
         Task 10 checklist update
         Task 11 checklist update
+        Task 12 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -888,7 +895,7 @@ This completed the helper deduplication with a clean cut and no compatibility sh
 
 **Inferred user intent:** Enforce a strict deduplication boundary with no compatibility abstractions left behind.
 
-**Commit (code):** Pending for Step 11 commit creation.
+**Commit (code):** b927b5d — "vm007: migrate JSON helper callsites clean-cut (task 11)"
 
 ### What I did
 
@@ -949,3 +956,73 @@ The subtle part was preserving storage-layer string behavior while removing help
 ### Technical details
 
 - There is now one marshal-fallback helper API: `vmmodels.MarshalJSONWithFallback`.
+
+## Step 12: Remove residual config alias duplication boundary in vmcontrol
+
+I removed the remaining vmcontrol config alias layer so `vmmodels` is the direct and only source of config model types. This closes the residual “core model boundary duplication” item after helper migration.
+
+This keeps the codebase on a clean-cut model contract with no shadow aliases.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1 + Step 11 note: "no backwards compatibility / wrappers btw, clean cut")
+
+**Assistant interpretation:** Complete config model boundary cleanup by removing remaining alias indirection and using vmmodels types directly.
+
+**Inferred user intent:** Ensure no residual duplicate model/helper declarations remain after dedup refactor.
+
+**Commit (code):** Pending for Step 12 commit creation.
+
+### What I did
+
+- Updated `pkg/vmcontrol/types.go`:
+  - removed `LimitsConfig`, `ResolverConfig`, `RuntimeConfig` alias declarations
+- Updated `pkg/vmcontrol/execution_service.go`:
+  - changed `loadSessionLimits` return type to `*vmmodels.LimitsConfig`
+  - unmarshaled directly into `vmmodels.LimitsConfig`
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmcontrol ./pkg/vmstore ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+- Marked Task 12 complete and updated changelog via `docmgr`.
+
+### Why
+
+Residual alias layers can drift and blur ownership of canonical model types. Direct use of `vmmodels` keeps the source-of-truth boundary explicit.
+
+### What worked
+
+- Changes were small and compiled cleanly.
+- No behavior changes; only type-boundary cleanup.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Alias-based convenience in boundary packages can persist longer than intended and should be removed once migration is complete.
+
+### What was tricky to build
+
+This step was mostly mechanical; the main care point was updating any remaining references so there were no stale alias assumptions.
+
+### What warrants a second pair of eyes
+
+- Verify no remaining code or docs refer to vmcontrol-owned config aliases.
+
+### What should be done in the future
+
+- Proceed with Task 13 tests to lock shared helper fallback behavior and config JSON marshalling expectations.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmcontrol/types.go`
+  - `pkg/vmcontrol/execution_service.go`
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmcontrol ./pkg/vmstore ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- `ExecutionService.loadSessionLimits` now unmarshals limits into `vmmodels.LimitsConfig` directly.
