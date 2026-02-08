@@ -42,6 +42,13 @@ GOWORK=off go build -o vm-system ./cmd/vm-system
 ./vm-system --server-url http://127.0.0.1:3210 exec repl <session-id> '1+2'
 ```
 
+## Developer Guide
+
+For a full onboarding and contribution guide (first VM run, architecture deep dive,
+API contracts, test coverage, and contribution workflow), see:
+
+- `docs/getting-started-from-first-vm-to-contributor-guide.md`
+
 ## API Endpoints (Current)
 
 - `GET /api/v1/health`
