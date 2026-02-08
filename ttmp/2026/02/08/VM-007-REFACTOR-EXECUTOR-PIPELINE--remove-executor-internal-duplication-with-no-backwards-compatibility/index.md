@@ -1,5 +1,5 @@
 ---
-Title: Remove executor internal duplication with no backwards compatibility
+Title: Remove executor and core model/helper duplication with no backwards compatibility
 Ticket: VM-007-REFACTOR-EXECUTOR-PIPELINE
 Status: active
 Topics:
@@ -15,21 +15,28 @@ RelatedFiles:
     - Path: pkg/vmtransport/http/server.go
       Note: API behavior contract that must remain intentional after internal refactor
     - Path: pkg/vmstore/vmstore.go
-      Note: Persistence write/read paths used by execution lifecycle
+      Note: Persistence write/read paths plus duplicated JSON helper semantics
+    - Path: pkg/vmcontrol/types.go
+      Note: Shared config aliases and JSON helper behavior in control layer
+    - Path: pkg/vmmodels/models.go
+      Note: Core config model types used as single source-of-truth target
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Detailed inspection and implementation plan
 ExternalSources: []
-Summary: Ticket for removing high executor internal duplication using a single execution pipeline (no backwards compatibility constraints), with explicit runtime/persistence contract hardening.
-LastUpdated: 2026-02-08T12:12:26-05:00
-WhatFor: Provide a concrete implementation-ready plan to simplify executor internals, reduce divergence, and improve robustness of execution persistence/event behavior.
-WhenToUse: Use when implementing vmexec refactor work and related tests for execution lifecycle correctness.
+Summary: Ticket for removing high executor internal duplication and remaining core model/helper duplication (finding 8 + 9) with no backwards compatibility constraints.
+LastUpdated: 2026-02-08T12:15:40-05:00
+WhatFor: Provide a concrete implementation-ready plan to simplify executor internals and eliminate duplicated core helper/model behavior.
+WhenToUse: Use when implementing vmexec refactor work plus shared model/helper deduplication tasks.
 ---
 
-# Remove executor internal duplication with no backwards compatibility
+# Remove executor and core model/helper duplication with no backwards compatibility
 
 ## Overview
 
-This ticket defines and tracks a no-backward-compatibility refactor of `pkg/vmexec/executor.go` to eliminate high internal duplication and make execution lifecycle behavior explicit, testable, and consistent across REPL and run-file paths.
+This ticket defines and tracks a no-backward-compatibility refactor that combines two VM-006 findings:
+
+- finding 9: high executor internal duplication in `pkg/vmexec/executor.go`
+- finding 8: remaining core model/helper duplication (notably duplicated `mustMarshalJSON` semantics)
 
 The associated design document contains a concrete architecture proposal, acceptance criteria, and a phased implementation plan for delegated execution.
 
