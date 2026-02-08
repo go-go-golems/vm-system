@@ -13,6 +13,7 @@ RelatedFiles:
         Task 3 shared session preparation helper extraction
         Task 4 shared execution record constructor
         Task 5 shared event recorder and AddEvent error propagation
+        Task 6 finalize helpers and explicit UpdateExecution error handling
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -27,6 +28,7 @@ RelatedFiles:
         Task 3 changelog entry
         Task 4 changelog entry
         Task 5 changelog entry
+        Task 6 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
@@ -35,12 +37,14 @@ RelatedFiles:
         Task 3 checklist update
         Task 4 checklist update
         Task 5 checklist update
+        Task 6 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -408,7 +412,7 @@ The goal here was to improve write-path rigor before moving to finalize helpers 
 
 **Inferred user intent:** Ensure persistence reliability by making event-write failures explicit during refactor.
 
-**Commit (code):** Pending for Step 5 commit creation.
+**Commit (code):** 835de10 — "vm007: share event recorder with explicit write errors (task 5)"
 
 ### What I did
 
@@ -465,3 +469,76 @@ The tricky part was propagating console write failures that happen inside callba
 ### Technical details
 
 - `emit(...)` marshals typed payloads; `emitRaw(...)` handles pre-encoded payloads used for value/exception records.
+
+## Step 6: Share success/error finalization and stop ignoring UpdateExecution failures
+
+I extracted dedicated finalization helpers for successful and failed executions and replaced direct `UpdateExecution` calls with explicit error handling. This removes the remaining silent persistence-update writes in executor completion paths.
+
+This step keeps external behavior stable for successful persistence while making store-write failures fail fast and explicit.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Continue dedup by centralizing execution finalization and enforcing explicit persistence error handling for updates.
+
+**Inferred user intent:** Ensure no ignored persistence failures remain in executor completion paths.
+
+**Commit (code):** Pending for Step 6 commit creation.
+
+### What I did
+
+- Added in `pkg/vmexec/executor.go`:
+  - `finalizeExecutionSuccess(...)`
+  - `finalizeExecutionError(...)`
+- Moved shared finalize behavior into helpers:
+  - set terminal status
+  - set `ended_at`
+  - set result/error payloads
+  - persist via `UpdateExecution`
+- Replaced all prior direct `UpdateExecution` calls in REPL/run-file paths with helper calls.
+- Changed write-error handling to return explicit errors when persistence update fails.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 6 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 6 closes the second major persistence write gap after Task 5: update writes are now explicitly checked and surfaced.
+
+### What worked
+
+- Existing behavior coverage passed after helper extraction.
+- Finalization semantics are now centralized and easier to reason about.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Splitting finalize behavior by terminal state keeps execution paths short and clarifies write-failure handling boundaries.
+
+### What was tricky to build
+
+The tricky part was preserving return semantics for runtime errors (`exec` with status `error`, nil transport error) while still introducing explicit persistence-update error returns. I preserved existing runtime-error contract and only changed behavior when persistence itself fails.
+
+### What warrants a second pair of eyes
+
+- Confirm that failing fast on `UpdateExecution` write failures is acceptable for callers expecting legacy silent behavior.
+
+### What should be done in the future
+
+- Proceed with full pipeline extraction in Task 7/8 now that session prep, record creation, event emission, and finalization are all helper-backed.
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` finalize helpers and call sites.
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- Finalize helpers wrap update failures with execution ID context to improve debugging of persistence issues.

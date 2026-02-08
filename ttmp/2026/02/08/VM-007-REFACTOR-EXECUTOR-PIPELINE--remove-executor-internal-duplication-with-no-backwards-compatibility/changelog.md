@@ -72,3 +72,13 @@ Task 5: Added shared event recorder helper and routed REPL/run-file event emissi
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Introduced eventRecorder helper with explicit AddEvent error propagation
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 5 complete
 
+
+## 2026-02-08
+
+Task 6: Added shared finalize helpers for success/error execution completion and made UpdateExecution failures explicit across REPL and run-file paths.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Introduced finalizeExecutionSuccess/finalizeExecutionError and removed ignored UpdateExecution calls
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 6 complete
+

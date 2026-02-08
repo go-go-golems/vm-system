@@ -124,6 +124,26 @@ func (r *eventRecorder) emitRaw(eventType vmmodels.EventType, payload json.RawMe
 	return nil
 }
 
+func (e *Executor) finalizeExecutionSuccess(exec *vmmodels.Execution, endedAt time.Time, result json.RawMessage) error {
+	exec.Status = string(vmmodels.ExecOK)
+	exec.EndedAt = &endedAt
+	exec.Result = result
+	if err := e.store.UpdateExecution(exec); err != nil {
+		return fmt.Errorf("failed to persist successful execution %s: %w", exec.ID, err)
+	}
+	return nil
+}
+
+func (e *Executor) finalizeExecutionError(exec *vmmodels.Execution, endedAt time.Time, exception json.RawMessage) error {
+	exec.Status = string(vmmodels.ExecError)
+	exec.EndedAt = &endedAt
+	exec.Error = exception
+	if err := e.store.UpdateExecution(exec); err != nil {
+		return fmt.Errorf("failed to persist failed execution %s: %w", exec.ID, err)
+	}
+	return nil
+}
+
 // ExecuteREPL executes a REPL snippet
 func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
 	session, unlock, err := e.prepareSession(sessionID)
@@ -171,10 +191,6 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 	}
 
 	if err != nil {
-		// Execution failed
-		exec.Status = string(vmmodels.ExecError)
-		exec.EndedAt = &endTime
-
 		// Create exception event
 		exceptionPayload := vmmodels.ExceptionPayload{
 			Message: err.Error(),
@@ -187,15 +203,12 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			return nil, err
 		}
 
-		exec.Error = exceptionJSON
-		e.store.UpdateExecution(exec)
+		if err := e.finalizeExecutionError(exec, endTime, exceptionJSON); err != nil {
+			return nil, err
+		}
 
 		return exec, nil
 	}
-
-	// Execution succeeded
-	exec.Status = string(vmmodels.ExecOK)
-	exec.EndedAt = &endTime
 
 	// Create value event
 	valuePayload := vmmodels.ValuePayload{
@@ -214,8 +227,9 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 		return nil, err
 	}
 
-	exec.Result = valueJSON
-	e.store.UpdateExecution(exec)
+	if err := e.finalizeExecutionSuccess(exec, endTime, valueJSON); err != nil {
+		return nil, err
+	}
 
 	return exec, nil
 }
@@ -281,10 +295,6 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 	}
 
 	if err != nil {
-		// Execution failed
-		exec.Status = string(vmmodels.ExecError)
-		exec.EndedAt = &endTime
-
 		exceptionPayload := vmmodels.ExceptionPayload{
 			Message: err.Error(),
 		}
@@ -296,16 +306,16 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 			return nil, err
 		}
 
-		exec.Error = exceptionJSON
-		e.store.UpdateExecution(exec)
+		if err := e.finalizeExecutionError(exec, endTime, exceptionJSON); err != nil {
+			return nil, err
+		}
 
 		return exec, nil
 	}
 
-	// Execution succeeded
-	exec.Status = string(vmmodels.ExecOK)
-	exec.EndedAt = &endTime
-	e.store.UpdateExecution(exec)
+	if err := e.finalizeExecutionSuccess(exec, endTime, nil); err != nil {
+		return nil, err
+	}
 
 	return exec, nil
 }
