@@ -16,4 +16,4 @@
 - [x] Verify config model single-source boundary (`vmmodels` as source) and remove any residual duplicated declarations/helpers
 - [x] Add focused tests for shared helper fallback behavior and config JSON marshalling expectations
 - [x] Add tests for persistence-failure paths (CreateExecution/AddEvent/UpdateExecution failures) to ensure deterministic error outcomes
-- [ ] Run validation matrix: `go test ./... -count=1`, HTTP integration suite, smoke/e2e scripts, and update ticket docs with results
+- [x] Run validation matrix: `go test ./... -count=1`, HTTP integration suite, smoke/e2e scripts, and update ticket docs with results

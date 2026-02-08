@@ -47,6 +47,10 @@ RelatedFiles:
         Task 1 baseline contract coverage for execution endpoints and event envelopes
         Task 1 external contract baseline test
         Task 9 updated execution API behavior contract assertions
+    - Path: smoke-test.sh
+      Note: Task 15 full validation script execution evidence
+    - Path: test-e2e.sh
+      Note: Task 15 full validation script execution evidence
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/changelog.md
       Note: |-
         Task-level changelog entries
@@ -64,6 +68,7 @@ RelatedFiles:
         Task 12 changelog entry
         Task 13 changelog entry
         Task 14 changelog entry
+        Task 15 changelog validation evidence
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -83,12 +88,14 @@ RelatedFiles:
         Task 12 checklist update
         Task 13 checklist update
         Task 14 checklist update
+        Task 15 checklist completion
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -1125,7 +1132,7 @@ To enable clean failure injection without compatibility shims, I introduced an i
 
 **Inferred user intent:** Guarantee executor persistence errors are explicit and test-locked, especially after refactor removed previously ignored writes.
 
-**Commit (code):** Pending for Step 14 commit creation.
+**Commit (code):** 166ba68 — "vm007: add persistence failure-path tests (task 14)"
 
 ### What I did
 
@@ -1186,3 +1193,75 @@ The tricky part was forcing each write failure independently without altering ru
 ### Technical details
 
 - Each failure-path test asserts both deterministic failure type (create/add-event/update stage) and wrapped forced error marker text.
+
+## Step 15: Run full validation matrix and close implementation loop
+
+I ran the full validation matrix requested for VM-007 and recorded outcomes. All required checks passed, including unit/integration tests and daemon-first smoke/e2e scripts.
+
+This step finalizes the implementation stream by attaching concrete test evidence after all refactor tasks were completed.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1 + Step 11 note: "no backwards compatibility / wrappers btw, clean cut")
+
+**Assistant interpretation:** Execute the full validation baseline and update ticket docs with concrete test evidence before closing the ticket work.
+
+**Inferred user intent:** Ensure refactor correctness is demonstrated by the agreed validation matrix, not only by partial package loops.
+
+**Commit (code):** Pending for Step 15 commit creation.
+
+### What I did
+
+- Ran full matrix:
+  - `GOWORK=off go test ./... -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+- Captured successful outcomes:
+  - go test matrix: pass across all packages
+  - HTTP integration suite: pass
+  - smoke script: `10/10` tests passed
+  - e2e script: daemon-first workflow passed end-to-end
+- Marked Task 15 complete and appended changelog entry via `docmgr`.
+
+### Why
+
+Task 15 is the final evidence gate for VM-007 and confirms the refactor landed without breaking expected behavior across the supported validation paths.
+
+### What worked
+
+- All requested validations passed on this branch/state.
+- Script outputs showed run-file now emits terminal value events consistent with Task 9 decision.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- The new refactor structure remains stable under both package tests and daemon workflow scripts.
+
+### What was tricky to build
+
+No major technical blockers in this step; the key risk was test-environment residue from script runs. I kept ticket commits scoped to VM-007 files only.
+
+### What warrants a second pair of eyes
+
+- Reviewer should scan Task 9 behavior-change evidence (run-file value/result parity) in both unit and integration tests.
+
+### What should be done in the future
+
+- If desired, close ticket with `docmgr ticket close --ticket VM-007-REFACTOR-EXECUTOR-PIPELINE` after review.
+
+### Code review instructions
+
+- Re-run full matrix:
+  - `GOWORK=off go test ./... -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+- Validate task completion and changelog entries in VM-007 ticket docs.
+
+### Technical details
+
+- E2E run showed run-file events ending with `value` and persisted result payload, matching Task 9 contract decision.
