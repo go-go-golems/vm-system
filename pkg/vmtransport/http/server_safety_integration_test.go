@@ -25,6 +25,15 @@ func TestSafetyPathTraversalAndOutputLimitEnforcement(t *testing.T) {
 	setTightLimitsForTemplate(t, store, templateID)
 	sessionID := createSessionForTest(t, client, server.URL, templateID, worktree, "ws-safety")
 
+	startupTemplateID := createTemplateForTest(t, client, server.URL, "startup-safety-template")
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/templates/"+startupTemplateID+"/startup-files", map[string]interface{}{
+		"path":        "../outside-startup.js",
+		"order_index": 10,
+		"mode":        "eval",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "INVALID_PATH",
+	})
+
 	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/run-file", map[string]interface{}{
 		"session_id": sessionID,
 		"path":       "../etc/passwd",
@@ -43,6 +52,28 @@ func TestSafetyPathTraversalAndOutputLimitEnforcement(t *testing.T) {
 	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/executions/run-file", map[string]interface{}{
 		"session_id": sessionID,
 		"path":       "escape-link.js",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "INVALID_PATH",
+	})
+
+	outsideStartupDir := t.TempDir()
+	outsideStartupFile := filepath.Join(outsideStartupDir, "outside-startup.js")
+	if err := os.WriteFile(outsideStartupFile, []byte("globalThis.ESCAPE = 1"), 0o644); err != nil {
+		t.Fatalf("write outside startup file: %v", err)
+	}
+	if err := os.Symlink(outsideStartupFile, filepath.Join(worktree, "startup-link.js")); err != nil {
+		t.Fatalf("create startup symlink: %v", err)
+	}
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/templates/"+startupTemplateID+"/startup-files", map[string]interface{}{
+		"path":        "startup-link.js",
+		"order_index": 20,
+		"mode":        "eval",
+	}, http.StatusCreated, nil)
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/sessions", map[string]interface{}{
+		"template_id":     startupTemplateID,
+		"workspace_id":    "ws-startup-safety",
+		"base_commit_oid": "deadbeef",
+		"worktree_path":   worktree,
 	}, http.StatusUnprocessableEntity, map[string]string{
 		"code": "INVALID_PATH",
 	})

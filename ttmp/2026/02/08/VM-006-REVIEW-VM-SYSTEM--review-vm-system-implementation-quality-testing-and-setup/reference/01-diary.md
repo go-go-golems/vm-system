@@ -642,3 +642,92 @@ This step directly addresses one of the highest-severity findings from VM-006 by
 ### Technical details
 
 - New test branch validates a symlink named `escape-link.js` in worktree pointing to an external JS file and asserts `code: INVALID_PATH`.
+
+## Step 8: Task 3 - startup path validation/resolution with typed model
+
+I implemented typed startup-path handling at both API ingress and runtime execution. This closes the previous mismatch where startup paths were less constrained than run-file paths and could traverse or escape via symlink.
+
+I also expanded the safety integration test to cover startup traversal rejection and startup symlink-escape rejection at session-create time.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Extend type-safe path guarantees to startup file lifecycle, not just run-file execution.
+
+**Inferred user intent:** Make path safety consistent and robust across all execution entry points.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Updated API validation in:
+  - `pkg/vmtransport/http/server.go`
+  - `handleTemplateAddStartupFile` now parses startup paths with `vmpath.ParseRelWorktreePath`
+  - invalid absolute/traversal/empty path now returns `422 INVALID_PATH`
+  - persisted path now uses normalized typed relative path
+- Updated startup runtime execution in:
+  - `pkg/vmsession/session.go`
+  - `runStartupFiles` now:
+    - constructs `WorktreeRoot` once
+    - parses each startup file path via `ParseRelWorktreePath`
+    - resolves each path via `WorktreeRoot.Resolve`
+    - executes canonical absolute resolved path
+  - path escape errors are mapped to `vmmodels.ErrPathTraversal` for typed transport mapping
+- Expanded integration test in:
+  - `pkg/vmtransport/http/server_safety_integration_test.go`
+  - added checks for:
+    - startup path `../outside-startup.js` rejected at template startup add (`422 INVALID_PATH`)
+    - startup symlink in worktree pointing outside rejected on session create (`422 INVALID_PATH`)
+- Ran:
+  - `gofmt -w pkg/vmtransport/http/server.go pkg/vmsession/session.go pkg/vmtransport/http/server_safety_integration_test.go`
+  - `GOWORK=off go test ./pkg/vmtransport/http -run TestSafetyPathTraversalAndOutputLimitEnforcement -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- Startup files are code execution inputs and need the same boundary guarantees as run-file inputs.
+- Typed validation at ingress + typed canonical resolution at runtime gives defense in depth.
+
+### What worked
+
+- Safety integration tests passed with new startup path assertions.
+- API now rejects traversal startup paths earlier and more explicitly.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Mapping typed path failures back to `vmmodels.ErrPathTraversal` allows existing transport error mapping to remain simple and consistent.
+
+### What was tricky to build
+
+- Deciding where to enforce each check required balancing UX and safety:
+  - ingress validation catches obvious invalid paths early,
+  - runtime canonicalization is still required to catch symlink-based escapes.
+
+### What warrants a second pair of eyes
+
+- Confirm that returning `422 INVALID_PATH` on session-create startup failure is preferred over generic startup failure semantics.
+
+### What should be done in the future
+
+- Add a dedicated integration test asserting startup syntax errors still map to non-path errors (to avoid overfitting safety tests to path-only failures).
+
+### Code review instructions
+
+- Review startup add validation in:
+  - `pkg/vmtransport/http/server.go`
+- Review startup execution path in:
+  - `pkg/vmsession/session.go`
+- Review test additions in:
+  - `pkg/vmtransport/http/server_safety_integration_test.go`
+
+### Technical details
+
+- Startup symlink safety test path:
+  - `startup-link.js` -> symlink to outside file
+  - add-startup returns `201` (path is syntactically valid)
+  - session create returns `422 INVALID_PATH` due canonical resolution escape detection.

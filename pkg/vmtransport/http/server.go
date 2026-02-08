@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-go-golems/vm-system/pkg/vmcontrol"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	"github.com/go-go-golems/vm-system/pkg/vmpath"
 )
 
 type Server struct {
@@ -226,6 +227,16 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 		writeError(w, stdhttp.StatusBadRequest, "VALIDATION_ERROR", "path is required", nil)
 		return
 	}
+	parsedPath, err := vmpath.ParseRelWorktreePath(req.Path)
+	if err != nil {
+		switch {
+		case errors.Is(err, vmpath.ErrAbsoluteRelativePath), errors.Is(err, vmpath.ErrTraversalRelativePath), errors.Is(err, vmpath.ErrEmptyRelativePath):
+			writeError(w, stdhttp.StatusUnprocessableEntity, "INVALID_PATH", "Path escapes allowed worktree", map[string]string{"template_id": templateID})
+		default:
+			writeError(w, stdhttp.StatusBadRequest, "INVALID_REQUEST", err.Error(), nil)
+		}
+		return
+	}
 	if req.Mode == "" {
 		req.Mode = "eval"
 	}
@@ -233,7 +244,7 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 	startup := &vmmodels.VMStartupFile{
 		ID:         uuid.NewString(),
 		VMID:       templateID,
-		Path:       req.Path,
+		Path:       parsedPath.String(),
 		OrderIndex: req.OrderIndex,
 		Mode:       req.Mode,
 	}

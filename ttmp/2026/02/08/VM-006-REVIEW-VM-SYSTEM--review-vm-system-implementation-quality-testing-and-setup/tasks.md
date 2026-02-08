@@ -15,6 +15,6 @@
 
 - [x] Introduce typed worktree path model (`WorktreeRoot`, `RelWorktreePath`, `ResolvedWorktreePath`) in a shared package and unit test it
 - [x] Replace run-file normalization with typed resolver and block symlink escapes; extend safety integration coverage
-- [ ] Validate and resolve startup file paths through typed path model (API + session runtime) and add traversal/symlink safety tests
+- [x] Validate and resolve startup file paths through typed path model (API + session runtime) and add traversal/symlink safety tests
 - [ ] Add typed `ErrExecutionNotFound` contract end-to-end (store + transport + integration tests)
 - [ ] Remove duplicated VM settings config structs from `vmcontrol` by reusing `vmmodels` types

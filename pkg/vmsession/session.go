@@ -2,6 +2,7 @@ package vmsession
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	"github.com/go-go-golems/vm-system/pkg/vmpath"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
 )
 
@@ -101,22 +103,22 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 			return nil, fmt.Errorf("failed to parse runtime config: %w", err)
 		}
 
-			// Set up console if enabled
-			if runtimeConfig.Console {
-				console := map[string]interface{}{
-					"log": func(args ...interface{}) {
-						// Console output will be captured during execution
-						fmt.Println(args...)
-					},
-				}
-				runtime.Set("console", console)
+		// Set up console if enabled
+		if runtimeConfig.Console {
+			console := map[string]interface{}{
+				"log": func(args ...interface{}) {
+					// Console output will be captured during execution
+					fmt.Println(args...)
+				},
 			}
-
-			// Load configured libraries into runtime
-			if err := sm.loadLibraries(runtime, vm); err != nil {
-				return nil, fmt.Errorf("failed to load libraries: %w", err)
-			}
+			runtime.Set("console", console)
 		}
+
+		// Load configured libraries into runtime
+		if err := sm.loadLibraries(runtime, vm); err != nil {
+			return nil, fmt.Errorf("failed to load libraries: %w", err)
+		}
+	}
 
 	// Add to active sessions
 	sm.sessionsMu.Lock()
@@ -127,11 +129,11 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 	if err := sm.runStartupFiles(session); err != nil {
 		session.Status = vmmodels.SessionCrashed
 		session.LastError = fmt.Sprintf("startup failed: %v", err)
-		
+
 		dbSession.Status = string(session.Status)
 		dbSession.LastError = session.LastError
 		sm.store.UpdateSession(dbSession)
-		
+
 		return nil, fmt.Errorf("startup failed: %w", err)
 	}
 
@@ -186,6 +188,11 @@ func (sm *SessionManager) CloseSession(sessionID string) error {
 
 // runStartupFiles executes startup files for a session
 func (sm *SessionManager) runStartupFiles(session *Session) error {
+	root, err := vmpath.NewWorktreeRoot(session.WorktreePath)
+	if err != nil {
+		return fmt.Errorf("invalid worktree root: %w", err)
+	}
+
 	// Get startup files
 	startupFiles, err := sm.store.ListStartupFiles(session.VMID)
 	if err != nil {
@@ -194,8 +201,24 @@ func (sm *SessionManager) runStartupFiles(session *Session) error {
 
 	// Execute each startup file
 	for _, file := range startupFiles {
-		// Resolve file path relative to worktree
-		filePath := filepath.Join(session.WorktreePath, file.Path)
+		relPath, err := vmpath.ParseRelWorktreePath(file.Path)
+		if err != nil {
+			switch {
+			case errors.Is(err, vmpath.ErrAbsoluteRelativePath), errors.Is(err, vmpath.ErrTraversalRelativePath), errors.Is(err, vmpath.ErrEmptyRelativePath):
+				return fmt.Errorf("%w: startup file path %q", vmmodels.ErrPathTraversal, file.Path)
+			default:
+				return fmt.Errorf("invalid startup file path %q: %w", file.Path, err)
+			}
+		}
+
+		resolvedPath, err := root.Resolve(relPath)
+		if err != nil {
+			if errors.Is(err, vmpath.ErrPathEscapesRoot) {
+				return fmt.Errorf("%w: startup file path %q", vmmodels.ErrPathTraversal, file.Path)
+			}
+			return fmt.Errorf("resolve startup path %q: %w", file.Path, err)
+		}
+		filePath := resolvedPath.Absolute()
 
 		// Check if file exists
 		if _, err := os.Stat(filePath); err != nil {
@@ -247,29 +270,29 @@ func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM) 
 
 	// Get library cache directory
 	cacheDir := filepath.Join(".vm-cache", "libraries")
-	
+
 	// Load each configured library
 	for _, libName := range vm.Libraries {
 		libPath := filepath.Join(cacheDir, libName+".js")
-		
+
 		// Check if library file exists
 		if _, err := os.Stat(libPath); err != nil {
 			return fmt.Errorf("library %s not found in cache (run 'vm-system libs download' first): %w", libName, err)
 		}
-		
+
 		// Read library content
 		content, err := os.ReadFile(libPath)
 		if err != nil {
 			return fmt.Errorf("failed to read library %s: %w", libName, err)
 		}
-		
+
 		// Execute library code in runtime
 		if _, err := runtime.RunString(string(content)); err != nil {
 			return fmt.Errorf("failed to load library %s: %w", libName, err)
 		}
-		
+
 		fmt.Printf("[Session] Loaded library: %s\n", libName)
 	}
-	
+
 	return nil
 }
