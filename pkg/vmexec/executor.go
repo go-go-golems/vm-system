@@ -1,7 +1,6 @@
 package vmexec
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -29,6 +28,13 @@ type executionRecordInput struct {
 	path      string
 	argsJSON  json.RawMessage
 	envJSON   json.RawMessage
+}
+
+type eventRecorder struct {
+	store       *vmstore.VMStore
+	executionID string
+	nextSeq     int
+	err         error
 }
 
 // NewExecutor creates a new Executor
@@ -77,6 +83,47 @@ func (e *Executor) newExecutionRecord(in executionRecordInput) *vmmodels.Executi
 	}
 }
 
+func newEventRecorder(store *vmstore.VMStore, executionID string) *eventRecorder {
+	return &eventRecorder{
+		store:       store,
+		executionID: executionID,
+		nextSeq:     1,
+	}
+}
+
+func (r *eventRecorder) recordError(err error) {
+	if err != nil && r.err == nil {
+		r.err = err
+	}
+}
+
+func (r *eventRecorder) Err() error {
+	return r.err
+}
+
+func (r *eventRecorder) emit(eventType vmmodels.EventType, payload interface{}) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal %s event payload: %w", eventType, err)
+	}
+	return r.emitRaw(eventType, payloadJSON)
+}
+
+func (r *eventRecorder) emitRaw(eventType vmmodels.EventType, payload json.RawMessage) error {
+	event := &vmmodels.ExecutionEvent{
+		ExecutionID: r.executionID,
+		Seq:         r.nextSeq,
+		Ts:          time.Now(),
+		Type:        string(eventType),
+		Payload:     payload,
+	}
+	if err := r.store.AddEvent(event); err != nil {
+		return fmt.Errorf("failed to persist event %s seq=%d: %w", eventType, event.Seq, err)
+	}
+	r.nextSeq++
+	return nil
+}
+
 // ExecuteREPL executes a REPL snippet
 func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
 	session, unlock, err := e.prepareSession(sessionID)
@@ -96,52 +143,32 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 		return nil, fmt.Errorf("failed to create execution: %w", err)
 	}
 
-	// Capture console output
-	var consoleOutput bytes.Buffer
-	eventSeq := 1
+	recorder := newEventRecorder(e.store, executionID)
 
 	// Override console.log to capture output
 	console := map[string]interface{}{
 		"log": func(args ...interface{}) {
 			output := fmt.Sprint(args...)
-			consoleOutput.WriteString(output + "\n")
-
-			// Create console event
 			payload := vmmodels.ConsolePayload{
 				Level: "log",
 				Text:  output,
 			}
-			payloadJSON, _ := json.Marshal(payload)
-
-			event := &vmmodels.ExecutionEvent{
-				ExecutionID: executionID,
-				Seq:         eventSeq,
-				Ts:          time.Now(),
-				Type:        string(vmmodels.EventConsole),
-				Payload:     payloadJSON,
-			}
-			eventSeq++
-
-			e.store.AddEvent(event)
+			recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
 		},
 	}
 	session.Runtime.Set("console", console)
 
 	// Add input echo event
-	inputPayload, _ := json.Marshal(map[string]string{"text": input})
-	inputEvent := &vmmodels.ExecutionEvent{
-		ExecutionID: executionID,
-		Seq:         eventSeq,
-		Ts:          time.Now(),
-		Type:        string(vmmodels.EventInputEcho),
-		Payload:     inputPayload,
+	if err := recorder.emit(vmmodels.EventInputEcho, map[string]string{"text": input}); err != nil {
+		return nil, err
 	}
-	eventSeq++
-	e.store.AddEvent(inputEvent)
 
 	// Execute code
 	value, err := session.Runtime.RunString(input)
 	endTime := time.Now()
+	if recorder.Err() != nil {
+		return nil, recorder.Err()
+	}
 
 	if err != nil {
 		// Execution failed
@@ -156,15 +183,9 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			exceptionPayload.Stack = gojaErr.String()
 		}
 		exceptionJSON, _ := json.Marshal(exceptionPayload)
-
-		exceptionEvent := &vmmodels.ExecutionEvent{
-			ExecutionID: executionID,
-			Seq:         eventSeq,
-			Ts:          time.Now(),
-			Type:        string(vmmodels.EventException),
-			Payload:     exceptionJSON,
+		if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
+			return nil, err
 		}
-		e.store.AddEvent(exceptionEvent)
 
 		exec.Error = exceptionJSON
 		e.store.UpdateExecution(exec)
@@ -188,16 +209,10 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			valuePayload.JSON = jsonBytes
 		}
 	}
-
 	valueJSON, _ := json.Marshal(valuePayload)
-	valueEvent := &vmmodels.ExecutionEvent{
-		ExecutionID: executionID,
-		Seq:         eventSeq,
-		Ts:          time.Now(),
-		Type:        string(vmmodels.EventValue),
-		Payload:     valueJSON,
+	if err := recorder.emitRaw(vmmodels.EventValue, valueJSON); err != nil {
+		return nil, err
 	}
-	e.store.AddEvent(valueEvent)
 
 	exec.Result = valueJSON
 	e.store.UpdateExecution(exec)
@@ -240,29 +255,17 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 		return nil, fmt.Errorf("failed to create execution: %w", err)
 	}
 
-	eventSeq := 1
+	recorder := newEventRecorder(e.store, executionID)
 
 	// Capture console output
 	console := map[string]interface{}{
 		"log": func(args ...interface{}) {
 			output := fmt.Sprint(args...)
-
 			payload := vmmodels.ConsolePayload{
 				Level: "log",
 				Text:  output,
 			}
-			payloadJSON, _ := json.Marshal(payload)
-
-			event := &vmmodels.ExecutionEvent{
-				ExecutionID: executionID,
-				Seq:         eventSeq,
-				Ts:          time.Now(),
-				Type:        string(vmmodels.EventConsole),
-				Payload:     payloadJSON,
-			}
-			eventSeq++
-
-			e.store.AddEvent(event)
+			recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
 		},
 	}
 	session.Runtime.Set("console", console)
@@ -273,6 +276,9 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 	// Execute file
 	_, err = session.Runtime.RunString(string(content))
 	endTime := time.Now()
+	if recorder.Err() != nil {
+		return nil, recorder.Err()
+	}
 
 	if err != nil {
 		// Execution failed
@@ -286,15 +292,9 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 			exceptionPayload.Stack = gojaErr.String()
 		}
 		exceptionJSON, _ := json.Marshal(exceptionPayload)
-
-		exceptionEvent := &vmmodels.ExecutionEvent{
-			ExecutionID: executionID,
-			Seq:         eventSeq,
-			Ts:          time.Now(),
-			Type:        string(vmmodels.EventException),
-			Payload:     exceptionJSON,
+		if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
+			return nil, err
 		}
-		e.store.AddEvent(exceptionEvent)
 
 		exec.Error = exceptionJSON
 		e.store.UpdateExecution(exec)

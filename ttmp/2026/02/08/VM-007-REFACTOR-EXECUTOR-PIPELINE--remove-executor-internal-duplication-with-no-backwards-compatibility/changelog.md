@@ -62,3 +62,13 @@ Task 4: Introduced shared execution-record constructor used by REPL and run-file
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Added executionRecordInput and newExecutionRecord helper to remove duplicated record construction
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 4 complete
 
+
+## 2026-02-08
+
+Task 5: Added shared event recorder helper and routed REPL/run-file event emission through it so AddEvent persistence failures are explicitly surfaced instead of ignored.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Introduced eventRecorder helper with explicit AddEvent error propagation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 5 complete
+

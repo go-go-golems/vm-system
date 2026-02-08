@@ -12,6 +12,7 @@ RelatedFiles:
       Note: |-
         Task 3 shared session preparation helper extraction
         Task 4 shared execution record constructor
+        Task 5 shared event recorder and AddEvent error propagation
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -25,6 +26,7 @@ RelatedFiles:
         Task 2 changelog entry
         Task 3 changelog entry
         Task 4 changelog entry
+        Task 5 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
@@ -32,12 +34,14 @@ RelatedFiles:
         Task 2 checklist update
         Task 3 checklist update
         Task 4 checklist update
+        Task 5 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -329,7 +333,7 @@ This keeps behavior stable while preparing the next steps (event recorder and fi
 
 **Inferred user intent:** Shrink duplicated internal logic and make execution lifecycle state initialization explicit and centralized.
 
-**Commit (code):** Pending for Step 4 commit creation.
+**Commit (code):** ea3cca9 — "vm007: share execution record construction (task 4)"
 
 ### What I did
 
@@ -389,3 +393,75 @@ The subtle part was preserving existing run-file serialization behavior while in
 ### Technical details
 
 - `newExecutionRecord` now owns shared initialization values and returns a fully initialized `*vmmodels.Execution`.
+
+## Step 5: Introduce shared event recorder with explicit write-error surfacing
+
+I added a dedicated `eventRecorder` helper and moved REPL/run-file event emission through it. This eliminates direct `store.AddEvent` duplication and ensures event persistence failures are surfaced instead of silently ignored.
+
+The goal here was to improve write-path rigor before moving to finalize helpers and full pipeline consolidation.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Implement shared event recording internals and remove silent `AddEvent` failure behavior in executor paths.
+
+**Inferred user intent:** Ensure persistence reliability by making event-write failures explicit during refactor.
+
+**Commit (code):** Pending for Step 5 commit creation.
+
+### What I did
+
+- Added `eventRecorder` in `pkg/vmexec/executor.go` with:
+  - shared sequence tracking
+  - typed payload marshaling helper
+  - raw payload emission helper
+  - first-error capture and retrieval (`recordError`, `Err`)
+- Replaced direct `AddEvent` calls in REPL/run-file flows with recorder usage.
+- Routed console event capture through recorder and stored console-side write errors.
+- Added explicit `recorder.Err()` checks after runtime execution to surface asynchronous console write failures.
+- Replaced exception/value/input event writes with explicit error-returning recorder calls.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 5 complete and appended changelog entry via `docmgr`.
+
+### Why
+
+Task 5 removes silent persistence failure paths for event writes and creates one authoritative event-emission primitive for both execution kinds.
+
+### What worked
+
+- Existing behavior tests still pass for success/error flows.
+- Event sequence handling is now centralized rather than duplicated per entrypoint.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Capturing console callback write failures requires delayed propagation because runtime callbacks cannot directly return errors to caller control flow.
+
+### What was tricky to build
+
+The tricky part was propagating console write failures that happen inside callback closures. I used first-error capture in the recorder and explicit post-run checks so failures are still surfaced deterministically.
+
+### What warrants a second pair of eyes
+
+- Verify post-run recorder error handling order is acceptable before finalize-helper extraction in Task 6.
+
+### What should be done in the future
+
+- Implement shared finalize helpers to ensure execution status updates also fail explicitly (Task 6).
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` (`eventRecorder` and REPL/run-file event call sites).
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- `emit(...)` marshals typed payloads; `emitRaw(...)` handles pre-encoded payloads used for value/exception records.
