@@ -32,3 +32,13 @@ Task 1: Added execution API contract baseline integration coverage (status codes
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_execution_contracts_integration_test.go — New baseline contract test for execution endpoints and event envelopes
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 1 complete
 
+
+## 2026-02-08
+
+Task 2: Added focused vmexec regression tests covering REPL success/error event ordering and persistence fields, plus current run-file parity behavior (console-only events and empty result payload).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor_test.go — Regression tests freezing vmexec behavior before internal pipeline refactor
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 2 complete
+

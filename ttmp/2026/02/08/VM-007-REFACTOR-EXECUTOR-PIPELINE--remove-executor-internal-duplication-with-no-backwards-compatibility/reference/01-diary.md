@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmexec/executor_test.go
+      Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
       Note: |-
         Task 1 baseline contract coverage for execution endpoints and event envelopes
@@ -16,16 +18,19 @@ RelatedFiles:
       Note: |-
         Task-level changelog entries
         Task 1 changelog entry
+        Task 2 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
         Task 1 checklist update
+        Task 2 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 # Diary
@@ -90,7 +95,7 @@ Use docmgr, keep a frequent diary. As you go, check off task, commit, update dia
 
 **Inferred user intent:** Safely land a deep refactor with auditable progress and explicit behavioral intent, rather than a large opaque rewrite.
 
-**Commit (code):** Pending for Step 1 commit creation.
+**Commit (code):** 760b3a9 — "vm007: freeze execution API contracts baseline (task 1)"
 
 ### What I did
 
@@ -150,3 +155,80 @@ The main sharp edge was balancing “freeze behavior now” with future intended
 
 - New helper `reqJSONStatus(...)` validates exact HTTP status and JSON envelope decoding in success flows.
 - Event envelope checks verify contiguous `seq`, non-empty `type`, non-zero `ts`, and JSON-decodable `payload`.
+
+## Step 2: Add vmexec regression safety net for behavior and parity
+
+I added focused `pkg/vmexec` regression tests to lock current execution behavior before internal helper extraction starts. The tests cover both success and error persistence and pin the current REPL vs run-file event/result parity.
+
+This step intentionally captures current asymmetry: REPL emits input/value events and result payload, while run-file currently persists console events without a result payload.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Add package-level executor regression coverage so upcoming refactors can be done with confidence and explicit behavior checks.
+
+**Inferred user intent:** Prevent regressions while deduplicating executor internals by freezing concrete event and persistence behavior now.
+
+**Commit (code):** Pending for Step 2 commit creation.
+
+### What I did
+
+- Added `pkg/vmexec/executor_test.go` with three focused tests:
+  - `TestExecuteREPLSuccessPersistsEventOrderAndResult`
+  - `TestExecuteREPLErrorPersistsExceptionAndExecutionError`
+  - `TestExecuteRunFileCurrentParityPersistsConsoleWithoutValueResult`
+- Added shared fixture setup for:
+  - temp SQLite store
+  - template creation
+  - session creation with goja runtime
+  - executor wiring
+- Verified:
+  - event ordering/sequence correctness
+  - success/error status persistence fields
+  - current run-file parity behavior (console-only event + empty result)
+  - persisted args/env payload presence for run-file execution
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+- Checked Task 2 with `docmgr task check --ticket VM-007-REFACTOR-EXECUTOR-PIPELINE --id 2`.
+- Appended Task 2 changelog entry with `docmgr changelog update`.
+
+### Why
+
+Task 2 establishes regression coverage where most refactor churn will happen. It reduces risk before extracting common helpers and pipeline flow.
+
+### What worked
+
+- New tests were deterministic and fast.
+- Fixture setup through real store/session/runtime integration provided meaningful coverage without heavy HTTP-layer scaffolding.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Existing executor behavior is internally inconsistent by execution kind, and this is now encoded in tests so future contract changes can be intentional and explicit.
+
+### What was tricky to build
+
+The tricky part was choosing which behavior to freeze vs defer. I froze current parity differences as "current contract" but kept wording explicit so Task 9 can intentionally redefine run-file value/result behavior without ambiguity.
+
+### What warrants a second pair of eyes
+
+- Review whether current run-file parity assertions should remain strict until Task 9 lands, or be loosened if reviewer prefers earlier contract unification.
+
+### What should be done in the future
+
+- Extend these tests with failure-injection coverage when persistence error handling is refactored (Task 14).
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor_test.go`.
+- Run `GOWORK=off go test ./pkg/vmexec -count=1`.
+- Confirm Task 2 state in `tasks.md` and changelog entry for this step.
+
+### Technical details
+
+- `newExecutorFixture` builds real store/session/executor plumbing to validate persisted artifacts, not just in-memory outputs.
+- Event-order checks assert exact sequence numbers and event-type ordering for REPL/error paths.
