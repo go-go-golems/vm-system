@@ -44,7 +44,7 @@ RelatedFiles:
         Final report authored from diary evidence
 ExternalSources: []
 Summary: Detailed implementation diary for VM-006 covering discovery, dynamic validation, deep code review, report authoring, and upload workflow.
-LastUpdated: 2026-02-08T11:15:28.600040763-05:00
+LastUpdated: 2026-02-08T12:00:41-05:00
 WhatFor: Preserve exact commands, findings, failures, and review procedure for VM-006.
 WhenToUse: Use when auditing VM-006 findings, reproducing discovered defects, or reviewing review-method quality.
 ---
@@ -901,7 +901,7 @@ The implementation intentionally uses UUID parsing and normalized string output 
 
 **Inferred user intent:** Keep iterating on robustness improvements with disciplined ticket bookkeeping.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `be336e86435538a0e1f57cb3d0d03bc0b66fb6c5` - `feat(types): add typed template/session/execution id wrappers`
 
 ### What I did
 
@@ -984,7 +984,7 @@ I also updated integration coverage to distinguish malformed ID validation (`400
 
 **Inferred user intent:** Make ID handling robust and explicit, with clear contract behavior for malformed versus missing resources.
 
-**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+**Commit (code):** `5ca0929f9d35ec56a192637801f7b8d33495ce8a` - `fix(http): enforce typed id validation at API boundaries`
 
 ### What I did
 
@@ -1060,3 +1060,107 @@ I also updated integration coverage to distinguish malformed ID validation (`400
 - New contract split:
   - malformed UUID -> `400 VALIDATION_ERROR`
   - valid UUID but missing row -> `404 *_NOT_FOUND`
+
+## Step 13: Task 3 - revise review document and republish updated bundle
+
+I revised the VM-006 report from a static baseline-only audit into a current-state assessment that explicitly separates resolved findings from open risks after the two type-system follow-up waves. I also refreshed dynamic validation evidence so the report reflects current behavior, not only the initial capture.
+
+After report revision, I completed delivery by uploading a revised report+diary bundle to reMarkable under the same ticket folder and verifying the remote listing.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 11)
+
+**Assistant interpretation:** Finish the remaining follow-up task by revising the quality review/improvement document, keep ticket bookkeeping and diary in sync, and deliver the updated report artifact.
+
+**Inferred user intent:** Keep the review document accurate as implementation evolves, with traceable execution history and updated deliverables.
+
+**Commit (code):** N/A (documentation/reporting and delivery workflow)
+
+### What I did
+
+- Revised:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/design-doc/01-comprehensive-vm-system-implementation-quality-review.md`
+- Added explicit post-implementation status section:
+  - resolved items (path safety, startup validation parity, execution not-found typing, config type dedup)
+  - open items (startup lifecycle leak, limit contract mismatch, legacy script drift, soft-fail limit handling, executor duplication/test gaps)
+- Refreshed dynamic validation evidence with:
+  - `GOWORK=off go test ./... -cover -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+  - `./test-library-loading.sh`
+  - `./test-library-requirements.sh`
+  - `./test-goja-library-execution.sh`
+- Updated ticket bookkeeping:
+  - marked Follow-Up 2 Task 3 complete in `tasks.md`
+  - set ticket status to complete in `index.md`
+  - updated `changelog.md` with Task 3 completion entry
+- Re-published revised bundle to reMarkable:
+  - `remarquee status`
+  - `remarquee cloud account --non-interactive`
+  - `remarquee upload bundle --dry-run <report> <diary> --name "VM-006-REVIEW-VM-SYSTEM Review + Diary (Revised)" --remote-dir "/ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM" --toc-depth 2`
+  - `remarquee upload bundle <report> <diary> --name "VM-006-REVIEW-VM-SYSTEM Review + Diary (Revised)" --remote-dir "/ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM" --toc-depth 2`
+  - `remarquee cloud ls /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM --long --non-interactive`
+
+### Why
+
+- The previous report content had become stale relative to implemented follow-up work, which would otherwise mislead prioritization.
+- The revised upload ensures the on-device artifact matches the new report state.
+
+### What worked
+
+- Revised report edits and ticket bookkeeping updates were straightforward.
+- `go test`, smoke, and daemon-first e2e checks passed.
+- reMarkable dry-run, upload, and remote verification succeeded.
+
+### What didn't work
+
+- Legacy library scripts still fail on removed command surface:
+  - `Error: unknown command "vm" for "vm-system"` in:
+    - `test-library-loading.sh`
+    - `test-library-requirements.sh`
+    - `test-goja-library-execution.sh`
+- `test-goja-library-execution.sh` still mutates tracked `test-goja-workspace` during execution.
+
+### What I learned
+
+- The strongest report format for ongoing hardening is a split between baseline findings and explicit current status updates.
+- The daemon-first supported path is stable, while legacy scripts remain the main setup-noise source.
+
+### What was tricky to build
+
+- The main challenge was preserving original high-quality baseline evidence while preventing resolved issues from being presented as still-open blockers. I addressed this by keeping baseline findings but adding status updates per affected finding and an explicit post-review status section near the top.
+
+### What warrants a second pair of eyes
+
+- Confirm severity order for remaining open risks now that path and ID hardening landed.
+- Validate whether Follow-Up 3 should prioritize startup lifecycle leak or limit contract alignment first.
+
+### What should be done in the future
+
+- Create and execute a third follow-up task block focused on:
+  - startup failure lifecycle correctness
+  - limit enforcement contract alignment
+  - legacy script migration/archive decision
+
+### Code review instructions
+
+- Start with revised report sections in:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/design-doc/01-comprehensive-vm-system-implementation-quality-review.md`
+- Confirm task/index/changelog consistency:
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md`
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/index.md`
+  - `ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/changelog.md`
+- Verify reMarkable remote contents:
+  - `remarquee cloud ls /ai/2026/02/08/VM-006-REVIEW-VM-SYSTEM --long --non-interactive`
+
+### Technical details
+
+- Updated coverage snapshot:
+  - `pkg/vmtransport/http`: `75.0%`
+  - `pkg/vmpath`: `78.3%`
+  - `pkg/vmmodels`: `86.1%`
+  - `pkg/vmcontrol`, `pkg/vmsession`, `pkg/vmexec`, `pkg/vmstore`: `0.0%`
+- Upload verification listing:
+  - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary`
+  - `[f] VM-006-REVIEW-VM-SYSTEM Review + Diary (Revised)`

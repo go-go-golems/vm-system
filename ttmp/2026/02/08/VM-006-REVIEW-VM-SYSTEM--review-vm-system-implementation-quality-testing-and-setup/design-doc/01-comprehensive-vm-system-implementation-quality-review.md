@@ -47,8 +47,8 @@ RelatedFiles:
         stale script and unsupported command assumptions
         Legacy script breakage evidence
 ExternalSources: []
-Summary: Deep implementation, testing, and setup review of vm-system in the context of VM-001, VM-004, and VM-005 with runtime-verified defects, structural quality findings, and prioritized remediation plan.
-LastUpdated: 2026-02-08T11:15:24.652798838-05:00
+Summary: Deep implementation, testing, and setup review of vm-system in the context of VM-001, VM-004, and VM-005, now revised with follow-up implementation status (resolved vs open findings) and updated dynamic validation evidence.
+LastUpdated: 2026-02-08T11:58:30-05:00
 WhatFor: Assess implementation quality and test/setup reliability after VM-001/VM-004/VM-005 and define concrete cleanup priorities.
 WhenToUse: Use when planning vm-system hardening work, cleanup/refactor tickets, and test strategy upgrades.
 ---
@@ -64,23 +64,42 @@ This review was executed against current `main` workspace code and ticket contex
 - `VM-004-EXPAND-E2E-COVERAGE`
 - `VM-005-DEVELOPER-GETTING-STARTED`
 
-The daemon-first architecture introduced in VM-001 is directionally correct, and VM-004 improved HTTP integration coverage substantially. However, the implementation still contains several high-impact correctness and safety gaps, substantial legacy surface drift, and test coverage concentration that leaves core runtime/storage behavior largely unprotected.
+The daemon-first architecture introduced in VM-001 is directionally correct, and VM-004 improved HTTP integration coverage substantially. Since the initial VM-006 baseline report, follow-up implementation work closed multiple high-impact gaps (typed path safety, startup/run-file boundary hardening, typed not-found errors, config-type deduplication, typed UUID validation at HTTP ingress). The repository still has meaningful open risks in lifecycle correctness, limit semantics, and legacy-surface cleanup.
 
 Current quality posture:
 
 - Architecture direction: good
 - API integration coverage depth: good
-- Runtime/path safety: weak
+- Runtime/path safety: improved (residual lifecycle and limit-contract gaps remain)
 - Legacy surface cleanup: weak
-- Core package test balance: weak
+- Core package test balance: weak-to-moderate (new unit tests added for `vmpath` and `vmmodels`, core runtime/store/control still mostly untested directly)
 
 Top risks found:
 
-1. Worktree isolation can be bypassed (startup traversal + run-file symlink escape).
-2. Failed session startup leaks/retains crashed runtime entries as "active".
-3. Execution-limit API behavior is contract-inconsistent (422 returned while execution is persisted as `ok`).
-4. Legacy script/test surface is stale and actively broken against current CLI.
-5. Missing error typing causes avoidable `500 INTERNAL` on expected not-found paths.
+1. Failed session startup leaks/retains crashed runtime entries as "active".
+2. Execution-limit API behavior is contract-inconsistent (422 returned while execution is persisted as `ok`).
+3. Legacy script/test surface is stale and actively broken against current CLI.
+4. Limit-enforcement load/read errors are silently swallowed (`enforceLimits` soft-fail policy).
+5. Runtime/store/control packages remain weakly unit-tested compared to HTTP layer coverage.
+
+## Post-Review Implementation Status (2026-02-08)
+
+### Implemented hardening from VM-006 follow-up tasks
+
+1. Typed worktree path model and resolver introduced (`pkg/vmpath/path.go`; commit `b8c9060`).
+2. Run-file path handling now uses typed canonical resolution with symlink-escape rejection (`pkg/vmcontrol/execution_service.go`; commit `b812c1b`).
+3. Startup-file path handling is now typed at both HTTP ingress and runtime resolution (`pkg/vmtransport/http/server.go`, `pkg/vmsession/session.go`; commit `6114840`).
+4. Missing execution IDs now map to typed `404 EXECUTION_NOT_FOUND` (`pkg/vmstore/vmstore.go`, `pkg/vmtransport/http/server.go`; commit `6197ed9`).
+5. Duplicated `vmcontrol` config structs replaced with aliases to `vmmodels` types (`pkg/vmcontrol/types.go`; commit `e0bfaf8`).
+6. Typed UUID ID wrappers/parsers added and enforced at HTTP boundaries (`pkg/vmmodels/ids.go`, `pkg/vmtransport/http/server.go`; commits `be336e8`, `5ca0929`).
+
+### Remaining open risks after follow-up implementation
+
+1. Startup failure still inserts session into active map before startup execution completes (`pkg/vmsession/session.go:123`).
+2. Limit enforcement still runs after execution persistence and can return API failure while stored execution remains `ok` (`pkg/vmcontrol/execution_service.go:29`, `pkg/vmexec/executor.go:147`).
+3. Legacy library scripts still fail on removed `vm` command surface (`test-library-loading.sh`, `test-library-requirements.sh`, `test-goja-library-execution.sh`).
+4. `enforceLimits` still soft-fails on settings/events read errors (`pkg/vmcontrol/execution_service.go:105`).
+5. Executor pipeline duplication and unchecked store-write errors remain (`pkg/vmexec/executor.go`).
 
 ## Problem Statement
 
@@ -125,10 +144,17 @@ Symptoms:
 - `./test-library-requirements.sh` (fails)
 - `./test-goja-library-execution.sh` (fails)
 - Additional targeted runtime probes for path safety, close semantics, startup failure lifecycle, and limit-enforcement contract consistency.
+- Re-validation after follow-up implementation:
+  - `GOWORK=off go test ./... -cover -count=1`
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+  - `./test-library-loading.sh` (still fails)
+  - `./test-library-requirements.sh` (still fails)
+  - `./test-goja-library-execution.sh` (still fails)
 
-## Findings (Ordered By Severity)
+## Findings (Ordered By Severity, Baseline Snapshot + Status Updates)
 
-### 1) Path-safety model is bypassable (high)
+### 1) Path-safety model was bypassable (high, resolved)
 
 Problem:
 
@@ -179,6 +205,13 @@ apply to:
 - SessionManager.runStartupFiles path resolution
 - startup-file add validation in HTTP handler (and/or core)
 ```
+
+Status update (resolved):
+
+- Implemented typed path primitives and canonical root resolution in `pkg/vmpath/path.go` (`b8c9060`).
+- Replaced run-file normalization with typed resolver and symlink-escape rejection in `pkg/vmcontrol/execution_service.go` (`b812c1b`).
+- Added typed startup path validation (HTTP) and runtime canonical resolution in `pkg/vmtransport/http/server.go` + `pkg/vmsession/session.go` (`6114840`).
+- Integration coverage now includes startup traversal and symlink-escape rejection in `pkg/vmtransport/http/server_safety_integration_test.go`.
 
 ### 2) Session startup failure leaks active runtime entry (high)
 
@@ -314,7 +347,7 @@ enforce in CI:
 - legacy scripts fail build if still under active test entrypoints
 ```
 
-### 5) Expected not-found path returns 500 (medium-high)
+### 5) Expected not-found path returned 500 (medium-high, resolved)
 
 Problem:
 
@@ -352,7 +385,13 @@ writeCoreError maps to 404 EXECUTION_NOT_FOUND
 update integration tests accordingly
 ```
 
-### 6) Security/validation parity gap for startup paths (medium-high)
+Status update (resolved):
+
+- Added `vmmodels.ErrExecutionNotFound` and SQL no-row mapping (`pkg/vmmodels/models.go`, `pkg/vmstore/vmstore.go`).
+- Added typed transport mapping to `404 EXECUTION_NOT_FOUND` in `pkg/vmtransport/http/server.go`.
+- Updated integration tests for valid UUID not-found behavior (`pkg/vmtransport/http/server_executions_integration_test.go`).
+
+### 6) Security/validation parity gap for startup paths (medium-high, resolved)
 
 Problem:
 
@@ -384,6 +423,12 @@ introduce shared path policy helper in vmcontrol
 validate startup path on add
 re-validate before execute for defense in depth
 ```
+
+Status update (resolved):
+
+- Startup path add endpoint now validates typed relative path and rejects malformed traversal inputs.
+- Startup execution now resolves through typed canonical worktree resolver before execution.
+- Safety integration tests now cover startup traversal and startup symlink escape behavior.
 
 ### 7) Soft-fail error handling masks policy failures (medium)
 
@@ -420,7 +465,7 @@ on policy load failure:
 never silently swallow in safety-critical branch
 ```
 
-### 8) Core model and helper duplication creates drift risk (medium)
+### 8) Core model and helper duplication creates drift risk (medium, partially resolved)
 
 Problem:
 
@@ -445,6 +490,11 @@ single-source config types in vmmodels (or vmcontrol/config)
 remove duplicate structs
 replace mustMarshalJSON variants with one utility + explicit fallback constants
 ```
+
+Status update (partially resolved):
+
+- Config struct duplication in `vmcontrol` was removed by aliasing to `vmmodels` types (`pkg/vmcontrol/types.go`; `e0bfaf8`).
+- JSON helper duplication (`mustMarshalJSON` behavior divergence) remains open.
 
 ### 9) Executor has high internal duplication and unchecked persistence errors (medium)
 
@@ -511,8 +561,10 @@ Coverage is concentrated in `pkg/vmtransport/http` while runtime/store/control p
 
 Measured result:
 
-- `pkg/vmtransport/http`: 72.6%
-- all other packages: 0.0%
+- `pkg/vmtransport/http`: 75.0%
+- `pkg/vmpath`: 78.3%
+- `pkg/vmmodels`: 86.1%
+- `pkg/vmcontrol`, `pkg/vmsession`, `pkg/vmexec`, `pkg/vmstore`: 0.0%
 
 Where to look:
 
@@ -571,7 +623,6 @@ all scripts must:
 
 ### Notable Duplication
 
-- Config structs duplicated (`vmmodels` and `vmcontrol`).
 - JSON marshal helper duplicated with differing fallback behavior.
 - REPL and run-file execution pipelines duplicated in executor.
 - Test bootstrap helpers spread across multiple integration files.
@@ -587,12 +638,14 @@ all scripts must:
 ### VM-001 Alignment
 
 - Achieved: daemonized host and API-centric command model.
-- Not fully achieved: runtime hardening and legacy-surface cleanup.
+- Progress since baseline: major path hardening items implemented with typed path model.
+- Not fully achieved: startup lifecycle correctness and limit contract consistency still open; legacy-surface cleanup still pending.
 
 ### VM-004 Alignment
 
 - Achieved: broad route-level integration and error/safety contract testing.
-- Gap: safety model not fully covered (startup traversal, symlink escape) and core package tests still absent.
+- Progress since baseline: safety model now includes startup traversal and symlink-escape coverage; malformed UUID boundary contracts also covered.
+- Gap: core runtime/store/control package tests remain sparse.
 
 ### VM-005 Alignment
 
@@ -603,10 +656,11 @@ all scripts must:
 
 ### Phase 1 (Immediate safety/correctness)
 
-1. Fix startup path validation and run-file symlink canonicalization.
-2. Fix session startup-failure map lifecycle leak.
-3. Fix execution-limit persistence/API contract mismatch.
-4. Add typed `ErrExecutionNotFound` and 404 mapping.
+1. Done: Fix startup path validation and run-file symlink canonicalization.
+2. Open: Fix session startup-failure map lifecycle leak.
+3. Open: Fix execution-limit persistence/API contract mismatch.
+4. Done: Add typed `ErrExecutionNotFound` and 404 mapping.
+5. Done: Enforce typed UUID validation at HTTP ID boundaries.
 
 ### Phase 2 (Surface cleanup)
 
@@ -616,23 +670,23 @@ all scripts must:
 
 ### Phase 3 (Refactor + test balance)
 
-1. Consolidate duplicated config types/helpers.
+1. Partially done: consolidate duplicated config types/helpers (config structs done; helper consolidation pending).
 2. Refactor executor into shared pipeline functions.
 3. Add unit tests for `vmcontrol`, `vmsession`, `vmexec`, and `vmstore`.
 
 ## Implementation Plan
 
-1. Create follow-up hardening ticket for path safety + startup lifecycle fixes.
-2. Add regression tests reproducing findings from this review.
+1. Create follow-up task(s) for startup-failure lifecycle correctness (`SessionManager.sessions` registration order/removal on startup error).
+2. Create follow-up task(s) to align limit contract across API response and persisted execution state.
 3. Create legacy-surface cleanup ticket for script migration/archive policy.
-4. Create targeted refactor ticket for model/helper duplication and executor extraction.
+4. Create targeted refactor ticket for executor pipeline extraction + persistence error propagation.
+5. Add direct tests for `vmcontrol`, `vmsession`, `vmexec`, and `vmstore`.
 
 ## Open Questions
 
 1. Should `session close` be idempotent (`200`) or strict (`404` after first close)?
 2. For limit breaches, should runtime truncate and return `ok` with warning events, or fail execution state persistently?
-3. Should startup-file path restrictions be relative-only with explicit disallow of symlinks, or allow controlled symlink roots?
-4. Should `modules` mutating commands be removed in next major cut?
+3. Should `modules` mutating commands be removed in next major cut?
 
 ## References
 
@@ -644,6 +698,8 @@ all scripts must:
 - `pkg/vmsession/session.go`
 - `pkg/vmexec/executor.go`
 - `pkg/vmstore/vmstore.go`
+- `pkg/vmpath/path.go`
+- `pkg/vmmodels/ids.go`
 - `smoke-test.sh`
 - `test-e2e.sh`
 - `test-library-loading.sh`
