@@ -333,15 +333,18 @@ This section explains how the implementation is structured so you can change cod
   - root command
   - global flags `--db` and `--server-url`
   - registers command groups
+- `cmd_http.go`
+  - daemon-backed API client command namespace
+  - groups `http template`, `http session`, and `http exec`
 - `cmd_serve.go`
   - daemon bootstrap command
   - wires `vmdaemon` + HTTP handler
 - `cmd_template.go`
-  - template CRUD + startup/capability/module/library operations
+  - `http template` subcommands for template CRUD + startup/capability/module/library operations
 - `cmd_session.go`
-  - create/list/get/close semantics
+  - `http session` subcommands for create/list/get/close semantics
 - `cmd_exec.go`
-  - repl/run-file/get/list/events
+  - `http exec` subcommands for repl/run-file/get/list/events
 - `cmd_libs.go`
   - cache utility operations for downloadable libraries
 
@@ -518,11 +521,11 @@ Practical consequence:
 
 ## 7) CLI/API cutover status
 
-Current CLI runtime commands are daemon-oriented (`template`, `session`, `exec`), which is good.
+Current CLI runtime commands are daemon-oriented under `http` (`http template`, `http session`, `http exec`), which is good.
 
-Template module/library operations are exposed through `template` subcommands and corresponding template API routes.
+Template module/library operations are exposed through `http template` subcommands and corresponding template API routes.
 
-As a contributor, keep template resource changes on the template command/API path and avoid introducing duplicate command surfaces.
+As a contributor, keep template resource changes on the `http template` command/API path and avoid introducing duplicate command surfaces.
 
 ## Implementation walkthrough: concrete files to read in order
 
@@ -933,7 +936,8 @@ curl -sS "http://127.0.0.1:3210/api/v1/executions?session_id=<session-id>&limit=
 ```text
                           +----------------------------+
                           |        vm-system CLI       |
-                          | template/session/exec cmds |
+                          |  http {template,session,   |
+                          |        exec} command set   |
                           +-------------+--------------+
                                         |
                                         | REST (vmclient)
