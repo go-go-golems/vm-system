@@ -28,7 +28,7 @@ func newSessionCommand() *cobra.Command {
 }
 
 func newSessionCreateCommand() *cobra.Command {
-	var vmID, workspaceID, baseCommitOID, worktreePath string
+	var templateID, workspaceID, baseCommitOID, worktreePath string
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -36,7 +36,7 @@ func newSessionCreateCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := vmclient.New(serverURL, nil)
 			session, err := client.CreateSession(context.Background(), vmclient.CreateSessionRequest{
-				TemplateID:    vmID,
+				TemplateID:    templateID,
 				WorkspaceID:   workspaceID,
 				BaseCommitOID: baseCommitOID,
 				WorktreePath:  worktreePath,
@@ -56,11 +56,11 @@ func newSessionCreateCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&vmID, "vm-id", "", "VM profile ID (required)")
+	cmd.Flags().StringVar(&templateID, "template-id", "", "Template ID (required)")
 	cmd.Flags().StringVar(&workspaceID, "workspace-id", "", "Workspace ID (required)")
 	cmd.Flags().StringVar(&baseCommitOID, "base-commit", "", "Base commit OID (required)")
 	cmd.Flags().StringVar(&worktreePath, "worktree-path", "", "Worktree path (required)")
-	_ = cmd.MarkFlagRequired("vm-id")
+	_ = cmd.MarkFlagRequired("template-id")
 	_ = cmd.MarkFlagRequired("workspace-id")
 	_ = cmd.MarkFlagRequired("base-commit")
 	_ = cmd.MarkFlagRequired("worktree-path")

@@ -25,7 +25,7 @@ func main() {
 
 	rootCmd.AddCommand(
 		newServeCommand(),
-		newVMCommand(),
+		newTemplateCommand(),
 		newSessionCommand(),
 		newExecCommand(),
 		modulesCmd,
