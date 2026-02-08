@@ -170,6 +170,50 @@ func TestExecuteRunFilePersistsResultAndValueEvent(t *testing.T) {
 	}
 }
 
+func TestExecuteRunFileUndefinedResultUsesFallbackPayload(t *testing.T) {
+	fx := newExecutorFixture(t)
+
+	if err := os.WriteFile(filepath.Join(fx.worktree, "script.js"), []byte("console.log('file-only');"), 0o644); err != nil {
+		t.Fatalf("write script file: %v", err)
+	}
+
+	exec, err := fx.executor.ExecuteRunFile(fx.sessionID, "script.js", map[string]interface{}{}, map[string]interface{}{})
+	if err != nil {
+		t.Fatalf("execute run-file undefined result: %v", err)
+	}
+	if exec.Status != string(vmmodels.ExecOK) {
+		t.Fatalf("expected status ok, got %q", exec.Status)
+	}
+	if len(exec.Result) == 0 {
+		t.Fatalf("expected fallback result payload for undefined run-file result")
+	}
+
+	var valuePayload vmmodels.ValuePayload
+	if err := json.Unmarshal(exec.Result, &valuePayload); err != nil {
+		t.Fatalf("unmarshal undefined run-file result: %v", err)
+	}
+	if valuePayload.Type != "undefined" {
+		t.Fatalf("expected undefined fallback type, got %q", valuePayload.Type)
+	}
+	if valuePayload.Preview != "undefined" {
+		t.Fatalf("expected undefined fallback preview, got %q", valuePayload.Preview)
+	}
+	if string(valuePayload.JSON) != "null" {
+		t.Fatalf("expected undefined fallback json null, got %s", string(valuePayload.JSON))
+	}
+
+	events, err := fx.executor.GetEvents(exec.ID, 0)
+	if err != nil {
+		t.Fatalf("get events: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("expected 2 run-file events (console, value), got %d", len(events))
+	}
+	if events[1].Type != string(vmmodels.EventValue) {
+		t.Fatalf("expected value event, got %q", events[1].Type)
+	}
+}
+
 type executorFixture struct {
 	executor  *vmexec.Executor
 	sessionID string

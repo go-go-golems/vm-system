@@ -189,14 +189,37 @@ func exceptionPayloadJSON(runErr error) json.RawMessage {
 
 func valuePayloadJSON(value goja.Value) json.RawMessage {
 	valuePayload := vmmodels.ValuePayload{
-		Type:    value.ExportType().String(),
-		Preview: value.String(),
+		Type:    "unknown",
+		Preview: "",
 	}
+
+	// RunString can yield undefined-like values where ExportType() is nil.
+	// Keep this path explicit so execution never panics on successful scripts.
+	if value == nil || goja.IsUndefined(value) {
+		valuePayload.Type = "undefined"
+		valuePayload.Preview = "undefined"
+		valuePayload.JSON = json.RawMessage("null")
+		valueJSON, _ := json.Marshal(valuePayload)
+		return valueJSON
+	}
+	if goja.IsNull(value) {
+		valuePayload.Type = "null"
+		valuePayload.Preview = "null"
+		valuePayload.JSON = json.RawMessage("null")
+		valueJSON, _ := json.Marshal(valuePayload)
+		return valueJSON
+	}
+
+	if exportType := value.ExportType(); exportType != nil {
+		valuePayload.Type = exportType.String()
+	}
+	valuePayload.Preview = value.String()
 	if exported := value.Export(); exported != nil {
 		if jsonBytes, err := json.Marshal(exported); err == nil {
 			valuePayload.JSON = jsonBytes
 		}
 	}
+
 	valueJSON, _ := json.Marshal(valuePayload)
 	return valueJSON
 }
