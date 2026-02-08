@@ -73,7 +73,7 @@ echo ""
 
 
 echo "5. Creating template..."
-CREATE_OUTPUT=$($CLI template create --name "test-template" --engine goja)
+CREATE_OUTPUT=$($CLI http template create --name "test-template" --engine goja)
 TEMPLATE_ID=$(echo "$CREATE_OUTPUT" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
 echo "$CREATE_OUTPUT"
 echo "Template ID: $TEMPLATE_ID"
@@ -81,15 +81,15 @@ echo ""
 
 
 echo "6. Adding startup files..."
-$CLI template add-startup "$TEMPLATE_ID" --path "runtime/init.js" --order 10 --mode eval
-$CLI template add-startup "$TEMPLATE_ID" --path "runtime/bootstrap.js" --order 20 --mode eval
+$CLI http template add-startup "$TEMPLATE_ID" --path "runtime/init.js" --order 10 --mode eval
+$CLI http template add-startup "$TEMPLATE_ID" --path "runtime/bootstrap.js" --order 20 --mode eval
 echo "✓ Startup files added"
 echo ""
 
 
 echo "7. Creating session..."
 WORKTREE_PATH="$WORKTREE"
-SESSION_OUTPUT=$($CLI session create \
+SESSION_OUTPUT=$($CLI http session create \
   --template-id "$TEMPLATE_ID" \
   --workspace-id ws-test-1 \
   --base-commit abc123 \
@@ -101,18 +101,18 @@ echo ""
 
 
 echo "8. Executing REPL snippet..."
-$CLI exec repl "$SESSION_ID" '1 + 2'
+$CLI http exec repl "$SESSION_ID" '1 + 2'
 echo ""
 
 
 echo "9. Executing run-file..."
-$CLI exec run-file "$SESSION_ID" 'test.js'
+$CLI http exec run-file "$SESSION_ID" 'test.js'
 echo ""
 
 
 echo "10. Listing sessions and executions..."
-$CLI session list
-$CLI exec list "$SESSION_ID"
+$CLI http session list
+$CLI http exec list "$SESSION_ID"
 echo ""
 
 

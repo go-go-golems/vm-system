@@ -71,7 +71,6 @@ const sorted = _.sortBy(users, 'age');
 console.log("Sorted users:", JSON.stringify(sorted));
 
 console.log("All Lodash tests passed!");
-"SCRIPT_OK";
 JS
 
   git add test-lodash.js
@@ -96,7 +95,7 @@ echo "✓ Libraries downloaded"
 echo ""
 echo "[TEST 2] Creating template with Lodash library..."
 TIMESTAMP=$(date +%s)
-CREATE_OUTPUT=$(${CLI} template create --name "goja-test-${TIMESTAMP}" --engine goja)
+CREATE_OUTPUT=$(${CLI} http template create --name "goja-test-${TIMESTAMP}" --engine goja)
 TEMPLATE_ID=$(echo "${CREATE_OUTPUT}" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
 echo "${CREATE_OUTPUT}"
 echo "✓ Created template: ${TEMPLATE_ID}"
@@ -104,20 +103,20 @@ echo "✓ Created template: ${TEMPLATE_ID}"
 # Test 3: Add Lodash to template
 echo ""
 echo "[TEST 3] Adding Lodash library to template..."
-${CLI} template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
-${CLI} template add-module "${TEMPLATE_ID}" --name console
+${CLI} http template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
+${CLI} http template add-module "${TEMPLATE_ID}" --name console
 echo "✓ Lodash configured"
 
 # Test 4: Verify configuration
 echo ""
 echo "[TEST 4] Verifying template configuration..."
-${CLI} template get "${TEMPLATE_ID}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"
+${CLI} http template get "${TEMPLATE_ID}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"
 echo "✓ Configuration verified"
 
 # Test 5: Create session (loads libraries into runtime)
 echo ""
 echo "[TEST 5] Creating session (loading libraries into goja runtime)..."
-SESSION_OUTPUT=$(${CLI} session create \
+SESSION_OUTPUT=$(${CLI} http session create \
   --template-id "${TEMPLATE_ID}" \
   --workspace-id "test-workspace" \
   --base-commit "${BASE_COMMIT}" \
@@ -128,7 +127,7 @@ echo "${SESSION_OUTPUT}"
 echo ""
 echo "[TEST 6] Executing JavaScript code that uses Lodash..."
 if [[ -n "${SESSION_ID}" ]]; then
-  EXEC_OUTPUT=$(${CLI} exec run-file "${SESSION_ID}" "test-lodash.js")
+  EXEC_OUTPUT=$(${CLI} http exec run-file "${SESSION_ID}" "test-lodash.js")
   echo "Execution output:"
   echo "${EXEC_OUTPUT}"
   echo ""

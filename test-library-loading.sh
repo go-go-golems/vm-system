@@ -46,12 +46,11 @@ if (typeof _ === 'undefined') {
 }
 const doubled = _.map([1, 2, 3], n => n * 2);
 console.log("LODASH_OK", JSON.stringify(doubled));
-"SCRIPT_OK";
 JS
 
 echo ""
 echo "[TEST 1] Creating template..."
-CREATE_OUTPUT=$(${CLI} template create --name "test-template-lib-loading" --engine goja)
+CREATE_OUTPUT=$(${CLI} http template create --name "test-template-lib-loading" --engine goja)
 TEMPLATE_ID=$(echo "${CREATE_OUTPUT}" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
 echo "${CREATE_OUTPUT}"
 [[ -n "${TEMPLATE_ID}" ]]
@@ -69,18 +68,18 @@ echo "✓ Libraries downloaded"
 
 echo ""
 echo "[TEST 3] Adding console module + Lodash library to template..."
-${CLI} template add-module "${TEMPLATE_ID}" --name console
-${CLI} template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
+${CLI} http template add-module "${TEMPLATE_ID}" --name console
+${CLI} http template add-library "${TEMPLATE_ID}" --name "${LODASH_LIB_ID}"
 echo "✓ Template configured"
 
 echo ""
 echo "[TEST 4] Verifying template library configuration..."
-${CLI} template get "${TEMPLATE_ID}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"
+${CLI} http template get "${TEMPLATE_ID}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"
 echo "✓ Lodash configuration verified"
 
 echo ""
 echo "[TEST 5] Creating session..."
-SESSION_OUTPUT=$(${CLI} session create \
+SESSION_OUTPUT=$(${CLI} http session create \
   --template-id "${TEMPLATE_ID}" \
   --workspace-id "ws-lib-loading" \
   --base-commit "deadbeef" \
@@ -92,7 +91,7 @@ echo "✓ Session created: ${SESSION_ID}"
 
 echo ""
 echo "[TEST 6] Executing Lodash test run-file..."
-EXEC_OUTPUT=$(${CLI} exec run-file "${SESSION_ID}" "test-lodash.js")
+EXEC_OUTPUT=$(${CLI} http exec run-file "${SESSION_ID}" "test-lodash.js")
 echo "${EXEC_OUTPUT}"
 echo "${EXEC_OUTPUT}" | grep -q "LODASH_OK"
 echo "✓ Lodash executed successfully in goja runtime"

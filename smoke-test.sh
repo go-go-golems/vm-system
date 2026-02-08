@@ -82,7 +82,7 @@ else
 fi
 
 run_test "List available modules"
-OUTPUT=$($CLI template list-available-modules)
+OUTPUT=$($CLI http template list-available-modules)
 if echo "$OUTPUT" | grep -q "console"; then
   log_success "Module list contains console"
 else
@@ -90,7 +90,7 @@ else
 fi
 
 run_test "Create template"
-CREATE_OUTPUT=$($CLI template create --name "SmokeTemplate" --engine goja)
+CREATE_OUTPUT=$($CLI http template create --name "SmokeTemplate" --engine goja)
 TEMPLATE_ID=$(echo "$CREATE_OUTPUT" | sed -n 's/.*(ID: \(.*\)).*/\1/p')
 if [[ -n "$TEMPLATE_ID" ]]; then
   log_success "Template created ($TEMPLATE_ID)"
@@ -100,7 +100,7 @@ else
 fi
 
 run_test "Add template capability"
-if $CLI template add-capability "$TEMPLATE_ID" --kind module --name console --enabled; then
+if $CLI http template add-capability "$TEMPLATE_ID" --kind module --name console --enabled; then
   log_success "Capability added"
 else
   log_error "Capability add failed"
@@ -108,14 +108,14 @@ fi
 
 run_test "Add template startup file"
 REL_STARTUP="$(realpath --relative-to "$WORKTREE" "$WORKTREE/startup.js")"
-if $CLI template add-startup "$TEMPLATE_ID" --path "$REL_STARTUP" --order 10 --mode eval; then
+if $CLI http template add-startup "$TEMPLATE_ID" --path "$REL_STARTUP" --order 10 --mode eval; then
   log_success "Startup file added"
 else
   log_error "Startup file add failed"
 fi
 
 run_test "Create session via daemon"
-SESSION_OUTPUT=$($CLI session create \
+SESSION_OUTPUT=$($CLI http session create \
   --template-id "$TEMPLATE_ID" \
   --workspace-id ws-smoke \
   --base-commit deadbeef \
@@ -129,7 +129,7 @@ else
 fi
 
 run_test "Execute REPL over daemon API"
-OUTPUT=$($CLI exec repl "$SESSION_ID" 'SMOKE_VALUE + 2')
+OUTPUT=$($CLI http exec repl "$SESSION_ID" 'SMOKE_VALUE + 2')
 if echo "$OUTPUT" | grep -q '"preview":"42"'; then
   log_success "REPL execution returned expected result"
 else
@@ -137,7 +137,7 @@ else
 fi
 
 run_test "Execute run-file over daemon API"
-OUTPUT=$($CLI exec run-file "$SESSION_ID" "app.js")
+OUTPUT=$($CLI http exec run-file "$SESSION_ID" "app.js")
 if echo "$OUTPUT" | grep -q "Execution ID:"; then
   log_success "run-file execution succeeded"
 else

@@ -25,9 +25,7 @@ func main() {
 
 	rootCmd.AddCommand(
 		newServeCommand(),
-		newTemplateCommand(),
-		newSessionCommand(),
-		newExecCommand(),
+		newHTTPCommand(),
 		libsCmd,
 	)
 

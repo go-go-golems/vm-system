@@ -95,7 +95,7 @@ fi
 # TEST 2: Create template WITHOUT libraries configured
 # ============================================================================
 run_test "Create template without library configuration"
-OUTPUT=$(${CLI} template create --name "NoLibsTemplate" --engine goja)
+OUTPUT=$(${CLI} http template create --name "NoLibsTemplate" --engine goja)
 TEMPLATE_NO_LIBS=$(extract_template_id "${OUTPUT}")
 if [[ -n "${TEMPLATE_NO_LIBS}" ]]; then
   log_success "Template created without libraries"
@@ -105,13 +105,13 @@ else
   exit 1
 fi
 
-${CLI} template add-module "${TEMPLATE_NO_LIBS}" --name console
+${CLI} http template add-module "${TEMPLATE_NO_LIBS}" --name console
 
 # ============================================================================
 # TEST 3: Create template WITH Lodash library configured
 # ============================================================================
 run_test "Create template with Lodash library"
-OUTPUT=$(${CLI} template create --name "LodashTemplate" --engine goja)
+OUTPUT=$(${CLI} http template create --name "LodashTemplate" --engine goja)
 TEMPLATE_LODASH=$(extract_template_id "${OUTPUT}")
 if [[ -n "${TEMPLATE_LODASH}" ]]; then
   log_success "Template created for Lodash"
@@ -121,14 +121,14 @@ else
   exit 1
 fi
 
-${CLI} template add-module "${TEMPLATE_LODASH}" --name console
-${CLI} template add-library "${TEMPLATE_LODASH}" --name "${LODASH_LIB_ID}"
+${CLI} http template add-module "${TEMPLATE_LODASH}" --name console
+${CLI} http template add-library "${TEMPLATE_LODASH}" --name "${LODASH_LIB_ID}"
 
 # ============================================================================
 # TEST 4: Verify library is in template configuration
 # ============================================================================
 run_test "Verify Lodash is in template configuration"
-OUTPUT=$(${CLI} template get "${TEMPLATE_LODASH}")
+OUTPUT=$(${CLI} http template get "${TEMPLATE_LODASH}")
 if echo "${OUTPUT}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"; then
   log_success "Template reports Lodash in Loaded Libraries"
 else
@@ -150,7 +150,6 @@ const users = [
 ];
 const names = _.map(users, 'name');
 console.log("SUCCESS_LODASH", JSON.stringify(names));
-"SUCCESS_LODASH";
 JS
 log_success "Lodash test code created"
 
@@ -158,13 +157,13 @@ log_success "Lodash test code created"
 # TEST 6: Verify code fails without library configured
 # ============================================================================
 run_test "Verify code fails on template without Lodash"
-SESSION_NO_LIBS=$(${CLI} session create \
+SESSION_NO_LIBS=$(${CLI} http session create \
   --template-id "${TEMPLATE_NO_LIBS}" \
   --workspace-id "ws-no-libs" \
   --base-commit "deadbeef" \
   --worktree-path "${WORKTREE}" | awk '/Created session:/ {print $3}')
 
-if ${CLI} exec run-file "${SESSION_NO_LIBS}" "test-lodash.js" >/tmp/test-no-libs.out 2>&1; then
+if ${CLI} http exec run-file "${SESSION_NO_LIBS}" "test-lodash.js" >/tmp/test-no-libs.out 2>&1; then
   if grep -q "Error" /tmp/test-no-libs.out; then
     log_success "Execution failed as expected without Lodash"
   else
@@ -178,13 +177,13 @@ fi
 # TEST 7: Verify code succeeds with library configured
 # ============================================================================
 run_test "Verify code succeeds on template with Lodash"
-SESSION_LODASH=$(${CLI} session create \
+SESSION_LODASH=$(${CLI} http session create \
   --template-id "${TEMPLATE_LODASH}" \
   --workspace-id "ws-lodash" \
   --base-commit "deadbeef" \
   --worktree-path "${WORKTREE}" | awk '/Created session:/ {print $3}')
 
-OUTPUT=$(${CLI} exec run-file "${SESSION_LODASH}" "test-lodash.js")
+OUTPUT=$(${CLI} http exec run-file "${SESSION_LODASH}" "test-lodash.js")
 if echo "${OUTPUT}" | grep -q "SUCCESS_LODASH"; then
   log_success "Execution succeeded with Lodash configured"
 else
@@ -195,17 +194,17 @@ fi
 # TEST 8: Add library to existing template (post-hoc)
 # ============================================================================
 run_test "Add library to existing template (post-hoc configuration)"
-OUTPUT=$(${CLI} template create --name "PostHocTemplate" --engine goja)
+OUTPUT=$(${CLI} http template create --name "PostHocTemplate" --engine goja)
 TEMPLATE_POSTHOC=$(extract_template_id "${OUTPUT}")
-${CLI} template add-module "${TEMPLATE_POSTHOC}" --name console
+${CLI} http template add-module "${TEMPLATE_POSTHOC}" --name console
 
-if ${CLI} template add-library "${TEMPLATE_POSTHOC}" --name "${LODASH_LIB_ID}"; then
+if ${CLI} http template add-library "${TEMPLATE_POSTHOC}" --name "${LODASH_LIB_ID}"; then
   log_success "Library added post-hoc successfully"
 else
   log_error "Failed to add library post-hoc"
 fi
 
-OUTPUT=$(${CLI} template get "${TEMPLATE_POSTHOC}")
+OUTPUT=$(${CLI} http template get "${TEMPLATE_POSTHOC}")
 if echo "${OUTPUT}" | grep -A 5 "Loaded Libraries" | grep -q "lodash"; then
   log_success "Post-hoc library configuration persisted"
 else
@@ -216,15 +215,15 @@ fi
 # TEST 9: Add multiple libraries to one template
 # ============================================================================
 run_test "Add multiple libraries to template"
-OUTPUT=$(${CLI} template create --name "MultiLibTemplate" --engine goja)
+OUTPUT=$(${CLI} http template create --name "MultiLibTemplate" --engine goja)
 TEMPLATE_MULTI=$(extract_template_id "${OUTPUT}")
 
-${CLI} template add-module "${TEMPLATE_MULTI}" --name console
-${CLI} template add-library "${TEMPLATE_MULTI}" --name "${LODASH_LIB_ID}"
-${CLI} template add-library "${TEMPLATE_MULTI}" --name "${RAMDA_LIB_ID}"
-${CLI} template add-library "${TEMPLATE_MULTI}" --name "${ZUSTAND_LIB_ID}"
+${CLI} http template add-module "${TEMPLATE_MULTI}" --name console
+${CLI} http template add-library "${TEMPLATE_MULTI}" --name "${LODASH_LIB_ID}"
+${CLI} http template add-library "${TEMPLATE_MULTI}" --name "${RAMDA_LIB_ID}"
+${CLI} http template add-library "${TEMPLATE_MULTI}" --name "${ZUSTAND_LIB_ID}"
 
-OUTPUT=$(${CLI} template get "${TEMPLATE_MULTI}")
+OUTPUT=$(${CLI} http template get "${TEMPLATE_MULTI}")
 if echo "${OUTPUT}" | grep -q "lodash" && echo "${OUTPUT}" | grep -q "ramda" && echo "${OUTPUT}" | grep -q "zustand"; then
   log_success "Multiple libraries configured successfully"
 else
