@@ -92,3 +92,13 @@ Task 7: Added internal runExecutionPipeline helper chain and refactored ExecuteR
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Introduced executionPipelineConfig/runExecutionPipeline and migrated ExecuteREPL
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 7 complete
 
+
+## 2026-02-08
+
+Task 8: Migrated ExecuteRunFile to runExecutionPipeline and removed duplicated lifecycle blocks, reusing shared console and exception helpers.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — ExecuteRunFile now uses pipeline hooks plus shared console/exception helpers
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 8 complete
+

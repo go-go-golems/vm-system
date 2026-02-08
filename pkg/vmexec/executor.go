@@ -153,6 +153,31 @@ func (e *Executor) finalizeExecutionError(exec *vmmodels.Execution, endedAt time
 	return nil
 }
 
+func (e *Executor) installConsoleRecorder(session *vmsession.Session, recorder *eventRecorder) {
+	console := map[string]interface{}{
+		"log": func(args ...interface{}) {
+			output := fmt.Sprint(args...)
+			payload := vmmodels.ConsolePayload{
+				Level: "log",
+				Text:  output,
+			}
+			recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
+		},
+	}
+	session.Runtime.Set("console", console)
+}
+
+func exceptionPayloadJSON(runErr error) json.RawMessage {
+	exceptionPayload := vmmodels.ExceptionPayload{
+		Message: runErr.Error(),
+	}
+	if gojaErr, ok := runErr.(*goja.Exception); ok {
+		exceptionPayload.Stack = gojaErr.String()
+	}
+	exceptionJSON, _ := json.Marshal(exceptionPayload)
+	return exceptionJSON
+}
+
 func (e *Executor) runExecutionPipeline(cfg executionPipelineConfig) (*vmmodels.Execution, error) {
 	session, unlock, err := e.prepareSession(cfg.sessionID)
 	if err != nil {
@@ -209,30 +234,14 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			input: input,
 		},
 		setupRuntime: func(session *vmsession.Session, recorder *eventRecorder) error {
-			console := map[string]interface{}{
-				"log": func(args ...interface{}) {
-					output := fmt.Sprint(args...)
-					payload := vmmodels.ConsolePayload{
-						Level: "log",
-						Text:  output,
-					}
-					recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
-				},
-			}
-			session.Runtime.Set("console", console)
+			e.installConsoleRecorder(session, recorder)
 			return recorder.emit(vmmodels.EventInputEcho, map[string]string{"text": input})
 		},
 		run: func(session *vmsession.Session, _ *eventRecorder) (goja.Value, error) {
 			return session.Runtime.RunString(input)
 		},
 		handleError: func(exec *vmmodels.Execution, recorder *eventRecorder, runErr error, endedAt time.Time) error {
-			exceptionPayload := vmmodels.ExceptionPayload{
-				Message: runErr.Error(),
-			}
-			if gojaErr, ok := runErr.(*goja.Exception); ok {
-				exceptionPayload.Stack = gojaErr.String()
-			}
-			exceptionJSON, _ := json.Marshal(exceptionPayload)
+			exceptionJSON := exceptionPayloadJSON(runErr)
 			if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
 				return err
 			}
@@ -259,88 +268,47 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 
 // ExecuteRunFile executes a file
 func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]interface{}) (*vmmodels.Execution, error) {
-	session, unlock, err := e.prepareSession(sessionID)
-	if err != nil {
-		return nil, err
-	}
-	defer unlock()
-
-	// Resolve file path
-	filePath := filepath.Join(session.WorktreePath, path)
-	if _, err := os.Stat(filePath); err != nil {
-		return nil, fmt.Errorf("%w: %s", vmmodels.ErrFileNotFound, path)
-	}
-
-	// Read file content
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
 	argsJSON, _ := json.Marshal(args)
 	envJSON, _ := json.Marshal(env)
-	exec := e.newExecutionRecord(executionRecordInput{
+	var fileContent []byte
+	return e.runExecutionPipeline(executionPipelineConfig{
 		sessionID: sessionID,
-		kind:      vmmodels.ExecRunFile,
-		path:      path,
-		argsJSON:  argsJSON,
-		envJSON:   envJSON,
-	})
-	executionID := exec.ID
-
-	if err := e.store.CreateExecution(exec); err != nil {
-		return nil, fmt.Errorf("failed to create execution: %w", err)
-	}
-
-	recorder := newEventRecorder(e.store, executionID)
-
-	// Capture console output
-	console := map[string]interface{}{
-		"log": func(args ...interface{}) {
-			output := fmt.Sprint(args...)
-			payload := vmmodels.ConsolePayload{
-				Level: "log",
-				Text:  output,
-			}
-			recorder.recordError(recorder.emit(vmmodels.EventConsole, payload))
+		recordInput: executionRecordInput{
+			kind:     vmmodels.ExecRunFile,
+			path:     path,
+			argsJSON: argsJSON,
+			envJSON:  envJSON,
 		},
-	}
-	session.Runtime.Set("console", console)
+		setupRuntime: func(session *vmsession.Session, recorder *eventRecorder) error {
+			filePath := filepath.Join(session.WorktreePath, path)
+			if _, err := os.Stat(filePath); err != nil {
+				return fmt.Errorf("%w: %s", vmmodels.ErrFileNotFound, path)
+			}
 
-	// Set __ARGS__ global
-	session.Runtime.Set("__ARGS__", args)
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to read file: %w", err)
+			}
+			fileContent = content
 
-	// Execute file
-	_, err = session.Runtime.RunString(string(content))
-	endTime := time.Now()
-	if recorder.Err() != nil {
-		return nil, recorder.Err()
-	}
-
-	if err != nil {
-		exceptionPayload := vmmodels.ExceptionPayload{
-			Message: err.Error(),
-		}
-		if gojaErr, ok := err.(*goja.Exception); ok {
-			exceptionPayload.Stack = gojaErr.String()
-		}
-		exceptionJSON, _ := json.Marshal(exceptionPayload)
-		if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
-			return nil, err
-		}
-
-		if err := e.finalizeExecutionError(exec, endTime, exceptionJSON); err != nil {
-			return nil, err
-		}
-
-		return exec, nil
-	}
-
-	if err := e.finalizeExecutionSuccess(exec, endTime, nil); err != nil {
-		return nil, err
-	}
-
-	return exec, nil
+			e.installConsoleRecorder(session, recorder)
+			session.Runtime.Set("__ARGS__", args)
+			return nil
+		},
+		run: func(session *vmsession.Session, _ *eventRecorder) (goja.Value, error) {
+			return session.Runtime.RunString(string(fileContent))
+		},
+		handleError: func(exec *vmmodels.Execution, recorder *eventRecorder, runErr error, endedAt time.Time) error {
+			exceptionJSON := exceptionPayloadJSON(runErr)
+			if err := recorder.emitRaw(vmmodels.EventException, exceptionJSON); err != nil {
+				return err
+			}
+			return e.finalizeExecutionError(exec, endedAt, exceptionJSON)
+		},
+		handleSuccess: func(exec *vmmodels.Execution, _ *eventRecorder, _ goja.Value, endedAt time.Time) error {
+			return e.finalizeExecutionSuccess(exec, endedAt, nil)
+		},
+	})
 }
 
 // GetExecution retrieves an execution

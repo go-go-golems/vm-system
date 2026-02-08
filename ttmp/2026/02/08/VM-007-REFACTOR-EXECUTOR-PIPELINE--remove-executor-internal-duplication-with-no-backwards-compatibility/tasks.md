@@ -9,7 +9,7 @@
 - [x] Introduce shared event recorder helper with explicit error propagation from store writes (no silent `AddEvent` failures)
 - [x] Introduce shared finalize helpers for success/error paths with explicit persistence error handling (no ignored `UpdateExecution` failures)
 - [x] Refactor `ExecuteREPL` to the pipeline helper chain and delete duplicated logic blocks
-- [ ] Refactor `ExecuteRunFile` to the pipeline helper chain and delete duplicated logic blocks
+- [x] Refactor `ExecuteRunFile` to the pipeline helper chain and delete duplicated logic blocks
 - [ ] Decide and implement explicit contract for run-file result/value events vs REPL value events (documented behavior, no compatibility shims)
 - [ ] Consolidate duplicated JSON helper behavior (`mustMarshalJSON`) into one shared utility with explicit fallback semantics
 - [ ] Remove helper duplication between `vmstore` and `vmcontrol` by migrating call sites to shared helper API

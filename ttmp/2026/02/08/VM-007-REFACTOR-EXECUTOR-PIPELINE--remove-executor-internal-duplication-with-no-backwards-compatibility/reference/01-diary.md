@@ -15,6 +15,7 @@ RelatedFiles:
         Task 5 shared event recorder and AddEvent error propagation
         Task 6 finalize helpers and explicit UpdateExecution error handling
         Task 7 pipeline helper chain and ExecuteREPL migration
+        Task 8 ExecuteRunFile pipeline migration and shared helper extraction
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -31,6 +32,7 @@ RelatedFiles:
         Task 5 changelog entry
         Task 6 changelog entry
         Task 7 changelog entry
+        Task 8 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
@@ -41,12 +43,14 @@ RelatedFiles:
         Task 5 checklist update
         Task 6 checklist update
         Task 7 checklist update
+        Task 8 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -561,7 +565,7 @@ This is the first full entrypoint migration to the pipeline style and removes mo
 
 **Inferred user intent:** Land structural deduplication incrementally, with isolated commits and stable behavior checks after each step.
 
-**Commit (code):** Pending for Step 7 commit creation.
+**Commit (code):** effc6cc — "vm007: move ExecuteREPL to pipeline chain (task 7)"
 
 ### What I did
 
@@ -624,3 +628,76 @@ The tricky part was threading callback responsibilities without obscuring contro
 ### Technical details
 
 - `runExecutionPipeline` enforces a single lifecycle skeleton and keeps execution-kind variation in supplied hooks.
+
+## Step 8: Move ExecuteRunFile onto the shared pipeline chain
+
+I migrated `ExecuteRunFile` to the same `runExecutionPipeline` flow so both execution entrypoints now share lifecycle orchestration. This removed the remaining large duplicated run-file lifecycle block.
+
+I also extracted small shared helpers for console installation and exception payload encoding to reduce callback duplication across REPL and run-file.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Complete pipeline migration by refactoring run-file entrypoint to the shared helper chain and deleting duplicated lifecycle code.
+
+**Inferred user intent:** Fully remove internal REPL/run-file lifecycle duplication before moving to explicit contract decisions.
+
+**Commit (code):** Pending for Step 8 commit creation.
+
+### What I did
+
+- Refactored `ExecuteRunFile` to call `runExecutionPipeline(...)` with run-file-specific hooks.
+- Moved file path resolution/read into run-file setup hook (still using session worktree path).
+- Preserved current run-file behavior:
+  - console events captured
+  - exception event on runtime error
+  - successful completion with empty result payload
+- Added shared helper methods in `pkg/vmexec/executor.go`:
+  - `installConsoleRecorder(...)`
+  - `exceptionPayloadJSON(...)`
+- Reused shared helpers in both REPL and run-file pipeline callbacks.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 8 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 8 closes the primary duplication finding by putting both entrypoints on one execution-lifecycle skeleton.
+
+### What worked
+
+- Tests passed with unchanged contract behavior.
+- Run-file callback configuration stayed concise after helper extraction.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Once both entrypoints share the pipeline, behavior decisions (Task 9) can be implemented in a single, explicit place without copy/paste risk.
+
+### What was tricky to build
+
+The tricky part was preserving current run-file semantics while moving file-read and runtime wiring into callback hooks. I kept run-file success finalization payload as `nil` to avoid changing behavior before the dedicated contract task.
+
+### What warrants a second pair of eyes
+
+- Confirm helper extraction (`installConsoleRecorder`, `exceptionPayloadJSON`) and hook placement make callback boundaries clear.
+
+### What should be done in the future
+
+- Decide and implement explicit run-file result/value-event contract (Task 9).
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` (`ExecuteRunFile` pipeline config and shared helper additions).
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- Run-file setup hook now validates path/readability and stores file content for run hook execution.
