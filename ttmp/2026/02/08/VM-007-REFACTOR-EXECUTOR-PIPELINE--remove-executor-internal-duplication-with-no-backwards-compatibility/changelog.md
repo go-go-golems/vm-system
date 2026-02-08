@@ -42,3 +42,13 @@ Task 2: Added focused vmexec regression tests covering REPL success/error event 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor_test.go — Regression tests freezing vmexec behavior before internal pipeline refactor
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 2 complete
 
+
+## 2026-02-08
+
+Task 3: Extracted shared session-preparation helper (get/status-check/lock) and switched both ExecuteREPL and ExecuteRunFile to the shared path.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Added prepareSession helper and removed duplicated session lock/status blocks
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 3 complete
+

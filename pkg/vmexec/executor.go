@@ -30,24 +30,27 @@ func NewExecutor(store *vmstore.VMStore, sessionManager *vmsession.SessionManage
 	}
 }
 
+func (e *Executor) prepareSession(sessionID string) (*vmsession.Session, func(), error) {
+	session, err := e.sessionManager.GetSession(sessionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if session.Status != vmmodels.SessionReady {
+		return nil, nil, vmmodels.ErrSessionNotReady
+	}
+	if !session.ExecutionLock.TryLock() {
+		return nil, nil, vmmodels.ErrSessionBusy
+	}
+	return session, session.ExecutionLock.Unlock, nil
+}
+
 // ExecuteREPL executes a REPL snippet
 func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
-	// Get session
-	session, err := e.sessionManager.GetSession(sessionID)
+	session, unlock, err := e.prepareSession(sessionID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check session status
-	if session.Status != vmmodels.SessionReady {
-		return nil, vmmodels.ErrSessionNotReady
-	}
-
-	// Acquire execution lock
-	if !session.ExecutionLock.TryLock() {
-		return nil, vmmodels.ErrSessionBusy
-	}
-	defer session.ExecutionLock.Unlock()
+	defer unlock()
 
 	// Create execution record
 	executionID := uuid.New().String()
@@ -76,14 +79,14 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 		"log": func(args ...interface{}) {
 			output := fmt.Sprint(args...)
 			consoleOutput.WriteString(output + "\n")
-			
+
 			// Create console event
 			payload := vmmodels.ConsolePayload{
 				Level: "log",
 				Text:  output,
 			}
 			payloadJSON, _ := json.Marshal(payload)
-			
+
 			event := &vmmodels.ExecutionEvent{
 				ExecutionID: executionID,
 				Seq:         eventSeq,
@@ -92,7 +95,7 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 				Payload:     payloadJSON,
 			}
 			eventSeq++
-			
+
 			e.store.AddEvent(event)
 		},
 	}
@@ -127,7 +130,7 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			exceptionPayload.Stack = gojaErr.String()
 		}
 		exceptionJSON, _ := json.Marshal(exceptionPayload)
-		
+
 		exceptionEvent := &vmmodels.ExecutionEvent{
 			ExecutionID: executionID,
 			Seq:         eventSeq,
@@ -152,14 +155,14 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 		Type:    value.ExportType().String(),
 		Preview: value.String(),
 	}
-	
+
 	// Try to export as JSON
 	if exported := value.Export(); exported != nil {
 		if jsonBytes, err := json.Marshal(exported); err == nil {
 			valuePayload.JSON = jsonBytes
 		}
 	}
-	
+
 	valueJSON, _ := json.Marshal(valuePayload)
 	valueEvent := &vmmodels.ExecutionEvent{
 		ExecutionID: executionID,
@@ -178,22 +181,11 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 
 // ExecuteRunFile executes a file
 func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]interface{}) (*vmmodels.Execution, error) {
-	// Get session
-	session, err := e.sessionManager.GetSession(sessionID)
+	session, unlock, err := e.prepareSession(sessionID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check session status
-	if session.Status != vmmodels.SessionReady {
-		return nil, vmmodels.ErrSessionNotReady
-	}
-
-	// Acquire execution lock
-	if !session.ExecutionLock.TryLock() {
-		return nil, vmmodels.ErrSessionBusy
-	}
-	defer session.ExecutionLock.Unlock()
+	defer unlock()
 
 	// Resolve file path
 	filePath := filepath.Join(session.WorktreePath, path)
@@ -211,7 +203,7 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 	executionID := uuid.New().String()
 	argsJSON, _ := json.Marshal(args)
 	envJSON, _ := json.Marshal(env)
-	
+
 	exec := &vmmodels.Execution{
 		ID:        executionID,
 		SessionID: sessionID,
@@ -234,13 +226,13 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 	console := map[string]interface{}{
 		"log": func(args ...interface{}) {
 			output := fmt.Sprint(args...)
-			
+
 			payload := vmmodels.ConsolePayload{
 				Level: "log",
 				Text:  output,
 			}
 			payloadJSON, _ := json.Marshal(payload)
-			
+
 			event := &vmmodels.ExecutionEvent{
 				ExecutionID: executionID,
 				Seq:         eventSeq,
@@ -249,7 +241,7 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 				Payload:     payloadJSON,
 			}
 			eventSeq++
-			
+
 			e.store.AddEvent(event)
 		},
 	}
@@ -274,7 +266,7 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 			exceptionPayload.Stack = gojaErr.String()
 		}
 		exceptionJSON, _ := json.Marshal(exceptionPayload)
-		
+
 		exceptionEvent := &vmmodels.ExecutionEvent{
 			ExecutionID: executionID,
 			Seq:         eventSeq,

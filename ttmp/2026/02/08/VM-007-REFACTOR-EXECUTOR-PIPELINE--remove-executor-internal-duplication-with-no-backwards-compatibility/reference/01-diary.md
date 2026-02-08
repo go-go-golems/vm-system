@@ -8,6 +8,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/vmexec/executor.go
+      Note: Task 3 shared session preparation helper extraction
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -19,17 +21,20 @@ RelatedFiles:
         Task-level changelog entries
         Task 1 changelog entry
         Task 2 changelog entry
+        Task 3 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
         Task 1 checklist update
         Task 2 checklist update
+        Task 3 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -170,7 +175,7 @@ This step intentionally captures current asymmetry: REPL emits input/value event
 
 **Inferred user intent:** Prevent regressions while deduplicating executor internals by freezing concrete event and persistence behavior now.
 
-**Commit (code):** Pending for Step 2 commit creation.
+**Commit (code):** b9db8c4 — "vm007: add vmexec regression baseline tests (task 2)"
 
 ### What I did
 
@@ -232,3 +237,75 @@ The tricky part was choosing which behavior to freeze vs defer. I froze current 
 
 - `newExecutorFixture` builds real store/session/executor plumbing to validate persisted artifacts, not just in-memory outputs.
 - Event-order checks assert exact sequence numbers and event-type ordering for REPL/error paths.
+
+## Step 3: Deduplicate session preparation lifecycle in executor entrypoints
+
+I extracted a shared `prepareSession` helper in `pkg/vmexec/executor.go` to centralize session lookup, readiness checks, and execution lock acquisition. Both `ExecuteREPL` and `ExecuteRunFile` now call this helper.
+
+This step only removes duplicated gatekeeping logic; behavior is intentionally unchanged. It narrows each entrypoint and prepares the next helper extractions.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Implement the task-by-task executor dedup plan, starting with shared session prep and explicit lock/status reuse.
+
+**Inferred user intent:** Reduce duplication incrementally while preserving intentional behavior and validating each step.
+
+**Commit (code):** Pending for Step 3 commit creation.
+
+### What I did
+
+- Added `prepareSession(sessionID string) (*vmsession.Session, func(), error)` in `pkg/vmexec/executor.go`.
+- Moved duplicated logic into helper:
+  - session retrieval
+  - session status readiness check
+  - execution lock acquisition
+- Replaced duplicated inline blocks in:
+  - `ExecuteREPL`
+  - `ExecuteRunFile`
+- Used returned unlock function (`defer unlock()`) in both execution paths.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 3 complete with `docmgr task check`.
+- Appended Task 3 changelog entry with `docmgr changelog update`.
+
+### Why
+
+Session gating duplication was one of the most obvious and repeated executor blocks. Centralizing it first lowers risk for later pipeline extraction steps.
+
+### What worked
+
+- Behavior remained stable under existing vmexec and HTTP integration tests.
+- Helper signature cleanly supports current call sites without additional compatibility shims.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Returning an unlock closure keeps call sites concise and makes lock lifecycle explicit in one place.
+
+### What was tricky to build
+
+The main constraint was avoiding accidental behavior changes while moving lock/status logic. I preserved existing error semantics (`ErrSessionNotFound`, `ErrSessionNotReady`, `ErrSessionBusy`) and only changed structure.
+
+### What warrants a second pair of eyes
+
+- Confirm helper naming/signature is appropriate before further pipeline helper extraction.
+
+### What should be done in the future
+
+- Continue extraction with execution-record construction and event recording helpers (Tasks 4-5).
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` and compare old vs new session-prep flow.
+- Run `GOWORK=off go test ./pkg/vmexec -count=1`.
+- Confirm no HTTP contract regression via `GOWORK=off go test ./pkg/vmtransport/http -count=1`.
+
+### Technical details
+
+- `prepareSession` returns a lock release function bound to the acquired session lock, reducing repeated `TryLock`/`Unlock` boilerplate.
