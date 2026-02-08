@@ -1,0 +1,185 @@
+package main
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/go-go-golems/vm-system/pkg/vmsession"
+	"github.com/go-go-golems/vm-system/pkg/vmstore"
+)
+
+var sessionManager *vmsession.SessionManager
+
+func newSessionCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "session",
+		Short: "Manage VM sessions",
+		Long:  `Create, list, and manage VM runtime sessions.`,
+	}
+
+	cmd.AddCommand(
+		newSessionCreateCommand(),
+		newSessionListCommand(),
+		newSessionGetCommand(),
+		newSessionDeleteCommand(),
+	)
+
+	return cmd
+}
+
+func newSessionCreateCommand() *cobra.Command {
+	var vmID, workspaceID, baseCommitOID, worktreePath string
+
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a new VM session",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := vmstore.NewVMStore(dbPath)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			if sessionManager == nil {
+				sessionManager = vmsession.NewSessionManager(store)
+			}
+
+			session, err := sessionManager.CreateSession(vmID, workspaceID, baseCommitOID, worktreePath)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Created session: %s\n", session.ID)
+			fmt.Printf("Status: %s\n", session.Status)
+			fmt.Printf("VM ID: %s\n", session.VMID)
+			fmt.Printf("Workspace ID: %s\n", session.WorkspaceID)
+			fmt.Printf("Base Commit: %s\n", session.BaseCommitOID)
+			fmt.Printf("Worktree Path: %s\n", session.WorktreePath)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&vmID, "vm-id", "", "VM profile ID (required)")
+	cmd.Flags().StringVar(&workspaceID, "workspace-id", "", "Workspace ID (required)")
+	cmd.Flags().StringVar(&baseCommitOID, "base-commit", "", "Base commit OID (required)")
+	cmd.Flags().StringVar(&worktreePath, "worktree-path", "", "Worktree path (required)")
+	cmd.MarkFlagRequired("vm-id")
+	cmd.MarkFlagRequired("workspace-id")
+	cmd.MarkFlagRequired("base-commit")
+	cmd.MarkFlagRequired("worktree-path")
+
+	return cmd
+}
+
+func newSessionListCommand() *cobra.Command {
+	var status string
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List VM sessions",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := vmstore.NewVMStore(dbPath)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			sessions, err := store.ListSessions(status)
+			if err != nil {
+				return err
+			}
+
+			if len(sessions) == 0 {
+				fmt.Println("No sessions found")
+				return nil
+			}
+
+			fmt.Printf("%-36s %-36s %-10s %-20s\n", "Session ID", "VM ID", "Status", "Created")
+			fmt.Println("------------------------------------------------------------------------------------------------------")
+			for _, session := range sessions {
+				fmt.Printf("%-36s %-36s %-10s %-20s\n",
+					session.ID,
+					session.VMID,
+					session.Status,
+					session.CreatedAt.Format(time.RFC3339))
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&status, "status", "", "Filter by status (starting, ready, crashed, closed)")
+
+	return cmd
+}
+
+func newSessionGetCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "get [session-id]",
+		Short: "Get session details",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := vmstore.NewVMStore(dbPath)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			sessionID := args[0]
+
+			session, err := store.GetSession(sessionID)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Session ID: %s\n", session.ID)
+			fmt.Printf("VM ID: %s\n", session.VMID)
+			fmt.Printf("Workspace ID: %s\n", session.WorkspaceID)
+			fmt.Printf("Base Commit: %s\n", session.BaseCommitOID)
+			fmt.Printf("Worktree Path: %s\n", session.WorktreePath)
+			fmt.Printf("Status: %s\n", session.Status)
+			fmt.Printf("Created: %s\n", session.CreatedAt.Format(time.RFC3339))
+			
+			if session.ClosedAt != nil {
+				fmt.Printf("Closed: %s\n", session.ClosedAt.Format(time.RFC3339))
+			}
+			
+			if session.LastError != "" {
+				fmt.Printf("Last Error: %s\n", session.LastError)
+			}
+
+			return nil
+		},
+	}
+}
+
+func newSessionDeleteCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete [session-id]",
+		Short: "Delete a session",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := vmstore.NewVMStore(dbPath)
+			if err != nil {
+				return err
+			}
+			defer store.Close()
+
+			if sessionManager == nil {
+				sessionManager = vmsession.NewSessionManager(store)
+			}
+
+			sessionID := args[0]
+
+			if err := sessionManager.CloseSession(sessionID); err != nil {
+				return err
+			}
+
+			fmt.Printf("Closed session: %s\n", sessionID)
+			return nil
+		},
+	}
+}
