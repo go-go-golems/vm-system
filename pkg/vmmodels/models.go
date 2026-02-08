@@ -8,17 +8,18 @@ import (
 
 // Common errors
 var (
-	ErrVMNotFound           = errors.New("VM not found")
-	ErrSessionNotFound      = errors.New("session not found")
-	ErrSessionNotReady      = errors.New("session not ready")
-	ErrSessionBusy          = errors.New("session busy")
-	ErrModuleNotAllowed     = errors.New("module not allowed")
-	ErrFileNotFound         = errors.New("file not found")
+	ErrVMNotFound             = errors.New("VM not found")
+	ErrSessionNotFound        = errors.New("session not found")
+	ErrSessionNotReady        = errors.New("session not ready")
+	ErrSessionBusy            = errors.New("session busy")
+	ErrPathTraversal          = errors.New("path traversal is not allowed")
+	ErrModuleNotAllowed       = errors.New("module not allowed")
+	ErrFileNotFound           = errors.New("file not found")
 	ErrImportResolutionFailed = errors.New("import resolution failed")
-	ErrStartupFailed        = errors.New("startup failed")
-	ErrExecTimeout          = errors.New("execution timeout")
-	ErrOutputLimitExceeded  = errors.New("output limit exceeded")
-	ErrInternalVMError      = errors.New("internal VM error")
+	ErrStartupFailed          = errors.New("startup failed")
+	ErrExecTimeout            = errors.New("execution timeout")
+	ErrOutputLimitExceeded    = errors.New("output limit exceeded")
+	ErrInternalVMError        = errors.New("internal VM error")
 )
 
 // VM represents a VM profile (configuration template)
@@ -35,25 +36,25 @@ type VM struct {
 
 // VMSettings contains VM configuration settings
 type VMSettings struct {
-	VMID        string          `json:"vm_id"`
-	Limits      json.RawMessage `json:"limits"`      // LimitsConfig as JSON
-	Resolver    json.RawMessage `json:"resolver"`    // ResolverConfig as JSON
-	Runtime     json.RawMessage `json:"runtime"`     // RuntimeConfig as JSON
+	VMID     string          `json:"vm_id"`
+	Limits   json.RawMessage `json:"limits"`   // LimitsConfig as JSON
+	Resolver json.RawMessage `json:"resolver"` // ResolverConfig as JSON
+	Runtime  json.RawMessage `json:"runtime"`  // RuntimeConfig as JSON
 }
 
 // LimitsConfig defines resource limits
 type LimitsConfig struct {
-	CPUMs        int `json:"cpu_ms"`
-	WallMs       int `json:"wall_ms"`
-	MemMB        int `json:"mem_mb"`
-	MaxEvents    int `json:"max_events"`
-	MaxOutputKB  int `json:"max_output_kb"`
+	CPUMs       int `json:"cpu_ms"`
+	WallMs      int `json:"wall_ms"`
+	MemMB       int `json:"mem_mb"`
+	MaxEvents   int `json:"max_events"`
+	MaxOutputKB int `json:"max_output_kb"`
 }
 
 // ResolverConfig defines module resolution settings
 type ResolverConfig struct {
-	Roots                   []string `json:"roots"`
-	Extensions              []string `json:"extensions"`
+	Roots                    []string `json:"roots"`
+	Extensions               []string `json:"extensions"`
 	AllowAbsoluteRepoImports bool     `json:"allow_absolute_repo_imports"`
 }
 
@@ -68,32 +69,32 @@ type RuntimeConfig struct {
 type VMCapability struct {
 	ID      string          `json:"id"`
 	VMID    string          `json:"vm_id"`
-	Kind    string          `json:"kind"`    // module, global, fs, net, env
-	Name    string          `json:"name"`    // import specifier or global name
+	Kind    string          `json:"kind"` // module, global, fs, net, env
+	Name    string          `json:"name"` // import specifier or global name
 	Enabled bool            `json:"enabled"`
-	Config  json.RawMessage `json:"config"`  // capability-specific config
+	Config  json.RawMessage `json:"config"` // capability-specific config
 }
 
 // VMStartupFile represents a file to run at session startup
 type VMStartupFile struct {
 	ID         string `json:"id"`
 	VMID       string `json:"vm_id"`
-	Path       string `json:"path"`       // repo path
+	Path       string `json:"path"` // repo path
 	OrderIndex int    `json:"order_index"`
-	Mode       string `json:"mode"`       // eval or import
+	Mode       string `json:"mode"` // eval or import
 }
 
 // VMSession represents a VM runtime instance
 type VMSession struct {
-	ID            string    `json:"id"`
-	VMID          string    `json:"vm_id"`
-	WorkspaceID   string    `json:"workspace_id"`
-	BaseCommitOID string    `json:"base_commit_oid"`
-	WorktreePath  string    `json:"worktree_path"`
-	Status        string    `json:"status"` // starting, ready, crashed, closed
-	CreatedAt     time.Time `json:"created_at"`
-	ClosedAt      *time.Time `json:"closed_at,omitempty"`
-	LastError     string    `json:"last_error,omitempty"`
+	ID            string          `json:"id"`
+	VMID          string          `json:"vm_id"`
+	WorkspaceID   string          `json:"workspace_id"`
+	BaseCommitOID string          `json:"base_commit_oid"`
+	WorktreePath  string          `json:"worktree_path"`
+	Status        string          `json:"status"` // starting, ready, crashed, closed
+	CreatedAt     time.Time       `json:"created_at"`
+	ClosedAt      *time.Time      `json:"closed_at,omitempty"`
+	LastError     string          `json:"last_error,omitempty"`
 	RuntimeMeta   json.RawMessage `json:"runtime_meta,omitempty"`
 }
 
@@ -111,7 +112,7 @@ const (
 type Execution struct {
 	ID        string          `json:"id"`
 	SessionID string          `json:"session_id"`
-	Kind      string          `json:"kind"` // startup, run_file, repl
+	Kind      string          `json:"kind"`            // startup, run_file, repl
 	Input     string          `json:"input,omitempty"` // snippet for repl
 	Path      string          `json:"path,omitempty"`  // entry path for run_file/startup
 	Args      json.RawMessage `json:"args"`

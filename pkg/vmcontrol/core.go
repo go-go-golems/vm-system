@@ -26,7 +26,7 @@ func NewCoreWithPorts(store StorePort, sessionRuntime SessionRuntimePort, execut
 	return &Core{
 		Templates:  NewTemplateService(store),
 		Sessions:   NewSessionService(store, sessionRuntime),
-		Executions: NewExecutionService(executionRuntime),
+		Executions: NewExecutionService(executionRuntime, store, store),
 		Registry:   NewRuntimeRegistry(sessionRuntime),
 	}
 }

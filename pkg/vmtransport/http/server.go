@@ -451,6 +451,10 @@ func writeCoreError(w stdhttp.ResponseWriter, err error, details interface{}) {
 		writeError(w, stdhttp.StatusConflict, "SESSION_NOT_READY", "Session is not ready", details)
 	case errors.Is(err, vmmodels.ErrSessionBusy):
 		writeError(w, stdhttp.StatusConflict, "SESSION_BUSY", "Session is busy", details)
+	case errors.Is(err, vmmodels.ErrPathTraversal):
+		writeError(w, stdhttp.StatusUnprocessableEntity, "INVALID_PATH", "Path escapes allowed worktree", details)
+	case errors.Is(err, vmmodels.ErrOutputLimitExceeded):
+		writeError(w, stdhttp.StatusUnprocessableEntity, "OUTPUT_LIMIT_EXCEEDED", "Execution exceeded configured output/event limits", details)
 	case errors.Is(err, vmmodels.ErrFileNotFound):
 		writeError(w, stdhttp.StatusNotFound, "FILE_NOT_FOUND", "File not found", details)
 	default:
