@@ -52,3 +52,13 @@ Task 3: Extracted shared session-preparation helper (get/status-check/lock) and 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Added prepareSession helper and removed duplicated session lock/status blocks
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 3 complete
 
+
+## 2026-02-08
+
+Task 4: Introduced shared execution-record constructor used by REPL and run-file flows, centralizing status/started_at/metrics defaults and record ID creation.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Added executionRecordInput and newExecutionRecord helper to remove duplicated record construction
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 4 complete
+

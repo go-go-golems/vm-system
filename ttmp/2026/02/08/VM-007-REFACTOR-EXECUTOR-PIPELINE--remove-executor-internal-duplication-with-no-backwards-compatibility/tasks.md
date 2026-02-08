@@ -5,7 +5,7 @@
 - [x] Baseline and freeze current external contracts (status codes, event envelopes, execution list/get semantics) that must stay intentional during internal refactor
 - [x] Add focused vmexec regression tests for current expected behavior (event ordering, success/error persistence fields, run-file and repl parity checks)
 - [x] Introduce shared internal session-preparation helper (`get+status-check+lock`) and remove duplicated lock/status blocks from both execution entrypoints
-- [ ] Introduce shared execution-record constructor/factory for REPL and run-file kinds (single source of defaults for args/env/metrics/status/timestamps)
+- [x] Introduce shared execution-record constructor/factory for REPL and run-file kinds (single source of defaults for args/env/metrics/status/timestamps)
 - [ ] Introduce shared event recorder helper with explicit error propagation from store writes (no silent `AddEvent` failures)
 - [ ] Introduce shared finalize helpers for success/error paths with explicit persistence error handling (no ignored `UpdateExecution` failures)
 - [ ] Refactor `ExecuteREPL` to the pipeline helper chain and delete duplicated logic blocks

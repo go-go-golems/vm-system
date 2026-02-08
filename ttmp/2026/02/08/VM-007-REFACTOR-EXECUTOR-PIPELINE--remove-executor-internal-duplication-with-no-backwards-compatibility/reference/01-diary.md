@@ -9,7 +9,9 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: pkg/vmexec/executor.go
-      Note: Task 3 shared session preparation helper extraction
+      Note: |-
+        Task 3 shared session preparation helper extraction
+        Task 4 shared execution record constructor
     - Path: pkg/vmexec/executor_test.go
       Note: Task 2 vmexec regression test coverage
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
@@ -22,18 +24,21 @@ RelatedFiles:
         Task 1 changelog entry
         Task 2 changelog entry
         Task 3 changelog entry
+        Task 4 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
         Task 1 checklist update
         Task 2 checklist update
         Task 3 checklist update
+        Task 4 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -252,7 +257,7 @@ This step only removes duplicated gatekeeping logic; behavior is intentionally u
 
 **Inferred user intent:** Reduce duplication incrementally while preserving intentional behavior and validating each step.
 
-**Commit (code):** Pending for Step 3 commit creation.
+**Commit (code):** 8f4f39a — "vm007: share executor session preparation (task 3)"
 
 ### What I did
 
@@ -309,3 +314,78 @@ The main constraint was avoiding accidental behavior changes while moving lock/s
 ### Technical details
 
 - `prepareSession` returns a lock release function bound to the acquired session lock, reducing repeated `TryLock`/`Unlock` boilerplate.
+
+## Step 4: Consolidate execution record construction into one helper
+
+I introduced a shared execution-record builder used by both REPL and run-file flows. This removed duplicate setup of ID/session/kind/status/timestamps/metrics and moved defaults to a single place.
+
+This keeps behavior stable while preparing the next steps (event recorder and finalize helpers). The task is structural deduplication, not behavior redesign.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Continue task-by-task executor dedup by extracting a common execution record constructor for both entrypoints.
+
+**Inferred user intent:** Shrink duplicated internal logic and make execution lifecycle state initialization explicit and centralized.
+
+**Commit (code):** Pending for Step 4 commit creation.
+
+### What I did
+
+- Added `executionRecordInput` and `newExecutionRecord(...)` in `pkg/vmexec/executor.go`.
+- Centralized shared record defaults:
+  - generated execution ID
+  - `status=running`
+  - `started_at=now`
+  - `metrics={}`
+  - fallback defaults for empty args/env payloads
+- Replaced duplicated record-construction blocks in:
+  - `ExecuteREPL`
+  - `ExecuteRunFile`
+- Preserved existing call-site behavior by still marshaling run-file args/env at call sites before helper invocation.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 4 complete with `docmgr task check`.
+- Appended Task 4 changelog entry with `docmgr changelog update`.
+
+### Why
+
+Execution record creation was repeated and error-prone. Centralizing defaults reduces drift risk and sets up later pipeline extraction.
+
+### What worked
+
+- Tests passed without contract drift.
+- Helper input object kept call-site changes minimal and readable.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Pulling constructor defaults into one helper simplifies future behavior decisions (for example, if args/env normalization changes later).
+
+### What was tricky to build
+
+The subtle part was preserving existing run-file serialization behavior while introducing shared defaults. I kept marshaling at call sites to avoid accidental early behavior changes.
+
+### What warrants a second pair of eyes
+
+- Confirm fallback/default semantics in `newExecutionRecord` are acceptable before we wire deeper pipeline helpers.
+
+### What should be done in the future
+
+- Extract event emission into a dedicated recorder next (Task 5) and route persistence errors explicitly.
+
+### Code review instructions
+
+- Start with `pkg/vmexec/executor.go` (`executionRecordInput`, `newExecutionRecord`).
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- `newExecutionRecord` now owns shared initialization values and returns a fully initialized `*vmmodels.Execution`.

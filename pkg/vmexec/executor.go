@@ -22,6 +22,15 @@ type Executor struct {
 	sessionManager *vmsession.SessionManager
 }
 
+type executionRecordInput struct {
+	sessionID string
+	kind      vmmodels.ExecutionKind
+	input     string
+	path      string
+	argsJSON  json.RawMessage
+	envJSON   json.RawMessage
+}
+
 // NewExecutor creates a new Executor
 func NewExecutor(store *vmstore.VMStore, sessionManager *vmsession.SessionManager) *Executor {
 	return &Executor{
@@ -44,6 +53,30 @@ func (e *Executor) prepareSession(sessionID string) (*vmsession.Session, func(),
 	return session, session.ExecutionLock.Unlock, nil
 }
 
+func (e *Executor) newExecutionRecord(in executionRecordInput) *vmmodels.Execution {
+	argsJSON := in.argsJSON
+	if len(argsJSON) == 0 {
+		argsJSON = json.RawMessage("[]")
+	}
+	envJSON := in.envJSON
+	if len(envJSON) == 0 {
+		envJSON = json.RawMessage("{}")
+	}
+
+	return &vmmodels.Execution{
+		ID:        uuid.New().String(),
+		SessionID: in.sessionID,
+		Kind:      string(in.kind),
+		Input:     in.input,
+		Path:      in.path,
+		Args:      argsJSON,
+		Env:       envJSON,
+		Status:    string(vmmodels.ExecRunning),
+		StartedAt: time.Now(),
+		Metrics:   json.RawMessage("{}"),
+	}
+}
+
 // ExecuteREPL executes a REPL snippet
 func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, error) {
 	session, unlock, err := e.prepareSession(sessionID)
@@ -52,19 +85,12 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 	}
 	defer unlock()
 
-	// Create execution record
-	executionID := uuid.New().String()
-	exec := &vmmodels.Execution{
-		ID:        executionID,
-		SessionID: sessionID,
-		Kind:      string(vmmodels.ExecREPL),
-		Input:     input,
-		Args:      json.RawMessage("[]"),
-		Env:       json.RawMessage("{}"),
-		Status:    string(vmmodels.ExecRunning),
-		StartedAt: time.Now(),
-		Metrics:   json.RawMessage("{}"),
-	}
+	exec := e.newExecutionRecord(executionRecordInput{
+		sessionID: sessionID,
+		kind:      vmmodels.ExecREPL,
+		input:     input,
+	})
+	executionID := exec.ID
 
 	if err := e.store.CreateExecution(exec); err != nil {
 		return nil, fmt.Errorf("failed to create execution: %w", err)
@@ -199,22 +225,16 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Create execution record
-	executionID := uuid.New().String()
 	argsJSON, _ := json.Marshal(args)
 	envJSON, _ := json.Marshal(env)
-
-	exec := &vmmodels.Execution{
-		ID:        executionID,
-		SessionID: sessionID,
-		Kind:      string(vmmodels.ExecRunFile),
-		Path:      path,
-		Args:      argsJSON,
-		Env:       envJSON,
-		Status:    string(vmmodels.ExecRunning),
-		StartedAt: time.Now(),
-		Metrics:   json.RawMessage("{}"),
-	}
+	exec := e.newExecutionRecord(executionRecordInput{
+		sessionID: sessionID,
+		kind:      vmmodels.ExecRunFile,
+		path:      path,
+		argsJSON:  argsJSON,
+		envJSON:   envJSON,
+	})
+	executionID := exec.ID
 
 	if err := e.store.CreateExecution(exec); err != nil {
 		return nil, fmt.Errorf("failed to create execution: %w", err)
