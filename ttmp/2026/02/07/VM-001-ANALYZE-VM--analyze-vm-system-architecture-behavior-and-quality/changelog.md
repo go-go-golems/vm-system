@@ -1,0 +1,63 @@
+# Changelog
+
+## 2026-02-07
+
+- Initial workspace created
+
+
+## 2026-02-07
+
+Completed deep vm-system audit: architecture map, runtime experiments, script compatibility checks, and textbook-style report with remediation roadmap.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/libloader/loader.go — Library cache contract mismatch evidence
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmsession/session.go — Session continuity defect evidence
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/01-comprehensive-vm-system-analysis-report.md — Final analysis report
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Detailed implementation diary
+
+
+## 2026-02-08
+
+Added a dedicated daemon architecture design for vm-system covering runtime host process model, template/session lifecycle, REST API, CLI client design, internals, migration phases, and DoD for real UI integration.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md — New detailed daemon architecture design doc
+
+
+## 2026-02-08
+
+Reworked daemon architecture design to separate reusable session management core (`pkg/vmcontrol`) from daemon/HTTP adapters; updated phased implementation plan, alternatives, and Definition of Done; added detailed diary step documenting the separation rationale and execution details.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md — Core/daemon separation plan update
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Added frequent detailed diary step for reusable core separation
+
+
+## 2026-02-08
+
+Follow-up clarification: reusable orchestration core is pkg/vmcontrol; daemon and HTTP remain adapters on top of this core.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md — Explicit vmcontrol naming and boundary clarification
+
+## 2026-02-08
+
+Updated daemon architecture doc to explicit hard cutover model: removed migration/backward-compatibility strategy, removed vm alias/deprecation path, removed migration matrix, and defined single post-cutover CLI/API surface.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md — Hard cutover update with no migration/backward-compatibility paths
+
+
+## 2026-02-08
+
+Added detailed v2 implementation task backlog and completed Task 8 to begin sequential implementation workflow.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/reference/01-diary.md — Recorded Step 7 with prompt context and planning rationale
+
