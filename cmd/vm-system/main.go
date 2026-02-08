@@ -22,6 +22,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "vm-system.db", "Path to SQLite database")
 
 	rootCmd.AddCommand(
+		newServeCommand(),
 		newVMCommand(),
 		newSessionCommand(),
 		newExecCommand(),
