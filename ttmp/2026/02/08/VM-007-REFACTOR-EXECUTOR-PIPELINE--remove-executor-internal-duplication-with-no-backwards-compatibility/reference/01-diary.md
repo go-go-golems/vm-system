@@ -21,6 +21,8 @@ RelatedFiles:
       Note: |-
         Task 2 vmexec regression test coverage
         Task 9 updated vmexec regression expectations
+    - Path: pkg/vmmodels/json_helpers.go
+      Note: Task 10 shared marshal-with-fallback helper
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
       Note: |-
         Task 1 baseline contract coverage for execution endpoints and event envelopes
@@ -38,6 +40,7 @@ RelatedFiles:
         Task 7 changelog entry
         Task 8 changelog entry
         Task 9 changelog entry
+        Task 10 changelog entry
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
       Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
@@ -52,12 +55,14 @@ RelatedFiles:
         Task 7 checklist update
         Task 8 checklist update
         Task 9 checklist update
+        Task 10 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -725,7 +730,7 @@ This is an intentional behavior change (no compatibility shim) and is now docume
 
 **Inferred user intent:** Remove accidental behavioral divergence and make the execution contract explicit and testable.
 
-**Commit (code):** Pending for Step 9 commit creation.
+**Commit (code):** c5b2e11 — "vm007: align run-file success value/result contract (task 9)"
 
 ### What I did
 
@@ -788,3 +793,73 @@ The tricky part was making an intentional behavior change while preserving the p
 ### Technical details
 
 - Successful run-file executions now produce the same value payload structure as REPL (`type`, `preview`, optional exported `json`).
+
+## Step 10: Add single shared JSON fallback helper
+
+I introduced a shared JSON helper in `vmmodels` to be the single source for marshal-with-fallback behavior. This step establishes the common helper contract before migrating vmstore/vmcontrol call sites.
+
+This is intentionally additive for this step: legacy helpers remain until Task 11 migration is applied.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Implement the shared JSON helper utility with explicit fallback semantics as the foundation for deduping `mustMarshalJSON`.
+
+**Inferred user intent:** Eliminate helper drift by defining one canonical fallback-marshalling implementation.
+
+**Commit (code):** Pending for Step 10 commit creation.
+
+### What I did
+
+- Added `pkg/vmmodels/json_helpers.go` with:
+  - `MarshalJSONWithFallback(v interface{}, fallback json.RawMessage) json.RawMessage`
+  - `MarshalJSONStringWithFallback(v interface{}, fallback json.RawMessage) string`
+- Defined explicit fallback behavior:
+  - return marshaled JSON when marshal succeeds
+  - return fallback verbatim when marshal fails
+  - return JSON `null` when fallback is empty
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+- Marked Task 10 complete and updated changelog via `docmgr`.
+
+### Why
+
+Task 10 creates one authoritative helper contract so vmstore/vmcontrol no longer need duplicate private marshal helpers.
+
+### What worked
+
+- Helper compiled cleanly and package tests passed.
+- Function shapes cover both raw-message and string callsite needs.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Splitting raw-message and string-return variants makes migration straightforward without changing storage-layer SQL callsites yet.
+
+### What was tricky to build
+
+The key detail was making fallback behavior explicit for empty fallback input. I set empty fallback to `null` to avoid returning invalid empty JSON.
+
+### What warrants a second pair of eyes
+
+- Confirm the empty-fallback-to-`null` behavior is acceptable before callsite migration.
+
+### What should be done in the future
+
+- Migrate vmstore/vmcontrol callsites to this shared helper and delete old duplicates (Task 11).
+
+### Code review instructions
+
+- Start with `pkg/vmmodels/json_helpers.go`.
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmmodels -count=1`
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+
+### Technical details
+
+- `MarshalJSONStringWithFallback` is a thin wrapper around `MarshalJSONWithFallback` for storage-layer string fields.
