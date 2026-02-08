@@ -76,3 +76,13 @@ Task 6: Deleted the legacy modules command file and removed modules command regi
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/main.go — Removed modulesCmd root registration
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 6 complete
 
+
+## 2026-02-08
+
+Task 7: Completed remaining CLI wording cleanup for template-targeted identifiers by replacing user-facing VM ID labels with Template ID in session command outputs; no template command flags use vm-id.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_session.go — Renamed user-facing VM ID labels to Template ID
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/tasks.md — Marked Task 7 complete
+

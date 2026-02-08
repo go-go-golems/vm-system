@@ -47,7 +47,7 @@ func newSessionCreateCommand() *cobra.Command {
 
 			fmt.Printf("Created session: %s\n", session.ID)
 			fmt.Printf("Status: %s\n", session.Status)
-			fmt.Printf("VM ID: %s\n", session.VMID)
+			fmt.Printf("Template ID: %s\n", session.VMID)
 			fmt.Printf("Workspace ID: %s\n", session.WorkspaceID)
 			fmt.Printf("Base Commit: %s\n", session.BaseCommitOID)
 			fmt.Printf("Worktree Path: %s\n", session.WorktreePath)
@@ -86,7 +86,7 @@ func newSessionListCommand() *cobra.Command {
 				return nil
 			}
 
-			fmt.Printf("%-36s %-36s %-10s %-20s\n", "Session ID", "VM ID", "Status", "Created")
+			fmt.Printf("%-36s %-36s %-10s %-20s\n", "Session ID", "Template ID", "Status", "Created")
 			fmt.Println("------------------------------------------------------------------------------------------------------")
 			for _, session := range sessions {
 				fmt.Printf("%-36s %-36s %-10s %-20s\n",
@@ -119,7 +119,7 @@ func newSessionGetCommand() *cobra.Command {
 			}
 
 			fmt.Printf("Session ID: %s\n", session.ID)
-			fmt.Printf("VM ID: %s\n", session.VMID)
+			fmt.Printf("Template ID: %s\n", session.VMID)
 			fmt.Printf("Workspace ID: %s\n", session.WorkspaceID)
 			fmt.Printf("Base Commit: %s\n", session.BaseCommitOID)
 			fmt.Printf("Worktree Path: %s\n", session.WorktreePath)

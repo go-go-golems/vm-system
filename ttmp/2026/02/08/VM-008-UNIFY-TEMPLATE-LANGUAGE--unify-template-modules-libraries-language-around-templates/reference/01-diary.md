@@ -13,6 +13,8 @@ RelatedFiles:
       Note: |-
         Task 3 removed command-side store mutation logic
         Task 6 legacy command deleted
+    - Path: cmd/vm-system/cmd_session.go
+      Note: Task 7 template wording cleanup for session output labels
     - Path: cmd/vm-system/cmd_template.go
       Note: Task 5 template module/library and catalog subcommands
     - Path: cmd/vm-system/main.go
@@ -36,6 +38,7 @@ RelatedFiles:
         Task 3 changelog entry
         Task 5 changelog entry
         Task 6 changelog entry
+        Task 7 changelog entry
     - Path: ttmp/2026/02/08/VM-008-UNIFY-TEMPLATE-LANGUAGE--unify-template-modules-libraries-language-around-templates/design-doc/01-template-language-unification-review-and-implementation-plan.md
       Note: |-
         Task 1 terminology contract finalized in design doc
@@ -49,12 +52,14 @@ RelatedFiles:
         Task 3 checklist status
         Task 5 checklist update
         Task 6 checklist update
+        Task 7 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-008 template language unification work.
 LastUpdated: 2026-02-08T13:25:00-05:00
 WhatFor: Preserve exact VM-008 implementation sequence, decisions, issues, and validation evidence.
 WhenToUse: Use when reviewing VM-008 implementation details or reproducing task-by-task outcomes.
 ---
+
 
 
 
@@ -446,7 +451,7 @@ This is the clean-cut behavior change expected by VM-008: no compatibility wrapp
 
 **Inferred user intent:** Complete hard removal of legacy command surface so command model is unambiguous.
 
-**Commit (code):** Pending for Step 6 commit creation.
+**Commit (code):** 2fdb181 — "vm008: remove legacy modules command surface (task 6)"
 
 ### What I did
 
@@ -498,3 +503,72 @@ The key concern was making sure no stale symbol references remained after file d
 ### Technical details
 
 - CLI root command now registers `serve`, `template`, `session`, `exec`, and `libs`, with no `modules` command surface.
+
+## Step 7: Complete remaining CLI template-targeted wording cleanup
+
+I completed remaining CLI wording cleanup for template-targeted identifiers by replacing user-facing `VM ID` labels with `Template ID` in session command outputs.
+
+At this point, template command surfaces use template terminology and do not expose `vm-id` flags.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Execute Task 7 and remove residual legacy `vm-id` wording where template resources are referenced in CLI output/flags.
+
+**Inferred user intent:** Eliminate user-facing terminology drift so template resources are consistently named.
+
+**Commit (code):** Pending for Step 7 commit creation.
+
+### What I did
+
+- Updated `cmd/vm-system/cmd_session.go`:
+  - changed `VM ID` output labels to `Template ID` in:
+    - session create output
+    - session list table header
+    - session get output
+- Verified no template command flags use `vm-id`.
+- Validated with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+Task 7 explicitly targets cleanup of remaining template-resource wording drift. Session output labels were the remaining user-facing CLI spots still showing `VM ID`.
+
+### What worked
+
+- Wording-only changes were low-risk and preserved behavior.
+- Full test sweep remained green.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Even with major command cleanup complete, small output labels can still carry old terminology and should be included in the consistency pass.
+
+### What was tricky to build
+
+The subtle part was distinguishing true runtime VM wording from template-targeted identifiers. I limited changes to places where `session.VMID` is presented as the template reference in user-facing output.
+
+### What warrants a second pair of eyes
+
+- Confirm reviewer agrees these session labels should be template-oriented and not runtime-oriented.
+
+### What should be done in the future
+
+- Continue with integration tests/scripts/docs cleanup tasks to remove legacy command usages still present outside core CLI code.
+
+### Code review instructions
+
+- Start with:
+  - `cmd/vm-system/cmd_session.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmclient ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- Change scope is label-only; API fields and model names remain unchanged.
