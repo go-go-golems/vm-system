@@ -813,3 +813,76 @@ The integration contract now aligns with other not-found resources in the API (`
 - Contract change:
   - before: missing execution -> `500 INTERNAL`
   - after: missing execution -> `404 EXECUTION_NOT_FOUND`
+
+## Step 10: Task 5 - remove duplicated config structs in vmcontrol
+
+I completed the final follow-up task by removing duplicated settings config struct definitions in `vmcontrol` and reusing `vmmodels` config types via aliases.
+
+This keeps one authoritative schema for limits/resolver/runtime settings and reduces future drift risk between orchestration and model layers.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Leverage types/structs better for simplicity and robustness, including reducing duplicate type definitions.
+
+**Inferred user intent:** Simplify maintenance by centralizing shared configuration contracts.
+
+**Commit (code):** Pending in this step (task commit follows implementation + diary update)
+
+### What I did
+
+- Updated:
+  - `pkg/vmcontrol/types.go`
+- Removed duplicate struct definitions:
+  - `LimitsConfig`
+  - `ResolverConfig`
+  - `RuntimeConfig`
+- Replaced them with model aliases:
+  - `type LimitsConfig = vmmodels.LimitsConfig`
+  - `type ResolverConfig = vmmodels.ResolverConfig`
+  - `type RuntimeConfig = vmmodels.RuntimeConfig`
+- Ran:
+  - `gofmt -w pkg/vmcontrol/types.go`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- Duplicate config struct declarations in two packages are a classic drift vector.
+- Using a single source-of-truth type family improves correctness and reduces review burden.
+
+### What worked
+
+- Alias conversion compiled without additional behavior changes.
+- Full test suite stayed green.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Type aliasing is an effective low-risk cleanup when package boundaries are already compatible.
+
+### What was tricky to build
+
+- The key constraint was preserving existing call sites and JSON behavior while removing duplicated declarations; aliases achieved that with minimal churn.
+
+### What warrants a second pair of eyes
+
+- Confirm there are no external package consumers relying on `vmcontrol`-local config type identity (unlikely, but worth a quick check if this module is imported elsewhere).
+
+### What should be done in the future
+
+- Continue consolidating remaining duplicate helper semantics (for example JSON fallback helpers) where safe.
+
+### Code review instructions
+
+- Review type alias switch in:
+  - `pkg/vmcontrol/types.go`
+- Validate with:
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- This step changed type declarations only; runtime behavior remains unchanged except reduced duplication risk.

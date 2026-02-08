@@ -74,3 +74,17 @@ Completed Task 4 by introducing typed `ErrExecutionNotFound` and wiring 404 exec
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_executions_integration_test.go - Updated missing execution expectation to typed 404 contract
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Task 4 complete
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 9 implementation diary entry
+
+## 2026-02-08
+
+Completed Task 5 by removing duplicated VM settings config structs from `vmcontrol` and reusing `vmmodels` config types as aliases.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/types.go - Replaced duplicated config structs with aliases to vmmodels types
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/tasks.md - Marked Task 5 complete
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-006-REVIEW-VM-SYSTEM--review-vm-system-implementation-quality-testing-and-setup/reference/01-diary.md - Added Step 10 implementation diary entry
+
+## 2026-02-08
+
+Type-system follow-up completed; all VM-006 tasks closed.

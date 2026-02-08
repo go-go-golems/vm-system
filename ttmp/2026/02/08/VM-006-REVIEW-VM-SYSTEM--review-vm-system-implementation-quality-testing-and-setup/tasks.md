@@ -17,4 +17,4 @@
 - [x] Replace run-file normalization with typed resolver and block symlink escapes; extend safety integration coverage
 - [x] Validate and resolve startup file paths through typed path model (API + session runtime) and add traversal/symlink safety tests
 - [x] Add typed `ErrExecutionNotFound` contract end-to-end (store + transport + integration tests)
-- [ ] Remove duplicated VM settings config structs from `vmcontrol` by reusing `vmmodels` types
+- [x] Remove duplicated VM settings config structs from `vmcontrol` by reusing `vmmodels` types
