@@ -120,6 +120,20 @@ Rationale: avoid replacing useful runtime-domain wording indiscriminately.
 4. Update guide/scripts in the same ticket to avoid another documentation lag cycle.
 Rationale: user-facing language drift is part of the core problem.
 
+## Terminology Contract (Finalized)
+
+This ticket adopts a strict template-centric terminology contract for user-facing surfaces:
+
+1. Use `template` / `template-id` for all template resource operations.
+2. Do not use `vm` / `vm-id` in user-facing CLI help, examples, flags, or API route naming when the target is a template resource.
+3. Remove the legacy `modules` command surface entirely rather than aliasing it.
+4. Keep `VM` wording only where it represents true runtime internals/models (for example internal model names in `vmmodels` or session runtime concepts), not CLI/API language for template operations.
+5. Use template-owned module/library operations through template service/API/CLI routes only; no direct command-side DB mutation path remains.
+
+Out of scope for this ticket:
+
+- internal core type/package renaming (`vmmodels.VM*`) where it does not affect user-facing command/API language.
+
 ## Alternatives Considered
 
 1. Keep `modules` command as alias to new template subcommands.

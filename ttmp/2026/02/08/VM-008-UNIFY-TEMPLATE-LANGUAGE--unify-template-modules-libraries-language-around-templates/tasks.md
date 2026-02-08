@@ -2,7 +2,7 @@
 
 ## TODO
 
-- [ ] Finalize terminology contract for this ticket: template-centric naming only, no compatibility aliases (`vm`, `vm-id`, legacy modules command) in user-facing surfaces
+- [x] Finalize terminology contract for this ticket: template-centric naming only, no compatibility aliases (`vm`, `vm-id`, legacy modules command) in user-facing surfaces
 - [ ] Add/extend template API endpoints for module and library mutation/query so CLI no longer needs direct DB writes for these operations
 - [ ] Extend `vmcontrol.TemplateService` and ports with explicit template module/library methods (add/remove/list) and remove ad-hoc command-side mutation logic
 - [ ] Extend `vmclient/templates_client.go` with module/library operations on template routes
