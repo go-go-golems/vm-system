@@ -43,6 +43,9 @@ func TestExecutionContractsStatusEnvelopeAndListGetSemantics(t *testing.T) {
 	if runFile.Path != "contract.js" {
 		t.Fatalf("expected run-file path contract.js, got %q", runFile.Path)
 	}
+	if len(runFile.Result) == 0 {
+		t.Fatalf("expected run-file result payload in response envelope")
+	}
 
 	getRunFile := executionContractResponse{}
 	reqJSONStatus(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s", server.URL, runFile.ID), nil, http.StatusOK, &getRunFile)
@@ -51,6 +54,9 @@ func TestExecutionContractsStatusEnvelopeAndListGetSemantics(t *testing.T) {
 	}
 	if getRunFile.Kind != "run_file" {
 		t.Fatalf("expected get execution kind run_file, got %q", getRunFile.Kind)
+	}
+	if len(getRunFile.Result) == 0 {
+		t.Fatalf("expected run-file result payload in get response")
 	}
 
 	list := []executionContractResponse{}
@@ -92,6 +98,16 @@ func TestExecutionContractsStatusEnvelopeAndListGetSemantics(t *testing.T) {
 	reqJSONStatus(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s/events?after_seq=%d", server.URL, repl.ID, events[len(events)-1].Seq-1), nil, http.StatusOK, &filtered)
 	if len(filtered) != 1 || filtered[0].Seq != events[len(events)-1].Seq {
 		t.Fatalf("expected after_seq filtering to return only tail event, got %d entries", len(filtered))
+	}
+
+	runFileEvents := []executionEventEnvelope{}
+	reqJSONStatus(t, client, http.MethodGet, fmt.Sprintf("%s/api/v1/executions/%s/events?after_seq=0", server.URL, runFile.ID), nil, http.StatusOK, &runFileEvents)
+	if len(runFileEvents) < 1 {
+		t.Fatalf("expected events for run-file execution")
+	}
+	last := runFileEvents[len(runFileEvents)-1]
+	if last.Type != "value" {
+		t.Fatalf("expected run-file to end with value event, got %q", last.Type)
 	}
 }
 

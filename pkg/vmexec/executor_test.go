@@ -107,7 +107,7 @@ func TestExecuteREPLErrorPersistsExceptionAndExecutionError(t *testing.T) {
 	}
 }
 
-func TestExecuteRunFileCurrentParityPersistsConsoleWithoutValueResult(t *testing.T) {
+func TestExecuteRunFilePersistsResultAndValueEvent(t *testing.T) {
 	fx := newExecutorFixture(t)
 
 	if err := os.WriteFile(filepath.Join(fx.worktree, "script.js"), []byte("console.log('file'); 40 + 2;"), 0o644); err != nil {
@@ -127,19 +127,29 @@ func TestExecuteRunFileCurrentParityPersistsConsoleWithoutValueResult(t *testing
 	if exec.Path != "script.js" {
 		t.Fatalf("expected stored path script.js, got %q", exec.Path)
 	}
-	if len(exec.Result) != 0 {
-		t.Fatalf("expected no result payload for run-file in current contract, got %s", string(exec.Result))
+	if len(exec.Result) == 0 {
+		t.Fatalf("expected result payload for run-file contract")
+	}
+	var runFileResult vmmodels.ValuePayload
+	if err := json.Unmarshal(exec.Result, &runFileResult); err != nil {
+		t.Fatalf("unmarshal run-file result: %v", err)
+	}
+	if runFileResult.Preview != "42" {
+		t.Fatalf("expected run-file preview 42, got %q", runFileResult.Preview)
 	}
 
 	events, err := fx.executor.GetEvents(exec.ID, 0)
 	if err != nil {
 		t.Fatalf("get events: %v", err)
 	}
-	if len(events) != 1 {
-		t.Fatalf("expected 1 run-file event (console only), got %d", len(events))
+	if len(events) != 2 {
+		t.Fatalf("expected 2 run-file events (console, value), got %d", len(events))
 	}
 	if events[0].Type != string(vmmodels.EventConsole) {
 		t.Fatalf("expected console event, got %q", events[0].Type)
+	}
+	if events[1].Type != string(vmmodels.EventValue) {
+		t.Fatalf("expected value event, got %q", events[1].Type)
 	}
 
 	persisted, err := fx.executor.GetExecution(exec.ID)
@@ -148,6 +158,9 @@ func TestExecuteRunFileCurrentParityPersistsConsoleWithoutValueResult(t *testing
 	}
 	if persisted.Status != string(vmmodels.ExecOK) {
 		t.Fatalf("expected persisted status ok, got %q", persisted.Status)
+	}
+	if len(persisted.Result) == 0 {
+		t.Fatalf("expected persisted result payload for run-file")
 	}
 	if !jsonContainsKV(t, persisted.Args, "a") {
 		t.Fatalf("expected args payload to contain key 'a': %s", string(persisted.Args))

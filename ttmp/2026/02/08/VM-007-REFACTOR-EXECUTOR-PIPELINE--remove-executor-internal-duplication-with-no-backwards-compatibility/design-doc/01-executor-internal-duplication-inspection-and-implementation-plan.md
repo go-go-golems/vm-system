@@ -205,6 +205,18 @@ Definition of done:
 - No duplicated `mustMarshalJSON` helper semantics across vmstore/vmcontrol.
 - Behavior contract is documented and tested.
 
+## Decision Log
+
+### 2026-02-08: Run-file success contract aligned with REPL value/result semantics
+
+Decision:
+- On successful `run_file` execution, emit a terminal `value` event and persist `result_json` using the same value-payload shape as REPL (`type`, `preview`, optional `json`).
+
+Rationale:
+- Eliminates accidental semantic divergence between execution kinds.
+- Makes execution consumers simpler by standardizing terminal success artifacts.
+- Aligns with no-backwards-compatibility scope for VM-007 internal refactor work.
+
 ## Open Questions
 
 1. Should run-file emit `value` events and set `result_json` symmetrically with REPL, or remain intentionally different?

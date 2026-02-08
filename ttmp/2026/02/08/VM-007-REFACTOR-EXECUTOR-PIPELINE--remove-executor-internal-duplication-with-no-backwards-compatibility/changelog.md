@@ -102,3 +102,16 @@ Task 8: Migrated ExecuteRunFile to runExecutionPipeline and removed duplicated l
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — ExecuteRunFile now uses pipeline hooks plus shared console/exception helpers
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 8 complete
 
+
+## 2026-02-08
+
+Task 9: Decided and implemented explicit run-file success contract parity with REPL: run-file now emits terminal value events and persists result payload JSON; tests updated to lock this intentional behavior change.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor.go — Run-file success path now emits value event and persists result payload
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmexec/executor_test.go — Updated vmexec regression expectations for run-file value/result semantics
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_execution_contracts_integration_test.go — Updated API contract baseline for run-file result/value event behavior
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md — Recorded run-file contract decision in Decision Log
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md — Marked Task 9 complete
+

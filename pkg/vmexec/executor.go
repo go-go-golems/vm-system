@@ -178,6 +178,20 @@ func exceptionPayloadJSON(runErr error) json.RawMessage {
 	return exceptionJSON
 }
 
+func valuePayloadJSON(value goja.Value) json.RawMessage {
+	valuePayload := vmmodels.ValuePayload{
+		Type:    value.ExportType().String(),
+		Preview: value.String(),
+	}
+	if exported := value.Export(); exported != nil {
+		if jsonBytes, err := json.Marshal(exported); err == nil {
+			valuePayload.JSON = jsonBytes
+		}
+	}
+	valueJSON, _ := json.Marshal(valuePayload)
+	return valueJSON
+}
+
 func (e *Executor) runExecutionPipeline(cfg executionPipelineConfig) (*vmmodels.Execution, error) {
 	session, unlock, err := e.prepareSession(cfg.sessionID)
 	if err != nil {
@@ -248,16 +262,7 @@ func (e *Executor) ExecuteREPL(sessionID, input string) (*vmmodels.Execution, er
 			return e.finalizeExecutionError(exec, endedAt, exceptionJSON)
 		},
 		handleSuccess: func(exec *vmmodels.Execution, recorder *eventRecorder, value goja.Value, endedAt time.Time) error {
-			valuePayload := vmmodels.ValuePayload{
-				Type:    value.ExportType().String(),
-				Preview: value.String(),
-			}
-			if exported := value.Export(); exported != nil {
-				if jsonBytes, err := json.Marshal(exported); err == nil {
-					valuePayload.JSON = jsonBytes
-				}
-			}
-			valueJSON, _ := json.Marshal(valuePayload)
+			valueJSON := valuePayloadJSON(value)
 			if err := recorder.emitRaw(vmmodels.EventValue, valueJSON); err != nil {
 				return err
 			}
@@ -305,8 +310,12 @@ func (e *Executor) ExecuteRunFile(sessionID, path string, args, env map[string]i
 			}
 			return e.finalizeExecutionError(exec, endedAt, exceptionJSON)
 		},
-		handleSuccess: func(exec *vmmodels.Execution, _ *eventRecorder, _ goja.Value, endedAt time.Time) error {
-			return e.finalizeExecutionSuccess(exec, endedAt, nil)
+		handleSuccess: func(exec *vmmodels.Execution, recorder *eventRecorder, value goja.Value, endedAt time.Time) error {
+			valueJSON := valuePayloadJSON(value)
+			if err := recorder.emitRaw(vmmodels.EventValue, valueJSON); err != nil {
+				return err
+			}
+			return e.finalizeExecutionSuccess(exec, endedAt, valueJSON)
 		},
 	})
 }

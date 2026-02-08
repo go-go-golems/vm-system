@@ -16,12 +16,16 @@ RelatedFiles:
         Task 6 finalize helpers and explicit UpdateExecution error handling
         Task 7 pipeline helper chain and ExecuteREPL migration
         Task 8 ExecuteRunFile pipeline migration and shared helper extraction
+        Task 9 run-file value/result parity behavior change
     - Path: pkg/vmexec/executor_test.go
-      Note: Task 2 vmexec regression test coverage
+      Note: |-
+        Task 2 vmexec regression test coverage
+        Task 9 updated vmexec regression expectations
     - Path: pkg/vmtransport/http/server_execution_contracts_integration_test.go
       Note: |-
         Task 1 baseline contract coverage for execution endpoints and event envelopes
         Task 1 external contract baseline test
+        Task 9 updated execution API behavior contract assertions
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/changelog.md
       Note: |-
         Task-level changelog entries
@@ -33,6 +37,9 @@ RelatedFiles:
         Task 6 changelog entry
         Task 7 changelog entry
         Task 8 changelog entry
+        Task 9 changelog entry
+    - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/01-executor-internal-duplication-inspection-and-implementation-plan.md
+      Note: Task 9 decision log for run-file value/result contract
     - Path: ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/tasks.md
       Note: |-
         Task checklist updated after Task 1 completion
@@ -44,12 +51,14 @@ RelatedFiles:
         Task 6 checklist update
         Task 7 checklist update
         Task 8 checklist update
+        Task 9 checklist update
 ExternalSources: []
 Summary: Implementation diary for VM-007 executor/core dedup refactor, recorded per completed task.
 LastUpdated: 2026-02-08T12:31:00-05:00
 WhatFor: Preserve exact implementation steps, tests, decisions, and follow-ups for VM-007.
 WhenToUse: Use when reviewing VM-007 task execution and validating refactor decisions.
 ---
+
 
 
 
@@ -643,7 +652,7 @@ I also extracted small shared helpers for console installation and exception pay
 
 **Inferred user intent:** Fully remove internal REPL/run-file lifecycle duplication before moving to explicit contract decisions.
 
-**Commit (code):** Pending for Step 8 commit creation.
+**Commit (code):** 233d194 — "vm007: move ExecuteRunFile to pipeline chain (task 8)"
 
 ### What I did
 
@@ -701,3 +710,81 @@ The tricky part was preserving current run-file semantics while moving file-read
 ### Technical details
 
 - Run-file setup hook now validates path/readability and stores file content for run hook execution.
+
+## Step 9: Decide and implement explicit run-file value/result contract
+
+I made the explicit Task 9 contract decision to align successful `run_file` behavior with REPL terminal success semantics. Run-file now emits a terminal `value` event and persists `result` JSON using the same value payload shape.
+
+This is an intentional behavior change (no compatibility shim) and is now documented in tests, changelog, and the design-doc decision log.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Resolve the run-file vs REPL parity decision explicitly, implement it, and document behavior change intentionally.
+
+**Inferred user intent:** Remove accidental behavioral divergence and make the execution contract explicit and testable.
+
+**Commit (code):** Pending for Step 9 commit creation.
+
+### What I did
+
+- Updated run-file success path in `pkg/vmexec/executor.go`:
+  - emit terminal `value` event
+  - persist `result` JSON payload
+- Added shared `valuePayloadJSON(...)` helper and reused it for REPL + run-file value payload creation.
+- Updated vmexec regression test:
+  - run-file now expects non-empty result payload
+  - run-file now expects `(console, value)` events on success
+- Updated HTTP contract integration test:
+  - run-file response/get envelopes now assert non-empty `result`
+  - run-file events now assert terminal `value` event
+- Updated design doc decision log to record the contract decision and rationale.
+- Ran task-relevant validation:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+- Marked Task 9 complete and updated changelog via `docmgr`.
+
+### Why
+
+Standardizing success artifacts across execution kinds removes accidental drift and simplifies downstream consumers.
+
+### What worked
+
+- Behavior change was fully captured in package and API-level tests.
+- Shared value payload helper reduced duplicate encoding logic.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- With both entrypoints on shared pipeline hooks, contract changes become localized and safer to reason about.
+
+### What was tricky to build
+
+The tricky part was making an intentional behavior change while preserving the per-task discipline and clearly separating “contract freeze” (earlier tasks) from “contract change” (this task). I handled this by updating all relevant contract tests and documenting the decision explicitly.
+
+### What warrants a second pair of eyes
+
+- Confirm client expectations are compatible with run-file now returning `result` and a `value` terminal event.
+
+### What should be done in the future
+
+- Keep REPL/run-file value payload semantics synchronized unless a future explicit contract decision says otherwise.
+
+### Code review instructions
+
+- Start with:
+  - `pkg/vmexec/executor.go`
+  - `pkg/vmexec/executor_test.go`
+  - `pkg/vmtransport/http/server_execution_contracts_integration_test.go`
+  - design doc decision log update
+- Validate with:
+  - `GOWORK=off go test ./pkg/vmexec -count=1`
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+
+### Technical details
+
+- Successful run-file executions now produce the same value payload structure as REPL (`type`, `preview`, optional exported `json`).
