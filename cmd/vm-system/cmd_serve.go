@@ -8,24 +8,38 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
 	vmhttp "github.com/go-go-golems/vm-system/pkg/vmtransport/http"
 )
 
-func newServeCommand() *cobra.Command {
-	var listenAddr string
+type serveSettings struct {
+	ListenAddr string `glazed:"listen"`
+}
 
-	cmd := &cobra.Command{
-		Use:   "serve",
-		Short: "Run the vm-system daemon host",
-		Long:  "Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := vmdaemon.DefaultConfig(dbPath)
-			if listenAddr != "" {
-				cfg.ListenAddr = listenAddr
+func newServeCommand() *cobra.Command {
+	cmd := &bareCommand{
+		CommandDescription: mustCommandDescription(
+			"serve",
+			"Run the vm-system daemon host",
+			"Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
+			[]*fields.Definition{
+				fields.New("listen", fields.TypeString, fields.WithDefault("127.0.0.1:3210"), fields.WithHelp("HTTP listen address")),
+			},
+			nil,
+			false,
+		),
+		run: func(_ context.Context, vals *values.Values) error {
+			settings := &serveSettings{}
+			if err := decodeDefault(vals, settings); err != nil {
+				return err
 			}
+
+			cfg := vmdaemon.DefaultConfig(dbPath)
+			cfg.ListenAddr = settings.ListenAddr
 
 			app, err := vmdaemon.New(cfg, http.NewServeMux())
 			if err != nil {
@@ -34,7 +48,6 @@ func newServeCommand() *cobra.Command {
 			defer app.Close()
 
 			app.SetHandler(vmhttp.NewHandler(app.Core()))
-
 			fmt.Printf("vm-system daemon listening on %s\n", cfg.ListenAddr)
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -44,6 +57,5 @@ func newServeCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&listenAddr, "listen", "127.0.0.1:3210", "HTTP listen address")
-	return cmd
+	return mustBuildCobraCommand(cmd)
 }

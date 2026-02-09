@@ -3,12 +3,12 @@
 ## Execution Checklist (new API only)
 
 - [x] T01: Add glazed dependency and ensure imports compile with `schema/fields/values/sources` APIs.
-- [ ] T02: Add common glazed command helpers in `cmd/vm-system` for building command descriptions and Cobra bindings.
+- [x] T02: Add common glazed command helpers in `cmd/vm-system` for building command descriptions and Cobra bindings.
 - [x] T03: Rebuild CLI root in `cmd/vm-system/main.go` with help-system wiring and logging setup (`help.NewHelpSystem`, `help_cmd.SetupCobraRootCommand`, `logging.AddLoggingSectionToRootCommand`, `logging.InitLoggerFromCobra`).
 - [x] T04: Add embedded help docs package (`pkg/doc`) and wire docs loading into root help system.
 - [x] T05: Remove `http` parent command from root registration.
-- [ ] T06: Port `serve` command to Glazed command implementation.
-- [ ] T07: Port `libs` command group (`download`, `list`, `cache-info`) to Glazed command implementations.
+- [x] T06: Port `serve` command to Glazed command implementation.
+- [x] T07: Port `libs` command group (`download`, `list`, `cache-info`) to Glazed command implementations.
 - [ ] T08: Port `template` command group to Glazed command implementations (all existing verbs).
 - [ ] T09: Port `session` command group to Glazed command implementations; expose canonical `close` command.
 - [ ] T10: Remove `session delete` CLI verb from registration.

@@ -518,3 +518,83 @@ The tricky part was dependency stabilization. Adding Glazed introduced many tran
 
 - Completed task IDs in this step: `T01`, `T03`, `T04`, `T05`, `T12`, `T13`.
 - Remaining high-priority coding tasks: `T02`, `T06`-`T11`, `T14`-`T19`.
+
+## Step 7: Add shared Glazed helpers and port serve/libs groups
+
+I introduced a shared helper layer for Glazed command construction and migrated `serve` plus all `libs` subcommands to new API command implementations. This establishes the reusable pattern needed for `template`, `session`, and `exec` migrations.
+
+The migration in this step uses `fields`, `schema`, `values`, and command descriptions directly and removes `cobra`-native flag parsing from these command groups.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue implementing the migration task-by-task with commits and diary updates.
+
+**Inferred user intent:** Ensure command group migrations follow one consistent implementation pattern.
+
+**Commit (code):** pending
+
+### What I did
+
+- Added shared helper file:
+  - `cmd/vm-system/glazed_helpers.go`
+- Ported `serve` command:
+  - `cmd/vm-system/cmd_serve.go`
+  - now implemented as Glazed `BareCommand`
+- Ported `libs` group:
+  - `cmd/vm-system/cmd_libs.go`
+  - subcommands implemented as Glazed `WriterCommand` instances (`download`, `list`, `cache-info`)
+- Kept runtime behavior parity for message output and cache handling.
+- Ran formatting and command-package tests.
+
+### Why
+
+Without a shared helper, each command migration would duplicate parser config/description boilerplate. Porting `serve` and `libs` first validated the helper pattern on both daemon-host and local-cache command families.
+
+### What worked
+
+- New helper abstraction compiled and reduced command boilerplate.
+- `serve` and `libs` command groups are now on Glazed command APIs.
+- `GOWORK=off go test ./cmd/vm-system -count=1` passed after migration.
+
+### What didn't work
+
+- First test run after helper migration failed with additional missing `go.sum` entries from Glazed formatter transitive deps.
+  - Command: `GOWORK=off go test ./cmd/vm-system -count=1`
+  - Errors included missing entries for `excelize`, `ugorji/codec`, and `go-pretty` modules.
+- Resolution:
+  - `go mod tidy`
+  - re-ran tests successfully.
+
+### What I learned
+
+- Glazed helper usage can pull in broader formatter dependency graph, so repeated `go mod tidy` is expected while migration surface expands.
+- `WriterCommand` is a pragmatic path for preserving current human-readable output while still moving command wiring to the new API.
+
+### What was tricky to build
+
+The trickiest part was balancing migration purity with output parity. Rewriting list-style commands into row emitters would have changed output shape immediately. I used `WriterCommand` first to keep user-visible output stable while migrating command definition/parsing to new APIs.
+
+### What warrants a second pair of eyes
+
+- Confirm whether we want to keep `WriterCommand` outputs long-term for `libs`, or later convert to `GlazeCommand` for structured output.
+
+### What should be done in the future
+
+- Apply the same helper pattern to `template`, `session`, and `exec` command groups in small slices.
+
+### Code review instructions
+
+- Start with helper layer:
+  - `cmd/vm-system/glazed_helpers.go`
+- Then review migrated groups:
+  - `cmd/vm-system/cmd_serve.go`
+  - `cmd/vm-system/cmd_libs.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T02`, `T06`, `T07`.
+- Next coding targets: `T08`, `T09`, `T10`, `T11`, `T14`-`T16`.
