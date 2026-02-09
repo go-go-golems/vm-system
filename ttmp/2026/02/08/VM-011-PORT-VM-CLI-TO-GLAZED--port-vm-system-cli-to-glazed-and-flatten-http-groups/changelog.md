@@ -17,3 +17,4 @@
 - Ported `session` command group to Glazed command implementations and switched canonical lifecycle CLI verb to `session close` (no `session delete` registration).
 - Ported the full `exec` command group to Glazed command implementations while preserving JSON flag parsing and output formatting behavior.
 - Ported the full `template` command group to Glazed command implementations (all existing template verbs).
+- Removed legacy `http` command artifacts and added root/session topology tests enforcing flattened command tree semantics.

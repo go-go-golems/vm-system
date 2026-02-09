@@ -808,3 +808,74 @@ The tricky part was size and behavioral parity: this file has many verbs with si
 
 - Completed task IDs in this step: `T08`.
 - Remaining code tasks: `T14`, `T15`, `T16`, `T17`, `T18`, `T19`.
+
+## Step 11: Remove legacy http artifacts and add root/session topology tests
+
+I removed legacy `http` command artifacts and added explicit tests for the new root topology and session close semantics. I also refactored root construction into a testable function.
+
+This closes the migration tasks related to legacy cleanup and basic registration coverage.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue implementing remaining migration tasks with tests and commit-by-commit progress.
+
+**Inferred user intent:** Ensure CLI taxonomy changes are enforced by tests, not only by code edits.
+
+**Commit (code):** pending
+
+### What I did
+
+- Refactored root construction into `newRootCommand(helpSystem)` in `cmd/vm-system/main.go` for testability.
+- Removed legacy files:
+  - `cmd/vm-system/cmd_http.go`
+  - `cmd/vm-system/cmd_http_test.go`
+- Added tests:
+  - `cmd/vm-system/cmd_root_test.go` (assert expected top-level commands and absence of `http`)
+  - `cmd/vm-system/cmd_session_test.go` (assert `close` exists and `delete` is absent)
+- Re-ran command-package tests.
+
+### Why
+
+Without explicit topology tests, future edits could silently reintroduce `http` grouping or old session verb naming. These tests make the taxonomy decision enforceable.
+
+### What worked
+
+- Root builder refactor did not break startup path.
+- New topology tests passed.
+- Existing template coverage test remained green.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Introducing a testable root-builder function (`newRootCommand`) significantly simplifies command-tree assertions.
+
+### What was tricky to build
+
+The key challenge was adding tests without introducing divergent construction logic between `main()` and tests. I solved this by making `main()` call the same `newRootCommand(...)` function that tests call.
+
+### What warrants a second pair of eyes
+
+- Confirm whether we want additional assertion coverage for `ops` subcommands in a dedicated test.
+
+### What should be done in the future
+
+- Extend topology tests to include required global flags and help wiring sanity checks.
+
+### Code review instructions
+
+- Review:
+  - `cmd/vm-system/main.go`
+  - `cmd/vm-system/cmd_root_test.go`
+  - `cmd/vm-system/cmd_session_test.go`
+- Validate:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T14`, `T15`, `T16`.
+- Remaining tasks: `T17`, `T18`, `T19`, `T20`.

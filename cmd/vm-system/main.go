@@ -14,14 +14,10 @@ import (
 var (
 	dbPath    string
 	serverURL string
-	rootCmd   *cobra.Command
 )
 
-func main() {
-	helpSystem := help.NewHelpSystem()
-	_ = doc.AddDocToHelpSystem(helpSystem)
-
-	rootCmd = &cobra.Command{
+func newRootCommand(helpSystem *help.HelpSystem) *cobra.Command {
+	rootCmd := &cobra.Command{
 		Use:   "vm-system",
 		Short: "JavaScript VM system with goja",
 		Long:  `A VM subsystem that manages JavaScript execution with goja, integrating with dual-storage workspaces.`,
@@ -43,6 +39,14 @@ func main() {
 		newOpsCommand(),
 		libsCmd,
 	)
+
+	return rootCmd
+}
+
+func main() {
+	helpSystem := help.NewHelpSystem()
+	_ = doc.AddDocToHelpSystem(helpSystem)
+	rootCmd := newRootCommand(helpSystem)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

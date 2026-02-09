@@ -15,9 +15,9 @@
 - [x] T11: Port `exec` command group (`repl`, `run-file`, `list`, `get`, `events`) to Glazed command implementations.
 - [x] T12: Add new `ops` command group with `health` and `runtime-summary`.
 - [x] T13: Add/extend vmclient support for ops endpoints used by CLI.
-- [ ] T14: Remove obsolete legacy command files and references tied to `http` parent wiring.
-- [ ] T15: Replace `cmd_http_test.go` with root topology tests asserting `http` is absent and `template/session/exec/ops/libs/serve` are present.
-- [ ] T16: Add tests for `session close` registration and keep template subgroup coverage tests green.
+- [x] T14: Remove obsolete legacy command files and references tied to `http` parent wiring.
+- [x] T15: Replace `cmd_http_test.go` with root topology tests asserting `http` is absent and `template/session/exec/ops/libs/serve` are present.
+- [x] T16: Add tests for `session close` registration and keep template subgroup coverage tests green.
 - [ ] T17: Update `README.md` command examples to root taxonomy (`template/session/exec/ops`).
 - [ ] T18: Update `docs/getting-started-from-first-vm-to-contributor-guide.md` from `vm-system http ...` to root forms.
 - [ ] T19: Run focused test pass (`go test ./cmd/vm-system -count=1`), then broader test pass (`go test ./... -count=1`) and capture any breakage.
