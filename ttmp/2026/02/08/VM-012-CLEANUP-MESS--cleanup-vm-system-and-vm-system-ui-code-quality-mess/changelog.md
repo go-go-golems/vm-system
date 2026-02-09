@@ -42,3 +42,17 @@ Task 1 cleanup: removed broken test-goja-workspace gitlink, removed manual go-ru
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-goja-workspace — Removed broken gitlink entry
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test/test_library_loading.go — Removed manual executable outside go test suite
 
+
+## 2026-02-08
+
+Task 2 (P1-2 Option B): startup mode import now rejected explicitly across CLI/API/service/runtime; added integration coverage for STARTUP_MODE_UNSUPPORTED
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — CLI help and preflight validation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmcontrol/template_service.go — Service-level startup mode validation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmmodels/models.go — Domain error added for unsupported startup mode
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmsession/session.go — Runtime rejects unsupported startup modes
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — Reject import mode with explicit 422 error
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_templates_integration_test.go — Contract test for unsupported startup mode
+

@@ -231,18 +231,13 @@ func (sm *SessionManager) runStartupFiles(session *Session) error {
 			return fmt.Errorf("failed to read startup file %s: %w", file.Path, err)
 		}
 
-		// Execute based on mode
-		if file.Mode == "eval" {
-			// Evaluate as script
+		switch file.Mode {
+		case "", "eval":
 			if _, err := session.Runtime.RunString(string(content)); err != nil {
 				return fmt.Errorf("failed to execute startup file %s: %w", file.Path, err)
 			}
-		} else if file.Mode == "import" {
-			// For import mode, we would need to set up module loading
-			// For now, treat it as eval
-			if _, err := session.Runtime.RunString(string(content)); err != nil {
-				return fmt.Errorf("failed to import startup file %s: %w", file.Path, err)
-			}
+		default:
+			return fmt.Errorf("%w: %s", vmmodels.ErrStartupModeUnsupported, file.Mode)
 		}
 	}
 

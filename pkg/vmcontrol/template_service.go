@@ -3,6 +3,8 @@ package vmcontrol
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,6 +97,14 @@ func (s *TemplateService) ListCapabilities(_ context.Context, templateID string)
 }
 
 func (s *TemplateService) AddStartupFile(_ context.Context, file *vmmodels.VMStartupFile) error {
+	mode := strings.ToLower(strings.TrimSpace(file.Mode))
+	if mode == "" {
+		mode = "eval"
+	}
+	if mode != "eval" {
+		return fmt.Errorf("%w: %s", vmmodels.ErrStartupModeUnsupported, mode)
+	}
+	file.Mode = mode
 	return s.store.AddStartupFile(file)
 }
 

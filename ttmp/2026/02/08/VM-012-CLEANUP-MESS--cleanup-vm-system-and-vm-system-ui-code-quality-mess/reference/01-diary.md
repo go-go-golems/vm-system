@@ -474,3 +474,74 @@ Go task by task, check and ocmmit, keep a frequent diary."
 
 ### Technical details
 - The workspace had pre-existing unrelated modifications; this task commit will stage only task-specific files.
+
+## Step 9: Task 2 Implemented P1-2 Option B (Reject Startup `import` Mode)
+
+I implemented the requested Option B behavior: startup files must use `eval`, and `import` is now rejected explicitly instead of being silently treated as `eval`. I applied this at API, service, CLI, and runtime execution layers for consistency.
+
+This task was validated with full backend tests before commit.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 8)
+
+**Assistant interpretation:** Implement P1-2 with strict rejection semantics and clear user-facing errors.
+
+**Inferred user intent:** Remove misleading placeholder behavior and enforce explicit contract until import support is truly implemented.
+
+**Commit (code):** pending
+
+### What I did
+- Added domain error: `ErrStartupModeUnsupported` in `pkg/vmmodels/models.go`.
+- Added validation in `TemplateService.AddStartupFile`:
+  - normalize mode
+  - allow only `eval`
+  - return `ErrStartupModeUnsupported` otherwise
+- Added HTTP validation in `handleTemplateAddStartupFile`:
+  - non-`eval` mode returns `422 STARTUP_MODE_UNSUPPORTED` with details.
+- Added core error mapping in `writeCoreError` for `ErrStartupModeUnsupported`.
+- Updated session startup execution path in `pkg/vmsession/session.go`:
+  - execute only `eval`
+  - return explicit unsupported-mode error for anything else.
+- Updated CLI help and preflight validation in `cmd/vm-system/cmd_template.go`:
+  - help text now states only `eval` is supported
+  - command rejects unsupported mode before sending request.
+- Added HTTP integration assertion in `pkg/vmtransport/http/server_templates_integration_test.go` for `mode=import` rejection.
+
+### Why
+- Existing behavior silently masked unsupported functionality and could cause incorrect user expectations.
+
+### What worked
+- `go test ./...` passed after changes.
+- New integration assertion for unsupported mode passes.
+
+### What didn't work
+- N/A for this step.
+
+### What I learned
+- Applying enforcement at multiple boundaries prevents invalid persisted state and catches legacy/stale entries during runtime startup.
+
+### What was tricky to build
+- Ensuring the same contract appears consistently in CLI, HTTP, service, and runtime layers without conflicting status/error codes.
+
+### What warrants a second pair of eyes
+- Error-code contract (`STARTUP_MODE_UNSUPPORTED` with 422) for external clients.
+
+### What should be done in the future
+- When import support is implemented, introduce explicit feature-flagged module loader behavior instead of silent fallback.
+
+### Code review instructions
+- Review files:
+  - `pkg/vmmodels/models.go`
+  - `pkg/vmcontrol/template_service.go`
+  - `pkg/vmtransport/http/server.go`
+  - `pkg/vmsession/session.go`
+  - `cmd/vm-system/cmd_template.go`
+  - `pkg/vmtransport/http/server_templates_integration_test.go`
+- Validate:
+  - `cd vm-system && go test ./...`
+
+### Technical details
+- Response contract for unsupported mode:
+  - HTTP status: `422`
+  - error code: `STARTUP_MODE_UNSUPPORTED`

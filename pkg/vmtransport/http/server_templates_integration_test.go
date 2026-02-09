@@ -89,6 +89,14 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 		})
 	}
 
+	doRequest(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/templates/%s/startup-files", server.URL, template.ID), map[string]interface{}{
+		"path":        "runtime/module.js",
+		"order_index": 20,
+		"mode":        "import",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "STARTUP_MODE_UNSUPPORTED",
+	})
+
 	detail := struct {
 		Template struct {
 			ID             string   `json:"id"`

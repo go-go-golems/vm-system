@@ -14,6 +14,7 @@ var (
 	ErrSessionNotReady        = errors.New("session not ready")
 	ErrSessionBusy            = errors.New("session busy")
 	ErrPathTraversal          = errors.New("path traversal is not allowed")
+	ErrStartupModeUnsupported = errors.New("startup mode is not supported")
 	ErrModuleNotAllowed       = errors.New("module not allowed")
 	ErrFileNotFound           = errors.New("file not found")
 	ErrImportResolutionFailed = errors.New("import resolution failed")
@@ -44,6 +45,7 @@ type VMSettings struct {
 }
 
 // LimitsConfig defines resource limits
+
 type LimitsConfig struct {
 	CPUMs       int `json:"cpu_ms"`
 	WallMs      int `json:"wall_ms"`
@@ -82,7 +84,7 @@ type VMStartupFile struct {
 	VMID       string `json:"vm_id"`
 	Path       string `json:"path"` // repo path
 	OrderIndex int    `json:"order_index"`
-	Mode       string `json:"mode"` // eval or import
+	Mode       string `json:"mode"` // eval (import is currently unsupported)
 }
 
 // VMSession represents a VM runtime instance

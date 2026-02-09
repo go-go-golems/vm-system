@@ -6,6 +6,7 @@ import (
 	"fmt"
 	stdhttp "net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -393,6 +394,16 @@ func (s *Server) handleTemplateAddStartupFile(w stdhttp.ResponseWriter, r *stdht
 	if req.Mode == "" {
 		req.Mode = "eval"
 	}
+	req.Mode = strings.ToLower(strings.TrimSpace(req.Mode))
+	if req.Mode != "eval" {
+		writeError(w, stdhttp.StatusUnprocessableEntity, "STARTUP_MODE_UNSUPPORTED", "Only startup mode 'eval' is currently supported", map[string]interface{}{
+			"template_id":      templateID.String(),
+			"requested_mode":   req.Mode,
+			"supported_modes":  []string{"eval"},
+			"migration_option": "Use mode=eval until import support is implemented",
+		})
+		return
+	}
 
 	startup := &vmmodels.VMStartupFile{
 		ID:         uuid.NewString(),
@@ -683,6 +694,8 @@ func writeCoreError(w stdhttp.ResponseWriter, err error, details interface{}) {
 		writeError(w, stdhttp.StatusUnprocessableEntity, "INVALID_PATH", "Path escapes allowed worktree", details)
 	case errors.Is(err, vmmodels.ErrOutputLimitExceeded):
 		writeError(w, stdhttp.StatusUnprocessableEntity, "OUTPUT_LIMIT_EXCEEDED", "Execution exceeded configured output/event limits", details)
+	case errors.Is(err, vmmodels.ErrStartupModeUnsupported):
+		writeError(w, stdhttp.StatusUnprocessableEntity, "STARTUP_MODE_UNSUPPORTED", "Only startup mode 'eval' is currently supported", details)
 	case errors.Is(err, vmmodels.ErrFileNotFound):
 		writeError(w, stdhttp.StatusNotFound, "FILE_NOT_FOUND", "File not found", details)
 	default:
