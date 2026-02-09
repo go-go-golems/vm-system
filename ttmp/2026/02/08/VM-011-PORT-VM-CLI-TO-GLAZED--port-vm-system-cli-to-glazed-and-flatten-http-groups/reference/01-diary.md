@@ -598,3 +598,72 @@ The trickiest part was balancing migration purity with output parity. Rewriting 
 
 - Completed task IDs in this step: `T02`, `T06`, `T07`.
 - Next coding targets: `T08`, `T09`, `T10`, `T11`, `T14`-`T16`.
+
+## Step 8: Port session group and enforce close semantics
+
+I migrated the entire `session` command group to Glazed command implementations and switched lifecycle command naming to `session close`. The old CLI `session delete` verb is no longer registered.
+
+This resolves the close/delete semantic mismatch at the CLI surface while preserving current backend behavior.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue task-by-task migration and commit each stable slice.
+
+**Inferred user intent:** Make semantic cleanup (`close` vs `delete`) part of the implementation, not just documentation.
+
+**Commit (code):** pending
+
+### What I did
+
+- Rewrote `cmd/vm-system/cmd_session.go` using Glazed `WriterCommand` implementations for:
+  - `session create`
+  - `session list`
+  - `session get`
+  - `session close`
+- Converted command fields/arguments to `fields.New(...)` definitions and decoded settings with `values`.
+- Removed CLI registration of `session delete` by not exposing it in the group.
+- Ran command package tests.
+
+### Why
+
+The session lifecycle ambiguity was one of the core design problems in VM-011. Enforcing `close` at CLI level reduces operator confusion and aligns command naming with actual behavior.
+
+### What worked
+
+- Session group now runs on new API command definitions.
+- `session close` is canonical and available.
+- `GOWORK=off go test ./cmd/vm-system -count=1` passed.
+
+### What didn't work
+
+- N/A in this slice.
+
+### What I learned
+
+- The helper pattern added in Step 7 scales well for command families with both flags and positional arguments.
+
+### What was tricky to build
+
+The tricky part was preserving output and argument semantics exactly while changing parser/runner internals. I kept the original output lines and argument names, then shifted only implementation plumbing to Glazed APIs.
+
+### What warrants a second pair of eyes
+
+- Verify no external scripts still depend on `vm-system session delete` naming.
+
+### What should be done in the future
+
+- Add explicit CLI tests asserting `close` exists and `delete` is absent in session command registration.
+
+### Code review instructions
+
+- Review file:
+  - `cmd/vm-system/cmd_session.go`
+- Run:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T09`, `T10`.
+- Next coding targets: `T08`, `T11`, `T14`-`T16`.
