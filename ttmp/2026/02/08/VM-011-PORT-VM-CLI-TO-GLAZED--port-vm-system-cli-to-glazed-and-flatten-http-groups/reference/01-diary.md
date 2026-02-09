@@ -667,3 +667,73 @@ The tricky part was preserving output and argument semantics exactly while chang
 
 - Completed task IDs in this step: `T09`, `T10`.
 - Next coding targets: `T08`, `T11`, `T14`-`T16`.
+
+## Step 9: Port exec group to Glazed commands
+
+I migrated the entire `exec` command family to Glazed `WriterCommand` implementations while preserving current argument/flag behavior and text output format.
+
+This step covers REPL execution, run-file execution, execution listing/details, and event stream inspection.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue implementing migration tasks sequentially and commit each stable slice.
+
+**Inferred user intent:** Complete high-impact command families with minimal behavior regression.
+
+**Commit (code):** pending
+
+### What I did
+
+- Rewrote `cmd/vm-system/cmd_exec.go` on new API command plumbing for:
+  - `exec repl`
+  - `exec run-file`
+  - `exec list`
+  - `exec get`
+  - `exec events`
+- Defined arguments/flags via `fields.New(...)` and decoded settings through `values`.
+- Preserved JSON parsing behavior for `--args` and `--env` in `run-file`.
+- Kept output shape and event formatting consistent with previous implementation.
+- Ran command-package tests.
+
+### Why
+
+`exec` is a core runtime interaction surface. Porting it early validates that new command plumbing handles a mix of positional args, optional flags, and JSON payload parsing.
+
+### What worked
+
+- All five `exec` subcommands compile and test.
+- `GOWORK=off go test ./cmd/vm-system -count=1` passed.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- The helper + `WriterCommand` pattern scales across command families with mixed argument/flag complexity.
+
+### What was tricky to build
+
+The highest-risk part was preserving parsing + error semantics for JSON flag inputs on `exec run-file`. I kept explicit `json.Unmarshal` validation paths and error messages to avoid script regressions.
+
+### What warrants a second pair of eyes
+
+- Verify output parity for downstream tooling that parses `exec` command stdout.
+
+### What should be done in the future
+
+- Consider optional structured output mode for `exec list` and `exec events` once migration baseline stabilizes.
+
+### Code review instructions
+
+- Review file:
+  - `cmd/vm-system/cmd_exec.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T11`.
+- Next coding target: `T08` template command family migration.

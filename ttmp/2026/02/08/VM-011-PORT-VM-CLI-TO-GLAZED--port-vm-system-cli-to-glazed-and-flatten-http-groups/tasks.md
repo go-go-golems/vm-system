@@ -12,7 +12,7 @@
 - [ ] T08: Port `template` command group to Glazed command implementations (all existing verbs).
 - [x] T09: Port `session` command group to Glazed command implementations; expose canonical `close` command.
 - [x] T10: Remove `session delete` CLI verb from registration.
-- [ ] T11: Port `exec` command group (`repl`, `run-file`, `list`, `get`, `events`) to Glazed command implementations.
+- [x] T11: Port `exec` command group (`repl`, `run-file`, `list`, `get`, `events`) to Glazed command implementations.
 - [x] T12: Add new `ops` command group with `health` and `runtime-summary`.
 - [x] T13: Add/extend vmclient support for ops endpoints used by CLI.
 - [ ] T14: Remove obsolete legacy command files and references tied to `http` parent wiring.
