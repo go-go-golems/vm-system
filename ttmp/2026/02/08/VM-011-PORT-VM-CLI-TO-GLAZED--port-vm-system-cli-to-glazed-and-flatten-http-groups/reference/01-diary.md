@@ -35,7 +35,7 @@ RelatedFiles:
         Diary traces production of this plan
 ExternalSources: []
 Summary: Step-by-step diary of VM-011 analysis, migration planning decisions, errors encountered, and reMarkable upload evidence.
-LastUpdated: 2026-02-09T00:00:00Z
+LastUpdated: 2026-02-09T04:12:23Z
 WhatFor: Record exactly how VM-011 planning artifacts were produced and validated.
 WhenToUse: Use when reviewing planning rationale, command inventory evidence, and upload verification for VM-011.
 ---
@@ -1012,3 +1012,76 @@ The migration touched root command wiring and multiple command groups. We need b
 
 - Completed task IDs in this step: `T19`.
 - Remaining task: `T20`.
+
+## Step 14: Finalize implementation sequence evidence and close checklist
+
+I finalized the ticket by recording the complete VM-011 execution commit trail and closing the last checklist task.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Provide detailed, traceable implementation history while completing tasks one by one.
+
+**Inferred user intent:** Leave durable audit evidence (not just narrative) for how the migration was executed.
+
+**Commit (code):** pending
+
+### What I did
+
+- Marked `T20` complete in `tasks.md`.
+- Added explicit commit evidence sequence to `changelog.md`.
+- Captured commit evidence with:
+  - `git log --oneline -- cmd/vm-system README.md docs/getting-started-from-first-vm-to-contributor-guide.md smoke-test.sh test-e2e.sh ttmp/2026/02/08/VM-011-PORT-VM-CLI-TO-GLAZED--port-vm-system-cli-to-glazed-and-flatten-http-groups | head -n 20`
+- Final VM-011 execution sequence recorded:
+  - `c93eeb9` docs(vm-011): add detailed execution checklist and diary step
+  - `5189e66` feat(vm-011): flatten root and wire help/logging plus ops commands
+  - `f1e084a` feat(vm-011): add glazed helpers and port serve/libs groups
+  - `2d78c17` feat(vm-011): port session commands to glazed and expose close verb
+  - `fb191d9` feat(vm-011): port exec command group to glazed
+  - `0f52208` feat(vm-011): port template command group to glazed
+  - `d15fc55` test(vm-011): remove http artifacts and add root/session topology coverage
+  - `6cb58ef` docs(vm-011): align root CLI docs and smoke/e2e scripts
+  - `95b1c6f` docs(vm-011): record validation pass for glazed CLI migration
+
+### Why
+
+T20 requires implementation sequence and commit evidence. Explicit hash/message capture makes the migration reviewable and reproducible.
+
+### What worked
+
+- Commit history for VM-011 changes is linear, readable, and directly tied to checklist progression.
+- No ambiguous or missing task-to-commit mapping remained after this step.
+
+### What didn't work
+
+- A separate unrelated commit with `VM-011` in another ticket namespace existed in repo history; path-scoped log filtering was required to keep evidence precise.
+
+### What I learned
+
+- In multi-ticket repos, path-scoped `git log` is more reliable than message grep when generating audit-quality migration evidence.
+
+### What was tricky to build
+
+The subtle issue was hash filtering: simple `--grep VM-011` included an unrelated UI ticket commit. I switched to path-scoped history to avoid mixing evidence sets.
+
+### What warrants a second pair of eyes
+
+- Validate whether any additional release notes outside this ticket should reference the same commit sequence.
+
+### What should be done in the future
+
+- Consider a tiny script in `ttmp` to auto-generate ticket-scoped commit evidence by path and date.
+
+### Code review instructions
+
+- Confirm:
+  - `ttmp/2026/02/08/VM-011-PORT-VM-CLI-TO-GLAZED--port-vm-system-cli-to-glazed-and-flatten-http-groups/tasks.md`
+  - `ttmp/2026/02/08/VM-011-PORT-VM-CLI-TO-GLAZED--port-vm-system-cli-to-glazed-and-flatten-http-groups/changelog.md`
+- Reproduce evidence:
+  - `git log --oneline -- cmd/vm-system README.md docs/getting-started-from-first-vm-to-contributor-guide.md smoke-test.sh test-e2e.sh ttmp/2026/02/08/VM-011-PORT-VM-CLI-TO-GLAZED--port-vm-system-cli-to-glazed-and-flatten-http-groups | head -n 20`
+
+### Technical details
+
+- Completed task IDs in this step: `T20`.
+- Remaining tasks: none.

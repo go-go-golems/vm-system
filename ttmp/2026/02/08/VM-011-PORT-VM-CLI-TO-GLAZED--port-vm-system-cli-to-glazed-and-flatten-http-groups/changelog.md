@@ -23,3 +23,13 @@
 - Validation pass completed with no regressions:
   - `GOWORK=off go test ./cmd/vm-system -count=1`
   - `GOWORK=off go test ./... -count=1`
+- Recorded implementation commit sequence for VM-011 execution:
+  - `c93eeb9` docs(vm-011): add detailed execution checklist and diary step
+  - `5189e66` feat(vm-011): flatten root and wire help/logging plus ops commands
+  - `f1e084a` feat(vm-011): add glazed helpers and port serve/libs groups
+  - `2d78c17` feat(vm-011): port session commands to glazed and expose close verb
+  - `fb191d9` feat(vm-011): port exec command group to glazed
+  - `0f52208` feat(vm-011): port template command group to glazed
+  - `d15fc55` test(vm-011): remove http artifacts and add root/session topology coverage
+  - `6cb58ef` docs(vm-011): align root CLI docs and smoke/e2e scripts
+  - `95b1c6f` docs(vm-011): record validation pass for glazed CLI migration
