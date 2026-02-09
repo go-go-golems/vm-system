@@ -10,15 +10,21 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: smoke-test.sh
-      Note: Current smoke baseline and upcoming harness migration target
+      Note: |-
+        Current smoke baseline and upcoming harness migration target
+        Migrated to shared harness and stale module assertion removed
     - Path: test-e2e.sh
-      Note: Current full-loop baseline and upcoming harness migration target
+      Note: |-
+        Current full-loop baseline and upcoming harness migration target
+        Migrated to shared harness for consistent setup and teardown
     - Path: test-goja-library-execution.sh
       Note: Legacy overlapping library execution test to consolidate
     - Path: test-library-loading.sh
       Note: Legacy overlapping library test to consolidate
     - Path: test-library-requirements.sh
       Note: Legacy overlapping library requirements test to consolidate
+    - Path: test/lib/e2e-common.sh
+      Note: New shared harness for daemon-first shell integration scripts
     - Path: ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/design-doc/01-test-infrastructure-reorganization-analysis-and-implementation-guide.md
       Note: Primary analysis and implementation sequencing for VM-018
     - Path: ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/reference/01-diary.md
@@ -32,6 +38,7 @@ LastUpdated: 2026-02-09T08:16:30-05:00
 WhatFor: Create a maintainable test surface that maps directly to architecture risks.
 WhenToUse: Use while implementing or reviewing VM-018 test-suite reorganization work.
 ---
+
 
 
 # Reorganize vm-system tests into coherent shared e2e infrastructure

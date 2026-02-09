@@ -15,3 +15,14 @@ Scaffolded VM-018 with detailed analysis guide, diary, and task-by-task executio
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/reference/01-diary.md — Captures step-by-step execution trail
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/tasks.md — Establishes task boundaries and acceptance criteria
 
+
+## 2026-02-09
+
+Implemented shared daemon-first harness (test/lib/e2e-common.sh), migrated smoke/e2e to use it, and removed stale smoke module assertion behavior tied to legacy module catalogs.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/smoke-test.sh — Now validates stable core behavior and uses template add-module fs instead of legacy console capability path
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-e2e.sh — Uses shared harness for deterministic setup and reduced duplication
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test/lib/e2e-common.sh — Centralizes temporary resource setup
+

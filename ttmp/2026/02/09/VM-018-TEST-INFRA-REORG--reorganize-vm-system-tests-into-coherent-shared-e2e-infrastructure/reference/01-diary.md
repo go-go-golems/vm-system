@@ -94,3 +94,72 @@ The analysis documents where the current overlap is harmful and defines a cohere
 
 - Ticket directory:
   - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure`
+
+## Step 2: Build shared daemon-first harness and migrate smoke/e2e scripts
+
+This step removed the highest-impact duplication first by extracting common setup and lifecycle code from shell integration scripts. The migration immediately reduced drift risk across dynamic port allocation, temp DB/worktree setup, daemon startup, health checks, and ID extraction.
+
+I also corrected smoke semantics so it no longer depends on a legacy module assumption (`console` in module catalog). Smoke now checks stable core behavior and the current module contract.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Implement the first code task by introducing reusable test infrastructure and applying it to the two core daemon-first scripts.
+
+**Inferred user intent:** Make the tests maintainable and trustworthy by removing duplicated script logic and stale assertions.
+
+**Commit (code):** pending
+
+### What I did
+
+- Added shared harness:
+  - `test/lib/e2e-common.sh`
+  - helpers for port allocation, temp resource initialization, daemon lifecycle, health wait loop, binary build, and template/session ID extraction.
+- Migrated `smoke-test.sh` to source harness and use shared primitives.
+- Migrated `test-e2e.sh` to source harness and use shared primitives.
+- Replaced stale smoke `console` assumption with stable module-catalog command output check.
+- Updated smoke module configuration path from legacy capability call to `template add-module --name fs`.
+
+### Why
+
+- Duplication across smoke/e2e was the main source of drift and unnecessary maintenance cost.
+
+### What worked
+
+- `./smoke-test.sh` passed (10/10 checks).
+- `./test-e2e.sh` passed full daemon-first lifecycle.
+- Shared harness reduced repeated setup code in both scripts.
+
+### What didn't work
+
+- There is still noisy debug output from CLI command-map parsing (`unknown section type Reference`) during command execution. This is pre-existing and does not fail tests.
+
+### What I learned
+
+- Once lifecycle primitives are centralized, scenario scripts become much easier to reason about and review.
+
+### What was tricky to build
+
+- Balancing harness abstraction with script readability: over-abstracting would hide scenario intent, so only repeated lifecycle primitives were extracted.
+
+### What warrants a second pair of eyes
+
+- Confirm smoke should continue asserting non-empty module catalog output (instead of specific module names) as the intended stability boundary.
+
+### What should be done in the future
+
+- Remove the pre-existing CLI command-map debug noise to keep script output cleaner.
+
+### Code review instructions
+
+- Start at `test/lib/e2e-common.sh` for shared behavior.
+- Review `smoke-test.sh` changes for stale-assertion removal and module-path alignment.
+- Review `test-e2e.sh` for migration fidelity.
+- Re-run:
+  - `./smoke-test.sh`
+  - `./test-e2e.sh`
+
+### Technical details
+
+- Health wait now uses a retry loop around `/api/v1/health` instead of one-shot checks.
