@@ -1,7 +1,7 @@
 ---
 Title: Stop template-configuring JS built-ins; use go-go-goja registrable native modules
 Ticket: VM-017-NATIVE-MODULE-REGISTRY
-Status: active
+Status: complete
 Topics:
     - backend
     - frontend
@@ -21,10 +21,11 @@ RelatedFiles:
 ExternalSources: []
 Summary: |
     Enforce module policy consistency by removing template configurability for JavaScript built-ins and adopting go-go-goja registrable native modules for template module configuration.
-LastUpdated: 2026-02-09T00:09:43-05:00
+LastUpdated: 2026-02-09T00:42:24.294118397-05:00
 WhatFor: Align runtime behavior, API contract, and UI semantics for template module configuration.
 WhenToUse: Use as entry point for VM-017 implementation and review.
 ---
+
 
 
 # Stop template-configuring JS built-ins; use go-go-goja registrable native modules

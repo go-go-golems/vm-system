@@ -48,3 +48,8 @@ Aligned vm-system-ui module catalog, template presets, and reference copy to nat
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/Reference.tsx — Reference page API/object model semantics updated
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/TemplateDetail.tsx — Template detail UI text and controls updated for native module semantics
 
+
+## 2026-02-09
+
+Completed native-module registry rollout and contract alignment
+
