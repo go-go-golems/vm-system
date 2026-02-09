@@ -4,40 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/fields"
-	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/vm-system/pkg/vmclient"
 	"github.com/spf13/cobra"
 )
-
-type execReplSettings struct {
-	SessionID string `glazed:"session-id"`
-	Code      string `glazed:"code"`
-}
-
-type execRunFileSettings struct {
-	SessionID string `glazed:"session-id"`
-	Path      string `glazed:"path"`
-	ArgsJSON  string `glazed:"args"`
-	EnvJSON   string `glazed:"env"`
-}
-
-type execListSettings struct {
-	SessionID string `glazed:"session-id"`
-	Limit     int    `glazed:"limit"`
-}
-
-type execGetSettings struct {
-	ExecutionID string `glazed:"execution-id"`
-}
-
-type execEventsSettings struct {
-	ExecutionID string `glazed:"execution-id"`
-	AfterSeq    int    `glazed:"after-seq"`
-}
 
 func newExecCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -58,33 +29,25 @@ func newExecCommand() *cobra.Command {
 }
 
 func newExecREPLCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"repl",
-			"Execute REPL code",
-			"Execute REPL code in a running session.",
-			nil,
-			[]*fields.Definition{
-				fields.New("session-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Session ID")),
-				fields.New("code", fields.TypeString, fields.WithRequired(true), fields.WithHelp("REPL code")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &execReplSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
+	return &cobra.Command{
+		Use:   "repl <session-id> <code>",
+		Short: "Execute REPL code",
+		Long:  "Execute REPL code in a running session.",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID := args[0]
+			code := args[1]
 
 			client := vmclient.New(serverURL, nil)
 			execution, err := client.ExecuteREPL(context.Background(), vmclient.ExecuteREPLRequest{
-				SessionID: settings.SessionID,
-				Input:     settings.Code,
+				SessionID: sessionID,
+				Input:     code,
 			})
 			if err != nil {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Execution ID: %s\n", execution.ID)
 			_, _ = fmt.Fprintf(w, "Status: %s\n", execution.Status)
 			if execution.Result != nil {
@@ -109,49 +72,44 @@ func newExecREPLCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
 
 func newExecRunFileCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"run-file",
-			"Run a file",
-			"Execute a file path within a running session worktree.",
-			[]*fields.Definition{
-				fields.New("args", fields.TypeString, fields.WithDefault("{}"), fields.WithHelp("Arguments as JSON")),
-				fields.New("env", fields.TypeString, fields.WithDefault("{}"), fields.WithHelp("Environment as JSON")),
-			},
-			[]*fields.Definition{
-				fields.New("session-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Session ID")),
-				fields.New("path", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Run-file path")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &execRunFileSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
+	cmd := &cobra.Command{
+		Use:   "run-file <session-id> <path>",
+		Short: "Run a file",
+		Long:  "Execute a file path within a running session worktree.",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID := args[0]
+			path := args[1]
+
+			argsJSON, err := cmd.Flags().GetString("args")
+			if err != nil {
+				return err
+			}
+			envJSON, err := cmd.Flags().GetString("env")
+			if err != nil {
 				return err
 			}
 
 			var argsMap map[string]interface{}
 			var envMap map[string]interface{}
-			if settings.ArgsJSON != "" {
-				if err := json.Unmarshal([]byte(settings.ArgsJSON), &argsMap); err != nil {
+			if argsJSON != "" {
+				if err := json.Unmarshal([]byte(argsJSON), &argsMap); err != nil {
 					return fmt.Errorf("invalid args JSON: %w", err)
 				}
 			}
-			if settings.EnvJSON != "" {
-				if err := json.Unmarshal([]byte(settings.EnvJSON), &envMap); err != nil {
+			if envJSON != "" {
+				if err := json.Unmarshal([]byte(envJSON), &envMap); err != nil {
 					return fmt.Errorf("invalid env JSON: %w", err)
 				}
 			}
 
 			client := vmclient.New(serverURL, nil)
 			execution, err := client.ExecuteRunFile(context.Background(), vmclient.ExecuteRunFileRequest{
-				SessionID: settings.SessionID,
-				Path:      settings.Path,
+				SessionID: sessionID,
+				Path:      path,
 				Args:      argsMap,
 				Env:       envMap,
 			})
@@ -159,6 +117,7 @@ func newExecRunFileCommand() *cobra.Command {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Execution ID: %s\n", execution.ID)
 			_, _ = fmt.Fprintf(w, "Status: %s\n", execution.Status)
 			if execution.Error != nil {
@@ -180,35 +139,32 @@ func newExecRunFileCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(command)
+	cmd.Flags().String("args", "{}", "Arguments as JSON")
+	cmd.Flags().String("env", "{}", "Environment as JSON")
+
+	return cmd
 }
 
 func newExecListCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"list",
-			"List executions for a session",
-			"List executions for a session ID.",
-			[]*fields.Definition{
-				fields.New("limit", fields.TypeInteger, fields.WithDefault(50), fields.WithHelp("Maximum number of executions to list")),
-			},
-			[]*fields.Definition{
-				fields.New("session-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Session ID")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &execListSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
-
-			client := vmclient.New(serverURL, nil)
-			executions, err := client.ListExecutions(context.Background(), settings.SessionID, settings.Limit)
+	cmd := &cobra.Command{
+		Use:   "list <session-id>",
+		Short: "List executions for a session",
+		Long:  "List executions for a session ID.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID := args[0]
+			limit, err := cmd.Flags().GetInt("limit")
 			if err != nil {
 				return err
 			}
 
+			client := vmclient.New(serverURL, nil)
+			executions, err := client.ListExecutions(context.Background(), sessionID, limit)
+			if err != nil {
+				return err
+			}
+
+			w := cmd.OutOrStdout()
 			if len(executions) == 0 {
 				_, _ = fmt.Fprintln(w, "No executions found")
 				return nil
@@ -223,33 +179,27 @@ func newExecListCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(command)
+	cmd.Flags().Int("limit", 50, "Maximum number of executions to list")
+
+	return cmd
 }
 
 func newExecGetCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"get",
-			"Get execution details",
-			"Get execution details by execution ID.",
-			nil,
-			[]*fields.Definition{
-				fields.New("execution-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Execution ID")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &execGetSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
+	return &cobra.Command{
+		Use:   "get <execution-id>",
+		Short: "Get execution details",
+		Long:  "Get execution details by execution ID.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			executionID := args[0]
 
 			client := vmclient.New(serverURL, nil)
-			execution, err := client.GetExecution(context.Background(), settings.ExecutionID)
+			execution, err := client.GetExecution(context.Background(), executionID)
 			if err != nil {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Execution ID: %s\n", execution.ID)
 			_, _ = fmt.Fprintf(w, "Session ID: %s\n", execution.SessionID)
 			_, _ = fmt.Fprintf(w, "Kind: %s\n", execution.Kind)
@@ -273,36 +223,28 @@ func newExecGetCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
 
 func newExecEventsCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"events",
-			"Get execution events",
-			"Get execution events by execution ID.",
-			[]*fields.Definition{
-				fields.New("after-seq", fields.TypeInteger, fields.WithDefault(0), fields.WithHelp("Get events after this sequence number")),
-			},
-			[]*fields.Definition{
-				fields.New("execution-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Execution ID")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &execEventsSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
-
-			client := vmclient.New(serverURL, nil)
-			events, err := client.GetExecutionEvents(context.Background(), settings.ExecutionID, settings.AfterSeq)
+	cmd := &cobra.Command{
+		Use:   "events <execution-id>",
+		Short: "Get execution events",
+		Long:  "Get execution events by execution ID.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			executionID := args[0]
+			afterSeq, err := cmd.Flags().GetInt("after-seq")
 			if err != nil {
 				return err
 			}
 
+			client := vmclient.New(serverURL, nil)
+			events, err := client.GetExecutionEvents(context.Background(), executionID, afterSeq)
+			if err != nil {
+				return err
+			}
+
+			w := cmd.OutOrStdout()
 			if len(events) == 0 {
 				_, _ = fmt.Fprintln(w, "No events found")
 				return nil
@@ -321,5 +263,7 @@ func newExecEventsCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(command)
+	cmd.Flags().Int("after-seq", 0, "Get events after this sequence number")
+
+	return cmd
 }

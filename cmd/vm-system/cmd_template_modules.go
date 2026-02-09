@@ -3,104 +3,87 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/fields"
-	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/vm-system/pkg/vmclient"
 	"github.com/spf13/cobra"
 )
 
 func newTemplateAddModuleCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"add-module",
-			"Add a module to a template",
-			"Add a module to a template.",
-			[]*fields.Definition{
-				fields.New("name", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Module name (required)")),
-			},
-			[]*fields.Definition{fields.New("template-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Template ID"))},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &templateNameFlag{}
-			if err := decodeDefault(vals, settings); err != nil {
+	cmd := &cobra.Command{
+		Use:   "add-module <template-id>",
+		Short: "Add a module to a template",
+		Long:  "Add a module to a template.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			templateID := args[0]
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
 				return err
 			}
 
 			client := vmclient.New(serverURL, nil)
-			if _, err := client.AddTemplateModule(context.Background(), settings.TemplateID, vmclient.AddTemplateModuleRequest{Name: settings.Name}); err != nil {
+			if _, err := client.AddTemplateModule(context.Background(), templateID, vmclient.AddTemplateModuleRequest{Name: name}); err != nil {
 				return err
 			}
 
-			_, _ = fmt.Fprintf(w, "Added module: %s to template %s\n", settings.Name, settings.TemplateID)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Added module: %s to template %s\n", name, templateID)
 			return nil
 		},
 	}
-	return mustBuildCobraCommand(command)
+	cmd.Flags().String("name", "", "Module name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
 }
 
 func newTemplateRemoveModuleCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"remove-module",
-			"Remove a module from a template",
-			"Remove a module from a template.",
-			[]*fields.Definition{
-				fields.New("name", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Module name (required)")),
-			},
-			[]*fields.Definition{fields.New("template-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Template ID"))},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &templateNameFlag{}
-			if err := decodeDefault(vals, settings); err != nil {
+	cmd := &cobra.Command{
+		Use:   "remove-module <template-id>",
+		Short: "Remove a module from a template",
+		Long:  "Remove a module from a template.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			templateID := args[0]
+			name, err := cmd.Flags().GetString("name")
+			if err != nil {
 				return err
 			}
 
 			client := vmclient.New(serverURL, nil)
-			if _, err := client.RemoveTemplateModule(context.Background(), settings.TemplateID, settings.Name); err != nil {
+			if _, err := client.RemoveTemplateModule(context.Background(), templateID, name); err != nil {
 				return err
 			}
 
-			_, _ = fmt.Fprintf(w, "Removed module: %s from template %s\n", settings.Name, settings.TemplateID)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Removed module: %s from template %s\n", name, templateID)
 			return nil
 		},
 	}
-	return mustBuildCobraCommand(command)
+	cmd.Flags().String("name", "", "Module name (required)")
+	_ = cmd.MarkFlagRequired("name")
+	return cmd
 }
 
 func newTemplateListModulesCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"list-modules",
-			"List modules configured on a template",
-			"List modules configured on a template.",
-			nil,
-			[]*fields.Definition{fields.New("template-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Template ID"))},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &templateIDArg{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
+	return &cobra.Command{
+		Use:   "list-modules <template-id>",
+		Short: "List modules configured on a template",
+		Long:  "List modules configured on a template.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			templateID := args[0]
 
 			client := vmclient.New(serverURL, nil)
-			modules, err := client.ListTemplateModules(context.Background(), settings.TemplateID)
+			modules, err := client.ListTemplateModules(context.Background(), templateID)
 			if err != nil {
 				return err
 			}
 			if len(modules) == 0 {
-				_, _ = fmt.Fprintln(w, "No modules configured")
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), "No modules configured")
 				return nil
 			}
 			for _, module := range modules {
-				_, _ = fmt.Fprintln(w, module)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), module)
 			}
 			return nil
 		},
 	}
-	return mustBuildCobraCommand(command)
 }

@@ -8,38 +8,25 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/fields"
-	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
 	vmhttp "github.com/go-go-golems/vm-system/pkg/vmtransport/http"
 )
 
-type serveSettings struct {
-	ListenAddr string `glazed:"listen"`
-}
-
 func newServeCommand() *cobra.Command {
-	cmd := &bareCommand{
-		CommandDescription: mustCommandDescription(
-			"serve",
-			"Run the vm-system daemon host",
-			"Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
-			[]*fields.Definition{
-				fields.New("listen", fields.TypeString, fields.WithDefault("127.0.0.1:3210"), fields.WithHelp("HTTP listen address")),
-			},
-			nil,
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values) error {
-			settings := &serveSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Run the vm-system daemon host",
+		Long:  "Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			listenAddr, err := cmd.Flags().GetString("listen")
+			if err != nil {
 				return err
 			}
 
 			cfg := vmdaemon.DefaultConfig(dbPath)
-			cfg.ListenAddr = settings.ListenAddr
+			cfg.ListenAddr = listenAddr
 
 			app, err := vmdaemon.New(cfg, http.NewServeMux())
 			if err != nil {
@@ -57,5 +44,7 @@ func newServeCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(cmd)
+	cmd.Flags().String("listen", "127.0.0.1:3210", "HTTP listen address")
+
+	return cmd
 }

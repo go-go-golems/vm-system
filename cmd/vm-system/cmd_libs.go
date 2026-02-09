@@ -1,12 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"path/filepath"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/vm-system/pkg/libloader"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
 	"github.com/spf13/cobra"
@@ -30,16 +27,11 @@ func newLibsCommand() *cobra.Command {
 }
 
 func newLibsDownloadCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"download",
-			"Download all builtin libraries",
-			"Download all built-in libraries into the local .vm-cache/libraries directory.",
-			nil,
-			nil,
-			false,
-		),
-		run: func(_ context.Context, _ *values.Values, w io.Writer) error {
+	return &cobra.Command{
+		Use:   "download",
+		Short: "Download all builtin libraries",
+		Long:  "Download all built-in libraries into the local .vm-cache/libraries directory.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cacheDir := filepath.Join(".", ".vm-cache", "libraries")
 
 			cache, err := libloader.NewLibraryCache(cacheDir)
@@ -47,6 +39,7 @@ func newLibsDownloadCommand() *cobra.Command {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Downloading libraries to: %s\n", cacheDir)
 			if err := cache.DownloadAll(); err != nil {
 				return err
@@ -61,22 +54,16 @@ func newLibsDownloadCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
 
 func newLibsListCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"list",
-			"List available libraries",
-			"List available built-in JavaScript libraries.",
-			nil,
-			nil,
-			false,
-		),
-		run: func(_ context.Context, _ *values.Values, w io.Writer) error {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List available libraries",
+		Long:  "List available built-in JavaScript libraries.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			libraries := vmmodels.BuiltinLibraries()
+			w := cmd.OutOrStdout()
 
 			_, _ = fmt.Fprintf(w, "Available libraries (%d):\n\n", len(libraries))
 			for _, lib := range libraries {
@@ -89,21 +76,14 @@ func newLibsListCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
 
 func newLibsCacheInfoCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"cache-info",
-			"Show library cache information",
-			"Show cached library file metadata and total cache size.",
-			nil,
-			nil,
-			false,
-		),
-		run: func(_ context.Context, _ *values.Values, w io.Writer) error {
+	return &cobra.Command{
+		Use:   "cache-info",
+		Short: "Show library cache information",
+		Long:  "Show cached library file metadata and total cache size.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cacheDir := filepath.Join(".", ".vm-cache", "libraries")
 
 			cache, err := libloader.NewLibraryCache(cacheDir)
@@ -115,6 +95,7 @@ func newLibsCacheInfoCommand() *cobra.Command {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			info := cache.GetCacheInfo()
 			if len(info) == 0 {
 				_, _ = fmt.Fprintln(w, "No libraries cached. Run 'vm-system libs download' first.")
@@ -136,6 +117,4 @@ func newLibsCacheInfoCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }

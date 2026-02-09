@@ -3,29 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/go-go-golems/glazed/pkg/cmds/fields"
-	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/vm-system/pkg/vmclient"
 	"github.com/spf13/cobra"
 )
-
-type sessionCreateSettings struct {
-	TemplateID    string `glazed:"template-id"`
-	WorkspaceID   string `glazed:"workspace-id"`
-	BaseCommitOID string `glazed:"base-commit"`
-	WorktreePath  string `glazed:"worktree-path"`
-}
-
-type sessionListSettings struct {
-	Status string `glazed:"status"`
-}
-
-type sessionIDArg struct {
-	SessionID string `glazed:"session-id"`
-}
 
 func newSessionCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -45,37 +27,40 @@ func newSessionCommand() *cobra.Command {
 }
 
 func newSessionCreateCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"create",
-			"Create a new VM session",
-			"Create a new VM runtime session from a template.",
-			[]*fields.Definition{
-				fields.New("template-id", fields.TypeString, fields.WithHelp("Template ID (required)"), fields.WithRequired(true)),
-				fields.New("workspace-id", fields.TypeString, fields.WithHelp("Workspace ID (required)"), fields.WithRequired(true)),
-				fields.New("base-commit", fields.TypeString, fields.WithHelp("Base commit OID (required)"), fields.WithRequired(true)),
-				fields.New("worktree-path", fields.TypeString, fields.WithHelp("Worktree path (required)"), fields.WithRequired(true)),
-			},
-			nil,
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &sessionCreateSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a new VM session",
+		Long:  "Create a new VM runtime session from a template.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			templateID, err := cmd.Flags().GetString("template-id")
+			if err != nil {
+				return err
+			}
+			workspaceID, err := cmd.Flags().GetString("workspace-id")
+			if err != nil {
+				return err
+			}
+			baseCommitOID, err := cmd.Flags().GetString("base-commit")
+			if err != nil {
+				return err
+			}
+			worktreePath, err := cmd.Flags().GetString("worktree-path")
+			if err != nil {
 				return err
 			}
 
 			client := vmclient.New(serverURL, nil)
 			session, err := client.CreateSession(context.Background(), vmclient.CreateSessionRequest{
-				TemplateID:    settings.TemplateID,
-				WorkspaceID:   settings.WorkspaceID,
-				BaseCommitOID: settings.BaseCommitOID,
-				WorktreePath:  settings.WorktreePath,
+				TemplateID:    templateID,
+				WorkspaceID:   workspaceID,
+				BaseCommitOID: baseCommitOID,
+				WorktreePath:  worktreePath,
 			})
 			if err != nil {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Created session: %s\n", session.ID)
 			_, _ = fmt.Fprintf(w, "Status: %s\n", session.Status)
 			_, _ = fmt.Fprintf(w, "Template ID: %s\n", session.VMID)
@@ -86,33 +71,36 @@ func newSessionCreateCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(command)
+	cmd.Flags().String("template-id", "", "Template ID (required)")
+	cmd.Flags().String("workspace-id", "", "Workspace ID (required)")
+	cmd.Flags().String("base-commit", "", "Base commit OID (required)")
+	cmd.Flags().String("worktree-path", "", "Worktree path (required)")
+	_ = cmd.MarkFlagRequired("template-id")
+	_ = cmd.MarkFlagRequired("workspace-id")
+	_ = cmd.MarkFlagRequired("base-commit")
+	_ = cmd.MarkFlagRequired("worktree-path")
+
+	return cmd
 }
 
 func newSessionListCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"list",
-			"List VM sessions",
-			"List VM sessions and optionally filter by status.",
-			[]*fields.Definition{
-				fields.New("status", fields.TypeString, fields.WithDefault(""), fields.WithHelp("Filter by status (starting, ready, crashed, closed)")),
-			},
-			nil,
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			settings := &sessionListSettings{}
-			if err := decodeDefault(vals, settings); err != nil {
-				return err
-			}
-
-			client := vmclient.New(serverURL, nil)
-			sessions, err := client.ListSessions(context.Background(), settings.Status)
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List VM sessions",
+		Long:  "List VM sessions and optionally filter by status.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			status, err := cmd.Flags().GetString("status")
 			if err != nil {
 				return err
 			}
 
+			client := vmclient.New(serverURL, nil)
+			sessions, err := client.ListSessions(context.Background(), status)
+			if err != nil {
+				return err
+			}
+
+			w := cmd.OutOrStdout()
 			if len(sessions) == 0 {
 				_, _ = fmt.Fprintln(w, "No sessions found")
 				return nil
@@ -127,33 +115,27 @@ func newSessionListCommand() *cobra.Command {
 		},
 	}
 
-	return mustBuildCobraCommand(command)
+	cmd.Flags().String("status", "", "Filter by status (starting, ready, crashed, closed)")
+
+	return cmd
 }
 
 func newSessionGetCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"get",
-			"Get session details",
-			"Get session details by session ID.",
-			nil,
-			[]*fields.Definition{
-				fields.New("session-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Session ID")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			args := &sessionIDArg{}
-			if err := decodeDefault(vals, args); err != nil {
-				return err
-			}
+	return &cobra.Command{
+		Use:   "get <session-id>",
+		Short: "Get session details",
+		Long:  "Get session details by session ID.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID := args[0]
 
 			client := vmclient.New(serverURL, nil)
-			session, err := client.GetSession(context.Background(), args.SessionID)
+			session, err := client.GetSession(context.Background(), sessionID)
 			if err != nil {
 				return err
 			}
 
+			w := cmd.OutOrStdout()
 			_, _ = fmt.Fprintf(w, "Session ID: %s\n", session.ID)
 			_, _ = fmt.Fprintf(w, "Template ID: %s\n", session.VMID)
 			_, _ = fmt.Fprintf(w, "Workspace ID: %s\n", session.WorkspaceID)
@@ -171,37 +153,24 @@ func newSessionGetCommand() *cobra.Command {
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
 
 func newSessionCloseCommand() *cobra.Command {
-	command := &writerCommand{
-		CommandDescription: mustCommandDescription(
-			"close",
-			"Close a session",
-			"Close a VM session by ID.",
-			nil,
-			[]*fields.Definition{
-				fields.New("session-id", fields.TypeString, fields.WithRequired(true), fields.WithHelp("Session ID")),
-			},
-			false,
-		),
-		run: func(_ context.Context, vals *values.Values, w io.Writer) error {
-			args := &sessionIDArg{}
-			if err := decodeDefault(vals, args); err != nil {
-				return err
-			}
+	return &cobra.Command{
+		Use:   "close <session-id>",
+		Short: "Close a session",
+		Long:  "Close a VM session by ID.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sessionID := args[0]
 
 			client := vmclient.New(serverURL, nil)
-			if _, err := client.CloseSession(context.Background(), args.SessionID); err != nil {
+			if _, err := client.CloseSession(context.Background(), sessionID); err != nil {
 				return err
 			}
 
-			_, _ = fmt.Fprintf(w, "Closed session: %s\n", args.SessionID)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Closed session: %s\n", sessionID)
 			return nil
 		},
 	}
-
-	return mustBuildCobraCommand(command)
 }
