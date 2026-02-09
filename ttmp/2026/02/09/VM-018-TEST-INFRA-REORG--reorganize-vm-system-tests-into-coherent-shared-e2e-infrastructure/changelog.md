@@ -26,3 +26,16 @@ Implemented shared daemon-first harness (test/lib/e2e-common.sh), migrated smoke
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-e2e.sh — Uses shared harness for deterministic setup and reduced duplication
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test/lib/e2e-common.sh — Centralizes temporary resource setup
 
+
+## 2026-02-09
+
+Consolidated three overlapping library scripts into test-library-matrix.sh with explicit JSON built-in and lodash configured/unconfigured assertions; legacy script names now delegate as thin wrappers.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-goja-library-execution.sh — Wrapper migration to consolidated matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-loading.sh — Wrapper migration to consolidated matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-matrix.sh — Defines single authoritative library/module capability matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-requirements.sh — Wrapper migration to consolidated matrix
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/design-doc/01-test-infrastructure-reorganization-analysis-and-implementation-guide.md — Records wrapper decision in open questions
+

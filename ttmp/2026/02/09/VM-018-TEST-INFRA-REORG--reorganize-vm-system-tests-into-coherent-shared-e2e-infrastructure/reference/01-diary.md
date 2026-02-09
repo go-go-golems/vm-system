@@ -163,3 +163,75 @@ I also corrected smoke semantics so it no longer depends on a legacy module assu
 ### Technical details
 
 - Health wait now uses a retry loop around `/api/v1/health` instead of one-shot checks.
+
+## Step 3: Consolidate overlapping library scripts into a capability matrix
+
+This step replaced three overlapping library-focused scripts with one authoritative matrix test. The new script asserts the core semantics we needed explicitly: `JSON` is always available as a built-in and cannot be configured as a template module, while lodash is only available when configured on the template.
+
+To avoid abrupt command breakage while removing duplicated logic, legacy script entry points were retained as thin wrappers that delegate to the new matrix script.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Execute Task 3 by consolidating redundant library scripts into one coherent test and preserving a clean migration path.
+
+**Inferred user intent:** Get useful, architecture-aligned capability tests with less script drift and clearer ownership.
+
+**Commit (code):** pending
+
+### What I did
+
+- Added `test-library-matrix.sh` as the canonical library/module capability script.
+- Implemented assertions for:
+  - `template add-module json` should fail (`MODULE_NOT_ALLOWED` semantics),
+  - `JSON.stringify` should work in sessions without library configuration,
+  - lodash-dependent execution should fail when lodash is not configured,
+  - lodash-dependent execution should succeed when lodash is configured,
+  - post-hoc library configuration path should succeed.
+- Converted legacy scripts to wrappers:
+  - `test-library-loading.sh`
+  - `test-goja-library-execution.sh`
+  - `test-library-requirements.sh`
+- Updated VM-018 design guide open question with resolved wrapper decision.
+
+### Why
+
+- Three nearly-duplicate scripts made maintenance and behavior auditing expensive.
+
+### What worked
+
+- `./test-library-matrix.sh` passed (10/10 checks).
+- Wrapper compatibility path verified via `./test-library-loading.sh` (delegates and passes).
+
+### What didn't work
+
+- Same pre-existing CLI debug noise appears during command execution (`unknown section type Reference`), but does not affect pass/fail behavior.
+
+### What I learned
+
+- Consolidation into a matrix format makes policy assertions explicit and easy to extend.
+
+### What was tricky to build
+
+- Ensuring failure-path assertions were robust: the script now treats both non-zero command exits and explicit error outputs as expected failure forms for missing-lodash scenarios.
+
+### What warrants a second pair of eyes
+
+- Confirm wrapper strategy should remain temporary versus long-term; if temporary, schedule explicit removal.
+
+### What should be done in the future
+
+- Add explicit matrix cases for additional native modules (`database`, `exec`) as dedicated runtime scenarios.
+
+### Code review instructions
+
+- Review `test-library-matrix.sh` end-to-end first.
+- Confirm wrappers contain no duplicated logic and only delegate.
+- Re-run:
+  - `./test-library-matrix.sh`
+  - `./test-library-loading.sh`
+
+### Technical details
+
+- Matrix script uses the shared harness at `test/lib/e2e-common.sh` and standard `template/session/exec` CLI surfaces.

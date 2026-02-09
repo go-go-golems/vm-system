@@ -172,7 +172,7 @@ Acceptance:
 ## Open Questions
 
 1. Should legacy script names be preserved as wrappers or removed immediately?
-- Proposed answer for VM-018: preserve compatibility via wrappers only if negligible maintenance overhead; otherwise remove and update docs.
+- Resolved in Task 3: preserve names as thin wrappers that delegate to `test-library-matrix.sh` to avoid abrupt command breakage while eliminating duplicated logic.
 
 2. Should `libs download` run in smoke?
 - Proposed answer for VM-018: no; keep smoke focused on core lifecycle and move library concerns to matrix script.

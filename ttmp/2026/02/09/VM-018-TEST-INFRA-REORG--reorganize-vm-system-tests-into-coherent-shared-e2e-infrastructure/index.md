@@ -18,11 +18,19 @@ RelatedFiles:
         Current full-loop baseline and upcoming harness migration target
         Migrated to shared harness for consistent setup and teardown
     - Path: test-goja-library-execution.sh
-      Note: Legacy overlapping library execution test to consolidate
+      Note: |-
+        Legacy overlapping library execution test to consolidate
+        Legacy wrapper delegating to consolidated matrix test
     - Path: test-library-loading.sh
-      Note: Legacy overlapping library test to consolidate
+      Note: |-
+        Legacy overlapping library test to consolidate
+        Legacy wrapper delegating to consolidated matrix test
+    - Path: test-library-matrix.sh
+      Note: Canonical consolidated library capability matrix test
     - Path: test-library-requirements.sh
-      Note: Legacy overlapping library requirements test to consolidate
+      Note: |-
+        Legacy overlapping library requirements test to consolidate
+        Legacy wrapper delegating to consolidated matrix test
     - Path: test/lib/e2e-common.sh
       Note: New shared harness for daemon-first shell integration scripts
     - Path: ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/design-doc/01-test-infrastructure-reorganization-analysis-and-implementation-guide.md
@@ -38,6 +46,7 @@ LastUpdated: 2026-02-09T08:16:30-05:00
 WhatFor: Create a maintainable test surface that maps directly to architecture risks.
 WhenToUse: Use while implementing or reviewing VM-018 test-suite reorganization work.
 ---
+
 
 
 
