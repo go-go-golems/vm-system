@@ -11,11 +11,12 @@ Intent: long-term
 Owners: []
 RelatedFiles: []
 ExternalSources: []
-Summary: ""
-LastUpdated: 2026-02-09T00:42:24.299705043-05:00
+Summary: Backend runtime/session/store high-risk integration coverage for JSON/lodash and native module semantics.
+LastUpdated: 2026-02-09T00:48:25.716953934-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 # VM-013A backend runtime/session/store high-risk coverage
 
