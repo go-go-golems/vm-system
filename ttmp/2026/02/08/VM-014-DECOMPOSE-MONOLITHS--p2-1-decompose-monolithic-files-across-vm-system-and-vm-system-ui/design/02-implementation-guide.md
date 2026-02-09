@@ -13,7 +13,7 @@ RelatedFiles:
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmstore/vmstore.go
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go
-    - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/vmService.ts
+    - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/api.ts
 ExternalSources: []
 Summary: >
     Detailed implementation guide for decomposing monolithic backend/frontend files
@@ -86,15 +86,14 @@ Checks:
 - `go test ./cmd/vm-system`
 - `go run ./cmd/vm-system --help` sanity check
 
-## Slice D: `vm-system-ui/client/src/lib/vmService.ts`
+## Slice D: `vm-system-ui/client/src/lib/api.ts`
 
 1. Create modules:
 - `lib/vm/transport.ts`
-- `lib/vm/types.ts`
-- `lib/vm/normalize.ts`
-- `lib/vm/templates.ts`
-- `lib/vm/sessions.ts`
-- `lib/vm/executions.ts`
+- `lib/vm/endpoints/shared.ts`
+- `lib/vm/endpoints/templates.ts`
+- `lib/vm/endpoints/sessions.ts`
+- `lib/vm/endpoints/executions.ts`
 
 2. Keep a compatibility export surface:
 - maintain current imports via a thin facade file during migration.

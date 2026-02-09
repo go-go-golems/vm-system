@@ -64,3 +64,12 @@ Completed Slice D: split frontend API layer into transport + domain endpoint mod
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/vm/endpoints/templates.ts — Extracted template endpoint operations
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/vm/transport.ts — Extracted URL and fetch base query concerns
 
+
+## 2026-02-09
+
+Aligned Slice D guide paths with implemented api.ts decomposition to prevent doc drift
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-014-DECOMPOSE-MONOLITHS--p2-1-decompose-monolithic-files-across-vm-system-and-vm-system-ui/design/02-implementation-guide.md — Updated Slice D file targets to match implemented frontend modules
+
