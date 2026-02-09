@@ -1,20 +1,21 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { useAppState } from '@/components/AppShell';
+import { useListTemplatesQuery, useListSessionsQuery } from '@/lib/api';
+import type { VMSession } from '@/lib/types';
 import {
   Activity,
   Box,
   Database,
   Layers,
   Loader2,
-  Monitor,
   Terminal,
   Zap,
 } from 'lucide-react';
 
 export default function System() {
-  const { templates, sessions, initialized } = useAppState();
+  const { data: templates = [], isLoading: loadingTemplates } = useListTemplatesQuery();
+  const { data: sessions = [], isLoading: loadingSessions } = useListSessionsQuery();
 
-  if (!initialized) {
+  if (loadingTemplates || loadingSessions) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -23,9 +24,9 @@ export default function System() {
     );
   }
 
-  const readyCount = sessions.filter(s => s.status === 'ready').length;
-  const closedCount = sessions.filter(s => s.status === 'closed').length;
-  const crashedCount = sessions.filter(s => s.status === 'crashed').length;
+  const readyCount = sessions.filter((s: VMSession) => s.status === 'ready').length;
+  const closedCount = sessions.filter((s: VMSession) => s.status === 'closed').length;
+  const crashedCount = sessions.filter((s: VMSession) => s.status === 'crashed').length;
 
   return (
     <div className="space-y-4 max-w-3xl">

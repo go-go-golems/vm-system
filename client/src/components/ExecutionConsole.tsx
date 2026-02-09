@@ -1,6 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import type { Execution, ExecutionEvent } from '@/lib/vmService';
+import type { Execution, ExecutionEvent } from '@/lib/types';
 import { CheckCircle2, XCircle, Terminal } from 'lucide-react';
 
 interface ExecutionConsoleProps {
@@ -44,7 +44,7 @@ function ExecutionBlock({ execution }: { execution: Execution }) {
           <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         )}
         <span className="text-xs text-slate-500 font-mono">
-          {execution.startedAt.toLocaleTimeString()}
+          {new Date(execution.startedAt).toLocaleTimeString()}
         </span>
       </div>
 

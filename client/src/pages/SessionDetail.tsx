@@ -1,16 +1,19 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAppState } from '@/components/AppShell';
 import { CodeEditor } from '@/components/CodeEditor';
 import { ExecutionConsole } from '@/components/ExecutionConsole';
 import { ExecutionLogViewer } from '@/components/ExecutionLogViewer';
 import { PresetSelector } from '@/components/PresetSelector';
 import {
-  vmService,
-  type Execution,
-  type VMSession,
-} from '@/lib/vmService';
+  useGetSessionQuery,
+  useGetTemplateQuery,
+  useListExecutionsQuery,
+  useCloseSessionMutation,
+  useExecuteREPLMutation,
+} from '@/lib/api';
+import { setCurrentSessionId } from '@/lib/uiSlice';
+import type { Execution } from '@/lib/types';
 import {
   ArrowLeft,
   History,
@@ -23,49 +26,30 @@ import {
 } from 'lucide-react';
 import { Link, useParams } from 'wouter';
 import { useCallback, useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 
 export default function SessionDetail() {
   const params = useParams<{ id: string }>();
   const sessionId = params.id;
-  const { templates, refreshSessions, setCurrentSession } = useAppState();
+  const dispatch = useDispatch();
 
-  const [session, setSession] = useState<VMSession | null>(null);
-  const [executions, setExecutions] = useState<Execution[]>([]);
+  const { data: session, isLoading: loadingSession } = useGetSessionQuery(sessionId);
+  const { data: template } = useGetTemplateQuery(session?.vmId ?? '', { skip: !session?.vmId });
+  const { data: executions = [] } = useListExecutionsQuery(sessionId);
+  const [closeSession] = useCloseSessionMutation();
+  const [executeREPL] = useExecuteREPLMutation();
+
   const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, VM!");');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('repl');
 
-  const loadSession = useCallback(async () => {
-    try {
-      const sess = await vmService.getSession(sessionId);
-      setSession(sess);
-      if (sess) {
-        await vmService.setCurrentSession(sess.id).catch(() => {});
-        setCurrentSession(sess);
-      }
-    } catch {
-      // session not found
-    }
-  }, [sessionId, setCurrentSession]);
-
-  const loadExecutions = useCallback(async () => {
-    try {
-      const execs = await vmService.getExecutionsBySession(sessionId);
-      setExecutions(execs);
-    } catch {
-      // ignore
-    }
-  }, [sessionId]);
-
+  // Set as current session on mount
   useEffect(() => {
-    (async () => {
-      await loadSession();
-      await loadExecutions();
-      setLoading(false);
-    })();
-  }, [loadSession, loadExecutions]);
+    if (session) {
+      dispatch(setCurrentSessionId(session.id));
+    }
+  }, [session, dispatch]);
 
   const handleExecute = async () => {
     if (!code.trim()) {
@@ -79,21 +63,15 @@ export default function SessionDetail() {
 
     setIsExecuting(true);
     try {
-      const execution = await vmService.executeREPL(code, sessionId);
-      setExecutions(prev => [...prev, execution]);
+      const execution = await executeREPL({ sessionId, input: code }).unwrap();
       if (execution.status === 'error') {
         toast.error('Execution failed', { description: execution.error });
       }
     } catch (error: any) {
-      toast.error('Execution failed', { description: error.message });
+      toast.error('Execution failed', { description: error?.message || error?.data?.message || 'Unknown error' });
     } finally {
       setIsExecuting(false);
     }
-  };
-
-  const handleClear = () => {
-    setExecutions([]);
-    toast.success('Console cleared');
   };
 
   const handleLoadPreset = (presetCode: string) => {
@@ -110,17 +88,14 @@ export default function SessionDetail() {
   const handleCloseSession = async () => {
     if (!session) return;
     try {
-      await vmService.closeSession(session.id);
-      const updated = await vmService.getSession(session.id);
-      setSession(updated);
-      await refreshSessions();
+      await closeSession(session.id).unwrap();
       toast.success('Session closed');
     } catch (error: any) {
-      toast.error('Failed to close session', { description: error.message });
+      toast.error('Failed to close session', { description: error?.message || error?.data?.message || 'Unknown error' });
     }
   };
 
-  if (loading) {
+  if (loadingSession) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -168,14 +143,14 @@ export default function SessionDetail() {
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
             <Link href={`/templates/${session.vmId}`} className="hover:text-blue-400 transition-colors">
-              Template: {session.vm?.name || session.vmProfile}
+              Template: {template?.name || session.vmProfile}
             </Link>
             <span className="text-slate-700">·</span>
             <span className="font-mono text-slate-500">{session.id.slice(0, 12)}…</span>
-            {session.vm && (
+            {template && (
               <>
                 <span className="text-slate-700">·</span>
-                <span>{session.vm.exposedModules.length} modules, {session.vm.libraries.length} libs</span>
+                <span>{template.exposedModules.length} modules, {template.libraries.length} libs</span>
               </>
             )}
           </div>
@@ -229,15 +204,6 @@ export default function SessionDetail() {
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={handleClear}
-                    className="bg-slate-900 border-slate-700 text-slate-300 h-7 text-xs"
-                  >
-                    <RotateCcw className="w-3 h-3 mr-1" />
-                    Clear
-                  </Button>
-                  <Button
-                    size="sm"
                     onClick={handleExecute}
                     disabled={isExecuting || !isReady}
                     className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs"
@@ -288,11 +254,11 @@ export default function SessionDetail() {
                       {exec.input?.slice(0, 60) || exec.path || '—'}
                     </span>
                     <span className="text-slate-600 flex-shrink-0">
-                      {exec.startedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {new Date(exec.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {exec.endedAt && (
                       <span className="text-slate-600 flex-shrink-0">
-                        {exec.endedAt.getTime() - exec.startedAt.getTime()}ms
+                        {new Date(exec.endedAt).getTime() - new Date(exec.startedAt).getTime()}ms
                       </span>
                     )}
                   </button>

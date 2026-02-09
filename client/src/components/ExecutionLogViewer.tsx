@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import type { Execution, ExecutionEvent } from '@/lib/vmService';
+import type { Execution, ExecutionEvent } from '@/lib/types';
 import {
   AlertCircle,
   CheckCircle,
@@ -148,7 +148,8 @@ export function ExecutionLogViewer({ executions, onSelectExecution }: ExecutionL
     }
   };
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = (dateStr: string | Date) => {
+    const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
     return new Intl.DateTimeFormat('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -157,9 +158,11 @@ export function ExecutionLogViewer({ executions, onSelectExecution }: ExecutionL
     }).format(date);
   };
 
-  const formatDuration = (start: Date, end?: Date) => {
+  const formatDuration = (start: string | Date, end?: string | Date) => {
     if (!end) return '—';
-    const ms = end.getTime() - start.getTime();
+    const startMs = typeof start === 'string' ? new Date(start).getTime() : start.getTime();
+    const endMs = typeof end === 'string' ? new Date(end).getTime() : end.getTime();
+    const ms = endMs - startMs;
     return `${ms}ms`;
   };
 

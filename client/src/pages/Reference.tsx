@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { PRESET_EXAMPLES } from '@/lib/vmService';
+import { PRESET_EXAMPLES } from '@/lib/types';
 import {
   BookOpen,
   ChevronDown,

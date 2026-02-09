@@ -1,40 +1,31 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppState } from '@/components/AppShell';
 import { CreateSessionDialog } from '@/components/CreateSessionDialog';
-import { vmService } from '@/lib/vmService';
+import { useListTemplatesQuery, useListSessionsQuery, useCreateTemplateMutation } from '@/lib/api';
 import { Box, Play, Plus, Loader2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function Templates() {
-  const { templates, sessions, initialized, refreshTemplates, refreshSessions } = useAppState();
+  const { data: templates = [], isLoading } = useListTemplatesQuery();
+  const { data: sessions = [] } = useListSessionsQuery();
+  const [createTemplate, { isLoading: creatingTemplate }] = useCreateTemplateMutation();
   const [, setLocation] = useLocation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogTemplateId, setCreateDialogTemplateId] = useState<string | undefined>();
-  const [creatingTemplate, setCreatingTemplate] = useState(false);
 
   const sessionCountByTemplate = (templateId: string) =>
     sessions.filter(s => s.vmId === templateId && s.status === 'ready').length;
 
   const handleCreateTemplate = async () => {
-    setCreatingTemplate(true);
     try {
       const name = `New Template ${templates.length + 1}`;
-      const baseUrl = ((import.meta as any).env.VITE_VM_SYSTEM_API_BASE_URL || '').replace(/\/$/, '');
-      const res = await fetch(`${baseUrl}/api/v1/templates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, engine: 'goja' }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await createTemplate({ name, engine: 'goja' }).unwrap();
       toast.success('Template created', { description: name });
-      await refreshTemplates();
+      // No manual refresh needed — tag invalidation handles it
     } catch (error: any) {
-      toast.error('Failed to create template', { description: error.message });
-    } finally {
-      setCreatingTemplate(false);
+      toast.error('Failed to create template', { description: error?.message || error?.data?.message || 'Unknown error' });
     }
   };
 
@@ -44,11 +35,10 @@ export default function Templates() {
   };
 
   const handleSessionCreated = async (sessionId: string) => {
-    await refreshSessions();
     setLocation(`/sessions/${sessionId}`);
   };
 
-  if (!initialized) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -99,10 +89,7 @@ export default function Templates() {
               {templates.map(tpl => {
                 const readySessions = sessionCountByTemplate(tpl.id);
                 return (
-                  <tr
-                    key={tpl.id}
-                    className="border-b border-slate-800/50 hover:bg-slate-900/30 transition-colors"
-                  >
+                  <tr key={tpl.id} className="border-b border-slate-800/50 hover:bg-slate-900/30 transition-colors">
                     <td className="px-4 py-3">
                       <Link href={`/templates/${tpl.id}`} className="text-slate-200 hover:text-white font-medium transition-colors">
                         {tpl.name}
@@ -113,12 +100,8 @@ export default function Templates() {
                         {tpl.engine}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-center text-slate-400 hidden md:table-cell">
-                      {tpl.exposedModules.length}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-400 hidden md:table-cell">
-                      {tpl.libraries.length}
-                    </td>
+                    <td className="px-4 py-3 text-center text-slate-400 hidden md:table-cell">{tpl.exposedModules.length}</td>
+                    <td className="px-4 py-3 text-center text-slate-400 hidden md:table-cell">{tpl.libraries.length}</td>
                     <td className="px-4 py-3 text-center hidden lg:table-cell">
                       {readySessions > 0 ? (
                         <Badge variant="outline" className="bg-emerald-950 border-emerald-800 text-emerald-400 text-xs">
@@ -157,7 +140,6 @@ export default function Templates() {
       <CreateSessionDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        templates={templates}
         defaultTemplateId={createDialogTemplateId}
         onCreated={handleSessionCreated}
       />

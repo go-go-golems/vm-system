@@ -21,15 +21,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { vmService, type VMProfile } from '@/lib/vmService';
+import { useListTemplatesQuery, useCreateSessionMutation } from '@/lib/api';
+import { setCurrentSessionId, setSessionName } from '@/lib/uiSlice';
+import { DEFAULT_WORKSPACE_ID, DEFAULT_BASE_COMMIT_OID, DEFAULT_WORKTREE_PATH } from '@/lib/types';
 import { ChevronRight, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 
 interface CreateSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  templates: VMProfile[];
   /** Pre-select a template */
   defaultTemplateId?: string;
   /** Called after successful creation with the new session ID */
@@ -39,12 +41,15 @@ interface CreateSessionDialogProps {
 export function CreateSessionDialog({
   open,
   onOpenChange,
-  templates,
   defaultTemplateId,
   onCreated,
 }: CreateSessionDialogProps) {
+  const { data: templates = [] } = useListTemplatesQuery();
+  const [createSession] = useCreateSessionMutation();
+  const dispatch = useDispatch();
+
   const [selectedTemplateId, setSelectedTemplateId] = useState(defaultTemplateId || '');
-  const [sessionName, setSessionName] = useState('');
+  const [sessionNameInput, setSessionNameInput] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -52,7 +57,7 @@ export function CreateSessionDialog({
   useEffect(() => {
     if (open) {
       setSelectedTemplateId(defaultTemplateId || templates[0]?.id || '');
-      setSessionName('');
+      setSessionNameInput('');
       setAdvancedOpen(false);
     }
   }, [open, defaultTemplateId, templates]);
@@ -66,13 +71,25 @@ export function CreateSessionDialog({
     }
     setCreating(true);
     try {
-      const session = await vmService.createSession(selectedTemplateId, sessionName || undefined);
-      await vmService.setCurrentSession(session.id);
+      const session = await createSession({
+        template_id: selectedTemplateId,
+        workspace_id: DEFAULT_WORKSPACE_ID,
+        base_commit_oid: DEFAULT_BASE_COMMIT_OID,
+        worktree_path: DEFAULT_WORKTREE_PATH,
+        name: sessionNameInput || undefined,
+      }).unwrap();
+
+      // Persist session name and set as current
+      if (sessionNameInput.trim()) {
+        dispatch(setSessionName({ sessionId: session.id, name: sessionNameInput }));
+      }
+      dispatch(setCurrentSessionId(session.id));
+
       toast.success('Session created', { description: session.name });
       onOpenChange(false);
       onCreated(session.id);
     } catch (error: any) {
-      toast.error('Failed to create session', { description: error.message });
+      toast.error('Failed to create session', { description: error?.message || error?.data?.message || 'Unknown error' });
     } finally {
       setCreating(false);
     }
@@ -127,8 +144,8 @@ export function CreateSessionDialog({
           <div className="space-y-2">
             <Label className="text-slate-300">Name (optional)</Label>
             <Input
-              value={sessionName}
-              onChange={e => setSessionName(e.target.value)}
+              value={sessionNameInput}
+              onChange={e => setSessionNameInput(e.target.value)}
               placeholder="e.g. Workshop Session 1"
               className="bg-slate-950 border-slate-700 text-slate-200"
               onKeyDown={e => {
@@ -145,9 +162,9 @@ export function CreateSessionDialog({
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2 space-y-2 text-xs text-slate-500">
               <div className="rounded-md bg-slate-950 border border-slate-800 p-3 space-y-1.5">
-                <div>workspace_id: <span className="text-slate-400 font-mono">ws-web-ui</span></div>
-                <div>base_commit_oid: <span className="text-slate-400 font-mono">web-ui</span></div>
-                <div>worktree_path: <span className="text-slate-400 font-mono">/tmp</span></div>
+                <div>workspace_id: <span className="text-slate-400 font-mono">{DEFAULT_WORKSPACE_ID}</span></div>
+                <div>base_commit_oid: <span className="text-slate-400 font-mono">{DEFAULT_BASE_COMMIT_OID}</span></div>
+                <div>worktree_path: <span className="text-slate-400 font-mono">{DEFAULT_WORKTREE_PATH}</span></div>
               </div>
               <p className="text-slate-600">These defaults come from environment variables.</p>
             </CollapsibleContent>

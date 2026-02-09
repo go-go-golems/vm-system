@@ -1,36 +1,11 @@
-import { Badge } from '@/components/ui/badge';
-import { vmService, type VMProfile, type VMSession } from '@/lib/vmService';
+import { Provider, useSelector, useDispatch } from 'react-redux';
+import { store, type RootState } from '@/lib/store';
+import { useListTemplatesQuery, useListSessionsQuery } from '@/lib/api';
+import type { VMProfile, VMSession } from '@/lib/types';
+import { setCurrentSessionId } from '@/lib/uiSlice';
 import { Box, Layers, Monitor, BookOpen, Terminal, ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { useEffect, useState, createContext, useContext, useCallback, type ReactNode } from 'react';
-
-// ---------------------------------------------------------------------------
-// Global app state context — shared across all pages
-// ---------------------------------------------------------------------------
-
-export interface AppState {
-  templates: VMProfile[];
-  sessions: VMSession[];
-  currentSession: VMSession | null;
-  initialized: boolean;
-  refreshTemplates: () => Promise<void>;
-  refreshSessions: () => Promise<void>;
-  setCurrentSession: (session: VMSession | null) => void;
-}
-
-const AppStateContext = createContext<AppState>({
-  templates: [],
-  sessions: [],
-  currentSession: null,
-  initialized: false,
-  refreshTemplates: async () => {},
-  refreshSessions: async () => {},
-  setCurrentSession: () => {},
-});
-
-export function useAppState() {
-  return useContext(AppStateContext);
-}
+import { type ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Breadcrumb
@@ -61,7 +36,6 @@ function Breadcrumbs({ segments }: { segments: BreadcrumbSegment[] }) {
   );
 }
 
-// Compute breadcrumbs from path
 function computeBreadcrumbs(
   path: string,
   templates: VMProfile[],
@@ -71,7 +45,6 @@ function computeBreadcrumbs(
 
   if (path === '/' || path.startsWith('/templates')) {
     segments.push({ label: 'Templates', href: path === '/templates' ? undefined : '/templates' });
-
     const match = path.match(/^\/templates\/([^/]+)/);
     if (match) {
       const tpl = templates.find(t => t.id === match[1]);
@@ -79,7 +52,6 @@ function computeBreadcrumbs(
     }
   } else if (path.startsWith('/sessions')) {
     segments.push({ label: 'Sessions', href: path === '/sessions' ? undefined : '/sessions' });
-
     const match = path.match(/^\/sessions\/([^/]+)/);
     if (match) {
       const sess = sessions.find(s => s.id === match[1]);
@@ -134,8 +106,16 @@ function NavBar({ path }: { path: string }) {
 // Footer status bar
 // ---------------------------------------------------------------------------
 
-function FooterStatus({ currentSession, sessions }: { currentSession: VMSession | null; sessions: VMSession[] }) {
-  const readyCount = sessions.filter(s => s.status === 'ready').length;
+function FooterStatus() {
+  const { data: sessions } = useListSessionsQuery();
+  const { data: templates } = useListTemplatesQuery();
+  const currentSessionId = useSelector((state: RootState) => state.ui.currentSessionId);
+
+  const currentSession = sessions?.find(s => s.id === currentSessionId) || null;
+  const currentTemplate = currentSession
+    ? templates?.find(t => t.id === currentSession.vmId)
+    : null;
+  const readyCount = sessions?.filter(s => s.status === 'ready').length ?? 0;
 
   return (
     <footer className="border-t border-slate-800 bg-slate-900/50 backdrop-blur">
@@ -152,11 +132,11 @@ function FooterStatus({ currentSession, sessions }: { currentSession: VMSession 
             ) : (
               <span>No active session</span>
             )}
-            {currentSession?.vm && (
+            {currentTemplate && (
               <>
                 <span className="text-slate-700">·</span>
-                <Link href={`/templates/${currentSession.vmId}`} className="hover:text-slate-300 transition-colors">
-                  Template: {currentSession.vm.name}
+                <Link href={`/templates/${currentTemplate.id}`} className="hover:text-slate-300 transition-colors">
+                  Template: {currentTemplate.name}
                 </Link>
               </>
             )}
@@ -173,97 +153,63 @@ function FooterStatus({ currentSession, sessions }: { currentSession: VMSession 
 }
 
 // ---------------------------------------------------------------------------
-// AppShell
+// Inner shell (inside Redux Provider)
 // ---------------------------------------------------------------------------
 
-export function AppShell({ children }: { children: ReactNode }) {
+function AppShellInner({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const [templates, setTemplates] = useState<VMProfile[]>([]);
-  const [sessions, setSessions] = useState<VMSession[]>([]);
-  const [currentSession, setCurrentSessionState] = useState<VMSession | null>(null);
-  const [initialized, setInitialized] = useState(false);
-
-  const refreshTemplates = useCallback(async () => {
-    try {
-      await vmService.initialize();
-      setTemplates(vmService.getVMs());
-    } catch {
-      // ignore — template list will stay empty
-    }
-  }, []);
-
-  const refreshSessions = useCallback(async () => {
-    try {
-      const list = await vmService.listSessions();
-      setSessions(list);
-      const cur = vmService.getCurrentSession();
-      setCurrentSessionState(cur);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const setCurrentSession = useCallback((session: VMSession | null) => {
-    setCurrentSessionState(session);
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await refreshTemplates();
-      await refreshSessions();
-      setInitialized(true);
-    })();
-  }, [refreshTemplates, refreshSessions]);
+  const { data: templates = [] } = useListTemplatesQuery();
+  const { data: sessions = [] } = useListSessionsQuery();
 
   const breadcrumbs = computeBreadcrumbs(location, templates, sessions);
 
-  const appState: AppState = {
-    templates,
-    sessions,
-    currentSession,
-    initialized,
-    refreshTemplates,
-    refreshSessions,
-    setCurrentSession,
-  };
-
   return (
-    <AppStateContext.Provider value={appState}>
-      <div className="min-h-screen flex flex-col bg-slate-950">
-        {/* Header */}
-        <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-10">
-          <div className="container py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/templates" className="flex items-center gap-2 flex-shrink-0">
-                  <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
-                    <Terminal className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-100 hidden sm:inline">VM System</span>
-                </Link>
-                <NavBar path={location} />
-              </div>
+    <div className="min-h-screen flex flex-col bg-slate-950">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-10">
+        <div className="container py-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/templates" className="flex items-center gap-2 flex-shrink-0">
+                <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
+                  <Terminal className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-slate-100 hidden sm:inline">VM System</span>
+              </Link>
+              <NavBar path={location} />
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Breadcrumb bar */}
-        {breadcrumbs.length > 0 && (
-          <div className="border-b border-slate-800/50 bg-slate-950">
-            <div className="container py-2">
-              <Breadcrumbs segments={breadcrumbs} />
-            </div>
+      {/* Breadcrumb bar */}
+      {breadcrumbs.length > 0 && (
+        <div className="border-b border-slate-800/50 bg-slate-950">
+          <div className="container py-2">
+            <Breadcrumbs segments={breadcrumbs} />
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Page content */}
-        <main className="flex-1 container py-4">
-          {children}
-        </main>
+      {/* Page content */}
+      <main className="flex-1 container py-4">
+        {children}
+      </main>
 
-        {/* Footer */}
-        <FooterStatus currentSession={currentSession} sessions={sessions} />
-      </div>
-    </AppStateContext.Provider>
+      {/* Footer */}
+      <FooterStatus />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AppShell (wraps everything in Redux Provider)
+// ---------------------------------------------------------------------------
+
+export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <Provider store={store}>
+      <AppShellInner>{children}</AppShellInner>
+    </Provider>
   );
 }

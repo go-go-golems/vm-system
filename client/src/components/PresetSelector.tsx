@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PRESET_EXAMPLES } from '@/lib/vmService';
+import { PRESET_EXAMPLES } from '@/lib/types';
 import { FileCode } from 'lucide-react';
 
 interface PresetSelectorProps {
