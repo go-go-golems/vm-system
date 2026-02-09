@@ -9,7 +9,7 @@
 - [x] T05: Remove `http` parent command from root registration.
 - [x] T06: Port `serve` command to Glazed command implementation.
 - [x] T07: Port `libs` command group (`download`, `list`, `cache-info`) to Glazed command implementations.
-- [ ] T08: Port `template` command group to Glazed command implementations (all existing verbs).
+- [x] T08: Port `template` command group to Glazed command implementations (all existing verbs).
 - [x] T09: Port `session` command group to Glazed command implementations; expose canonical `close` command.
 - [x] T10: Remove `session delete` CLI verb from registration.
 - [x] T11: Port `exec` command group (`repl`, `run-file`, `list`, `get`, `events`) to Glazed command implementations.

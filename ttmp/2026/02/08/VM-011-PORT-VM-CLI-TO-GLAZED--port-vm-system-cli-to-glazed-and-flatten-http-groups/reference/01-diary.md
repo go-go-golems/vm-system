@@ -737,3 +737,74 @@ The highest-risk part was preserving parsing + error semantics for JSON flag inp
 
 - Completed task IDs in this step: `T11`.
 - Next coding target: `T08` template command family migration.
+
+## Step 10: Port template group to Glazed commands
+
+I migrated the full `template` command family (all verbs currently exposed by the CLI) to Glazed command implementations. This was the largest surface area in the migration.
+
+All existing template operations remain available under root `template` with preserved output behavior.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue implementing all ticket tasks in sequence with frequent diary updates and commits.
+
+**Inferred user intent:** Complete the high-volume command family migration, not just infrastructure wiring.
+
+**Commit (code):** pending
+
+### What I did
+
+- Rewrote `cmd/vm-system/cmd_template.go` using Glazed `WriterCommand` implementations for all existing template verbs:
+  - create/list/get/delete
+  - add/remove/list module
+  - add/remove/list library
+  - list available modules/libraries
+  - add/list capability
+  - add/list startup file
+- Defined flags/arguments through `fields.New(...)` and decoded via `values`.
+- Preserved existing JSON parsing for capability config payloads.
+- Preserved output text/table formatting patterns.
+- Ran command-package tests.
+
+### Why
+
+`template` is the largest and most central command family. Porting it now validates that the shared helper pattern can support full command breadth while keeping behavior stable.
+
+### What worked
+
+- All template subcommands compile under new API command plumbing.
+- `GOWORK=off go test ./cmd/vm-system -count=1` passed.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- A single shared `templateID`/`name` settings model simplified many verb implementations and reduced duplication.
+
+### What was tricky to build
+
+The tricky part was size and behavioral parity: this file has many verbs with similar but not identical data flow. I kept each verb explicit (instead of over-generic helpers) to avoid subtle regressions in per-command output and validation behavior.
+
+### What warrants a second pair of eyes
+
+- Check whether any template subcommands should move to structured row output in a follow-up instead of text-only writer output.
+
+### What should be done in the future
+
+- Add table-driven tests for template subcommand registration to guard against accidental omissions during future edits.
+
+### Code review instructions
+
+- Review file:
+  - `cmd/vm-system/cmd_template.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T08`.
+- Remaining code tasks: `T14`, `T15`, `T16`, `T17`, `T18`, `T19`.

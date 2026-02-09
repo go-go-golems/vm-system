@@ -16,3 +16,4 @@
 - Added shared Glazed helper layer and ported `serve` + `libs` command groups to new API command implementations.
 - Ported `session` command group to Glazed command implementations and switched canonical lifecycle CLI verb to `session close` (no `session delete` registration).
 - Ported the full `exec` command group to Glazed command implementations while preserving JSON flag parsing and output formatting behavior.
+- Ported the full `template` command group to Glazed command implementations (all existing template verbs).
