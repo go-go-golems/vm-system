@@ -62,6 +62,21 @@ The plan below is intentionally detailed and phased. It references the prior fin
 - `VM-001-ANALYZE-VM` report (`.../design-doc/01-comprehensive-vm-system-analysis-report.md`)
 - `VM-002-ANALYZE-VM-SYSTEM-UI` report (`.../design-doc/01-comprehensive-vm-system-ui-analysis-report.md`)
 
+## Implementation Correction (2026-02-08)
+
+The original planning section below used a transitional `/api/v1/vms` naming sketch. The implemented backend contract and UI migration use template-first naming only:
+
+- `GET/POST /api/v1/templates`
+- `GET/DELETE /api/v1/templates/{template_id}`
+- `GET/POST/DELETE /api/v1/templates/{template_id}/modules`
+- `GET/POST/DELETE /api/v1/templates/{template_id}/libraries`
+- `GET/POST /api/v1/templates/{template_id}/capabilities`
+- `GET/POST /api/v1/templates/{template_id}/startup-files`
+- `GET/POST/DELETE /api/v1/sessions...`
+- `GET/POST /api/v1/executions...`
+
+VM-003 implementation followed this clean-cut contract with no compatibility wrappers.
+
 ## Problem Statement
 
 ### What “real UI” means
@@ -644,4 +659,3 @@ Accepted. Minimal disruption with explicit convergence path.
 - `vm-system-ui/client/src/components/VMConfig.tsx`
 - `vm-system-ui/server/index.ts`
 - `vm-system-ui/vite.config.ts`
-

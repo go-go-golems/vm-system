@@ -7,6 +7,12 @@ topics:
       description: WebSocket lifecycle & events
     - slug: frontend
       description: Frontend applications, UI architecture, and UX behavior
+    - slug: architecture
+      description: Architecture and system design analysis
+    - slug: plugin
+      description: Plugin runtime, APIs, and integration
+    - slug: state-management
+      description: State model, reducers, scoping, and synchronization
 docTypes:
     - slug: design-doc
       description: Structured rationale and architecture notes
