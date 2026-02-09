@@ -319,7 +319,7 @@ The key completion criterion was met: task list fully checked, validation eviden
 
 **Inferred user intent:** Ensure the reorganization is not only designed and implemented, but also proven and auditable as complete work.
 
-**Commit (code):** pending
+**Commit (code):** `df09754` — `docs(vm-018): capture validation and close ticket`
 
 ### What I did
 
