@@ -114,7 +114,7 @@ The resulting state is that production code paths use returned errors and struct
 
 **Inferred user intent:** Prevent crash-on-error behavior in normal runtime/CLI operation and make failures explicit and handleable.
 
-**Commit (code):** pending
+**Commit (code):** `6306f49` — `refactor(vm-015): remove panic paths from command and id flow`
 
 ### What I did
 
