@@ -31,7 +31,7 @@ export default function Reference() {
           <CardContent className="pt-5">
             <pre className="text-xs text-slate-300 font-mono leading-relaxed overflow-x-auto">
 {`Template (VM)
-│  id, name, engine, exposed_modules[], libraries[],
+│  id, name, engine, exposed_modules[] (native modules), libraries[],
 │  settings {limits, resolver, runtime},
 │  capabilities[], startup_files[]
 │
@@ -87,8 +87,8 @@ export default function Reference() {
                   <ApiRow method="GET" path="/api/v1/templates" desc="List all templates" />
                   <ApiRow method="POST" path="/api/v1/templates" desc="Create a template" />
                   <ApiRow method="GET" path="/api/v1/templates/:id" desc="Get template detail (settings, capabilities, startup files)" />
-                  <ApiRow method="POST" path="/api/v1/templates/:id/modules" desc="Add a module to a template" />
-                  <ApiRow method="DELETE" path="/api/v1/templates/:id/modules/:name" desc="Remove a module" />
+                  <ApiRow method="POST" path="/api/v1/templates/:id/modules" desc="Add a native module to a template" />
+                  <ApiRow method="DELETE" path="/api/v1/templates/:id/modules/:name" desc="Remove a native module" />
                   <ApiRow method="POST" path="/api/v1/templates/:id/libraries" desc="Add a library" />
                   <ApiRow method="DELETE" path="/api/v1/templates/:id/libraries/:name" desc="Remove a library" />
 
@@ -142,7 +142,8 @@ export default function Reference() {
             </div>
             <Separator className="bg-slate-800 my-4" />
             <div className="text-xs text-slate-500 space-y-1">
-              <p>The runtime uses goja (ECMAScript 5.1). Modules are only available when enabled in the template.</p>
+              <p>The runtime uses goja (ECMAScript 5.1). JavaScript built-ins are always available.</p>
+              <p>Template modules refer to native modules (for example <code className="font-mono">require(\"fs\")</code>) configured per template.</p>
               <p>The last expression in REPL input is automatically returned. All console output is captured as events.</p>
             </div>
           </CardContent>

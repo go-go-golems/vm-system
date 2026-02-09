@@ -186,14 +186,9 @@ export interface BuiltinLibrary {
 }
 
 export const BUILTIN_MODULES: BuiltinModule[] = [
-  { id: 'console', name: 'console', kind: 'builtin', description: 'Console logging and debugging', functions: ['log', 'warn', 'error', 'info', 'debug'] },
-  { id: 'math', name: 'Math', kind: 'builtin', description: 'Mathematical functions and constants', functions: ['abs', 'ceil', 'floor', 'round', 'sqrt', 'pow', 'random'] },
-  { id: 'json', name: 'JSON', kind: 'builtin', description: 'JSON parsing and stringification', functions: ['parse', 'stringify'] },
-  { id: 'date', name: 'Date', kind: 'builtin', description: 'Date and time manipulation', functions: ['now', 'parse', 'UTC'] },
-  { id: 'array', name: 'Array', kind: 'builtin', description: 'Array manipulation methods', functions: ['map', 'filter', 'reduce', 'forEach', 'find', 'some', 'every'] },
-  { id: 'string', name: 'String', kind: 'builtin', description: 'String manipulation methods', functions: ['split', 'join', 'slice', 'substring', 'indexOf', 'replace'] },
-  { id: 'object', name: 'Object', kind: 'builtin', description: 'Object manipulation methods', functions: ['keys', 'values', 'entries', 'assign', 'freeze'] },
-  { id: 'promise', name: 'Promise', kind: 'builtin', description: 'Asynchronous programming with promises', functions: ['resolve', 'reject', 'all', 'race'] },
+  { id: 'database', name: 'database', kind: 'native', description: 'SQLite access via go-go-goja native module', functions: ['configure', 'query', 'exec', 'close'] },
+  { id: 'exec', name: 'exec', kind: 'native', description: 'Run external commands through native module bridge', functions: ['run'] },
+  { id: 'fs', name: 'fs', kind: 'native', description: 'Read/write files through native module bridge', functions: ['readFileSync', 'writeFileSync'] },
 ];
 
 export const BUILTIN_LIBRARIES: BuiltinLibrary[] = [
@@ -223,7 +218,7 @@ export const DEFAULT_BASE_COMMIT_OID = (import.meta.env.VITE_VM_SYSTEM_BASE_COMM
 export const DEFAULT_WORKTREE_PATH = (import.meta.env.VITE_VM_SYSTEM_WORKTREE_PATH || '/tmp').trim();
 
 export const DEFAULT_TEMPLATE_SPECS = [
-  { name: 'Default JavaScript', engine: 'goja', modules: ['console', 'math', 'json', 'date'] },
-  { name: 'Utility Playground', engine: 'goja', modules: ['console', 'math', 'json', 'array', 'object'], libraries: ['lodash'] },
-  { name: 'Library Sandbox', engine: 'goja', modules: ['console', 'json'], libraries: ['dayjs', 'ramda'] },
+  { name: 'Default JavaScript', engine: 'goja', modules: [] },
+  { name: 'Utility Playground', engine: 'goja', modules: [], libraries: ['lodash'] },
+  { name: 'Library Sandbox', engine: 'goja', modules: [], libraries: ['dayjs', 'ramda'] },
 ] as const;

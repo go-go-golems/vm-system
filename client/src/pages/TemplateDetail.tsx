@@ -73,10 +73,10 @@ export default function TemplateDetail() {
 
     try {
       await updateModules({ templateId: template.id, modules: Array.from(next) }).unwrap();
-      toast.success('Modules updated');
+      toast.success('Native modules updated');
     } catch (error: any) {
       setSelectedModules(prev);
-      toast.error('Failed to update modules', { description: error?.message || 'Unknown error' });
+      toast.error('Failed to update native modules', { description: error?.message || 'Unknown error' });
     } finally {
       setUpdatingModules(false);
     }
@@ -142,7 +142,7 @@ export default function TemplateDetail() {
           <div className="flex items-center gap-3 text-xs text-slate-400">
             <span>Engine: <span className="text-slate-300">{template.engine}</span></span>
             <span className="text-slate-700">·</span>
-            <span>{template.exposedModules.length} modules</span>
+            <span>{template.exposedModules.length} native modules</span>
             <span className="text-slate-700">·</span>
             <span>{template.libraries.length} libraries</span>
             <span className="text-slate-700">·</span>
@@ -168,7 +168,7 @@ export default function TemplateDetail() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="bg-slate-900 border border-slate-800">
           <TabsTrigger value="overview" className="data-[state=active]:bg-slate-800 text-xs">Overview</TabsTrigger>
-          <TabsTrigger value="modules" className="data-[state=active]:bg-slate-800 text-xs">Modules</TabsTrigger>
+          <TabsTrigger value="modules" className="data-[state=active]:bg-slate-800 text-xs">Native Modules</TabsTrigger>
           <TabsTrigger value="libraries" className="data-[state=active]:bg-slate-800 text-xs">Libraries</TabsTrigger>
           <TabsTrigger value="startup" className="data-[state=active]:bg-slate-800 text-xs">Startup Files</TabsTrigger>
           <TabsTrigger value="settings" className="data-[state=active]:bg-slate-800 text-xs">Settings</TabsTrigger>
@@ -206,11 +206,11 @@ export default function TemplateDetail() {
             </Card>
             <Card className="bg-slate-900 border-slate-800">
               <CardContent className="pt-5 space-y-3">
-                <h3 className="text-sm font-medium text-slate-200 flex items-center gap-2"><Layers className="w-4 h-4 text-blue-500" /> Modules ({template.exposedModules.length})</h3>
+                <h3 className="text-sm font-medium text-slate-200 flex items-center gap-2"><Layers className="w-4 h-4 text-blue-500" /> Native Modules ({template.exposedModules.length})</h3>
                 <div className="flex flex-wrap gap-1">
                   {template.exposedModules.length > 0 ? template.exposedModules.map(m => (
                     <Badge key={m} variant="outline" className="bg-blue-950/30 border-blue-800/40 text-blue-400 text-xs">{m}</Badge>
-                  )) : <span className="text-xs text-slate-500">No modules enabled</span>}
+                  )) : <span className="text-xs text-slate-500">No native modules enabled</span>}
                 </div>
               </CardContent>
             </Card>
@@ -231,7 +231,8 @@ export default function TemplateDetail() {
         <TabsContent value="modules">
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="pt-5">
-              <p className="text-xs text-slate-400 mb-3">{selectedModules.size} of {BUILTIN_MODULES.length} modules enabled</p>
+              <p className="text-xs text-slate-400 mb-3">{selectedModules.size} of {BUILTIN_MODULES.length} native modules enabled</p>
+              <p className="text-[11px] text-slate-500 mb-3">JavaScript built-ins (JSON, Math, Date, Array, etc.) are always available and are not configured here.</p>
               <div className="space-y-2">
                 {BUILTIN_MODULES.map(mod => (
                   <div key={mod.id} className="flex items-start gap-3 p-3 rounded-md bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors">
