@@ -33,3 +33,8 @@
   - `d15fc55` test(vm-011): remove http artifacts and add root/session topology coverage
   - `6cb58ef` docs(vm-011): align root CLI docs and smoke/e2e scripts
   - `95b1c6f` docs(vm-011): record validation pass for glazed CLI migration
+
+## 2026-02-08
+
+Closed ticket after completing glazed migration, flattened root command taxonomy, docs/script alignment, and validation.
+
