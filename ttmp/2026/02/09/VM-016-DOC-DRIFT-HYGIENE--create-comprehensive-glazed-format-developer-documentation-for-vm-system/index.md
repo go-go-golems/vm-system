@@ -1,26 +1,36 @@
 ---
-Title: Analyze vm-system architecture, behavior, and quality
-Ticket: VM-001-ANALYZE-VM
-Status: complete
+Title: Create comprehensive glazed-format developer documentation for vm-system
+Ticket: VM-016-DOC-DRIFT-HYGIENE
+Status: active
 Topics:
-    - backend
+    - documentation
+    - developer-experience
+    - glazed
 DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: ttmp/2026/02/07/VM-001-ANALYZE-VM--analyze-vm-system-architecture-behavior-and-quality/design-doc/02-daemonized-vm-system-architecture-backend-runtime-host-rest-api-and-cli.md
-      Note: Updated design with reusable vmcontrol core and adapter layering
+    - Path: pkg/doc/doc.go
+      Note: Go embed wiring for help system
+    - Path: pkg/doc/vm-system-api-reference.md
+      Note: REST API reference
+    - Path: pkg/doc/vm-system-architecture.md
+      Note: Architecture guide
+    - Path: pkg/doc/vm-system-cli-command-reference.md
+      Note: CLI command reference
+    - Path: pkg/doc/vm-system-getting-started.md
+      Note: Getting started tutorial
+    - Path: pkg/doc/vm-system-templates-and-sessions.md
+      Note: Templates and sessions concept guide
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-02-09T08:51:47.918735494-05:00
+LastUpdated: 2026-02-09T09:18:47.54923748-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
 
 
-
-
-# Analyze vm-system architecture, behavior, and quality
+# Create comprehensive glazed-format developer documentation for vm-system
 
 ## Overview
 
@@ -37,7 +47,9 @@ Current status: **active**
 
 ## Topics
 
-- backend
+- documentation
+- developer-experience
+- glazed
 
 ## Tasks
 
