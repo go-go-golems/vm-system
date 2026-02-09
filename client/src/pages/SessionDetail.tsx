@@ -43,6 +43,12 @@ export default function SessionDetail() {
   const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, VM!");');
   const [isExecuting, setIsExecuting] = useState(false);
   const [activeTab, setActiveTab] = useState('repl');
+  const [consoleClearedAt, setConsoleClearedAt] = useState<string | null>(null);
+
+  // Executions visible in the console (respects clear; full list stays in Executions tab)
+  const consoleExecutions = consoleClearedAt
+    ? executions.filter(e => e.startedAt > consoleClearedAt)
+    : executions;
 
   // Set as current session on mount
   useEffect(() => {
@@ -229,7 +235,10 @@ export default function SessionDetail() {
 
             {/* Right: Console output */}
             <div className="flex-1 min-h-0">
-              <ExecutionConsole executions={executions} />
+              <ExecutionConsole
+                executions={consoleExecutions}
+                onClear={() => setConsoleClearedAt(new Date().toISOString())}
+              />
             </div>
           </div>
 
