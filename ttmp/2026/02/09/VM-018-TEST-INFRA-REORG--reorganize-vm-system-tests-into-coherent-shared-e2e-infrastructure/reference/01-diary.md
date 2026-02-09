@@ -235,3 +235,72 @@ To avoid abrupt command breakage while removing duplicated logic, legacy script 
 ### Technical details
 
 - Matrix script uses the shared harness at `test/lib/e2e-common.sh` and standard `template/session/exec` CLI surfaces.
+
+## Step 4: Add coherent top-level runner and align contributor docs
+
+This step turned the reorganized scripts into an operator-friendly workflow by adding a single orchestrator command and aligning all core documentation to match the new architecture. Contributors now have one command (`test-all.sh`) for complete shell-based integration validation.
+
+I also updated the long-form guide so script roles are explicit: smoke for fast core signal, e2e for full command lifecycle, and library matrix for capability semantics.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Complete Task 4 by providing one coherent execution entrypoint and documenting the updated script strategy.
+
+**Inferred user intent:** Reduce confusion around which tests to run and when, while preserving useful scenario coverage.
+
+**Commit (code):** pending
+
+### What I did
+
+- Added `test-all.sh` to run:
+  - `smoke-test.sh`
+  - `test-e2e.sh`
+  - `test-library-matrix.sh`
+- Updated `README.md` test section with full-suite and per-script commands.
+- Updated `docs/getting-started-from-first-vm-to-contributor-guide.md`:
+  - script dependency note,
+  - smoke semantics,
+  - new library matrix section,
+  - validation workflow commands,
+  - script debugging order.
+
+### Why
+
+- Coherent architecture needs coherent operator entrypoints; otherwise script consolidation still leaves usage ambiguity.
+
+### What worked
+
+- `./test-all.sh` passed and produced clear script-by-script pass/fail summary.
+
+### What didn't work
+
+- The same pre-existing command-map debug noise still appears in CLI invocations during script runs.
+
+### What I learned
+
+- A lightweight orchestrator script significantly improves day-to-day usage without adding architectural complexity.
+
+### What was tricky to build
+
+- Balancing documentation updates: needed to clarify new behavior without rewriting unrelated large sections in the contributor guide.
+
+### What warrants a second pair of eyes
+
+- Confirm test-all ordering is ideal for CI (currently smoke -> e2e -> library matrix).
+
+### What should be done in the future
+
+- Optionally add flags to `test-all.sh` for subset runs (for example `--fast` or `--library-only`).
+
+### Code review instructions
+
+- Review `test-all.sh` first for orchestration behavior.
+- Verify README and getting-started docs reference only current canonical scripts.
+- Re-run:
+  - `./test-all.sh`
+
+### Technical details
+
+- `test-all.sh` intentionally aggregates failures and exits non-zero only after running all scripts.

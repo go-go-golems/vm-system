@@ -75,6 +75,12 @@ API contracts, test coverage, and contribution workflow), see:
 
 ```bash
 GOWORK=off go test ./...
+
+# full shell integration suite
+bash ./test-all.sh
+
+# or run individually
 bash ./smoke-test.sh
 bash ./test-e2e.sh
+bash ./test-library-matrix.sh
 ```

@@ -9,10 +9,16 @@ DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: README.md
+      Note: Updated test command guidance for consolidated scripts
+    - Path: docs/getting-started-from-first-vm-to-contributor-guide.md
+      Note: Updated script architecture and recommended validation workflow
     - Path: smoke-test.sh
       Note: |-
         Current smoke baseline and upcoming harness migration target
         Migrated to shared harness and stale module assertion removed
+    - Path: test-all.sh
+      Note: Top-level orchestrator for coherent shell integration suite
     - Path: test-e2e.sh
       Note: |-
         Current full-loop baseline and upcoming harness migration target
@@ -46,6 +52,7 @@ LastUpdated: 2026-02-09T08:16:30-05:00
 WhatFor: Create a maintainable test surface that maps directly to architecture risks.
 WhenToUse: Use while implementing or reviewing VM-018 test-suite reorganization work.
 ---
+
 
 
 

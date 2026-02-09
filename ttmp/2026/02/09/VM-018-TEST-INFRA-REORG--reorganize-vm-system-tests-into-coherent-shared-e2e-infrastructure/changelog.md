@@ -39,3 +39,14 @@ Consolidated three overlapping library scripts into test-library-matrix.sh with 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-library-requirements.sh — Wrapper migration to consolidated matrix
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-018-TEST-INFRA-REORG--reorganize-vm-system-tests-into-coherent-shared-e2e-infrastructure/design-doc/01-test-infrastructure-reorganization-analysis-and-implementation-guide.md — Records wrapper decision in open questions
 
+
+## 2026-02-09
+
+Added test-all.sh orchestrator and aligned README/getting-started docs with the coherent script architecture (smoke, e2e, library-matrix, full-suite runner).
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/README.md — Now documents full suite runner and individual script commands
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/docs/getting-started-from-first-vm-to-contributor-guide.md — Explains consolidated script responsibilities and debugging order
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/test-all.sh — Runs smoke/e2e/library-matrix scripts and summarizes pass/fail
+

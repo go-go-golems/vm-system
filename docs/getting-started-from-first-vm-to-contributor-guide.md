@@ -27,7 +27,7 @@ If you only need the first successful run, jump to the “Step-by-Step Guide” 
 - Go toolchain compatible with `go 1.25.5` (see `go.mod`)
 - A Unix-like shell (`bash`/`zsh`) for scripts and examples
 - `curl` for direct API verification
-- `python3` only if you run scripts that dynamically allocate ports (for example `smoke-test.sh`, `test-e2e.sh`)
+- `python3` only if you run scripts that dynamically allocate ports (for example `smoke-test.sh`, `test-e2e.sh`, `test-library-matrix.sh`, `test-all.sh`)
 
 ### Repository location used in this guide
 
@@ -583,7 +583,8 @@ No mocks are required for core endpoint behavior.
 - build success
 - daemon health
 - template create
-- capability and startup add
+- module catalog command
+- template module and startup add
 - session create
 - repl and run-file execution
 - runtime summary check
@@ -610,6 +611,20 @@ This script is good for fast confidence before committing.
 - runtime summary
 
 It is also parallel-safe via dynamic temp resources.
+
+### Library capability matrix script
+
+`test-library-matrix.sh` validates capability semantics that should not drift:
+
+- `JSON` built-in works without template library configuration
+- `JSON` cannot be configured as a template module (`MODULE_NOT_ALLOWED`)
+- lodash-dependent execution fails when lodash is not configured
+- lodash-dependent execution succeeds when lodash is configured
+- post-hoc library configuration path succeeds
+
+Legacy scripts (`test-library-loading.sh`, `test-goja-library-execution.sh`, and
+`test-library-requirements.sh`) are thin wrappers that delegate to
+`test-library-matrix.sh`.
 
 ## Does current e2e/integration coverage exercise all capabilities?
 
@@ -646,12 +661,13 @@ For normal backend changes:
 GOWORK=off go test ./pkg/vmtransport/http -count=1
 GOWORK=off go test ./... -count=1
 bash ./smoke-test.sh
+bash ./test-library-matrix.sh
 ```
 
 For end-to-end confidence before opening PR:
 
 ```bash
-bash ./test-e2e.sh
+bash ./test-all.sh
 ```
 
 For focused test loops:
@@ -775,6 +791,8 @@ When behavior is unclear, use this sequence.
 
 - run `smoke-test.sh` first for quick signal
 - run `test-e2e.sh` for full command loop
+- run `test-library-matrix.sh` for built-in/library capability semantics
+- run `test-all.sh` when you want the complete shell integration suite
 - if script passes but integration test fails (or opposite), isolate layer mismatch
 
 ## 7) High-value first contributions for new developers
