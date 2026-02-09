@@ -545,3 +545,67 @@ This task was validated with full backend tests before commit.
 - Response contract for unsupported mode:
   - HTTP status: `422`
   - error code: `STARTUP_MODE_UNSUPPORTED`
+
+## Step 10: Task 3 Created Follow-up Tickets (Tests + P2-1/P2-2/P2-5)
+
+I created four new tickets as requested: one detailed test-coverage analysis ticket and three scoped planning tickets for deferred P2 cleanup work. The test ticket includes an explicit matrix of what should be tested and in what order; the P2 tickets include implementation plans but no code changes.
+
+All newly created tickets were validated with `docmgr doctor`.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 8)
+
+**Assistant interpretation:** Create the requested follow-up tickets now, with detailed planning docs, while deferring actual P2 implementation.
+
+**Inferred user intent:** Keep momentum by turning analysis into actionable, scoped ticket artifacts.
+
+**Commit (code):** pending
+
+### What I did
+- Created ticket `VM-013-TEST-STRATEGY-MATRIX` with detailed test strategy doc:
+  - `design/01-test-coverage-strategy-matrix-and-priority-plan.md`
+- Created ticket `VM-014-DECOMPOSE-MONOLITHS` (P2-1):
+  - `design/01-monolithic-file-decomposition-plan.md`
+- Created ticket `VM-015-PANIC-LOGGING-ALIGNMENT` (P2-2):
+  - `design/01-panic-boundary-and-logging-alignment-plan.md`
+- Created ticket `VM-016-DOC-DRIFT-HYGIENE` (P2-5):
+  - `design/01-documentation-drift-and-template-hygiene-plan.md`
+- Filled each ticket’s `index.md`, `tasks.md`, and `changelog.md` with concrete next actions.
+- Ran `docmgr doctor` for all four tickets; all passed.
+
+### Why
+- You asked to defer these items from immediate code cleanup but still have actionable, high-quality ticket plans.
+
+### What worked
+- Ticket scaffolding and docs were created cleanly.
+- Frontmatter and ticket hygiene checks passed.
+
+### What didn't work
+- N/A for this step.
+
+### What I learned
+- Converting each deferred finding into a dedicated ticket improves execution clarity and reduces scope bleed in the active cleanup ticket.
+
+### What was tricky to build
+- Balancing detail across four tickets without overprescribing implementation specifics prematurely.
+
+### What warrants a second pair of eyes
+- Final prioritization ordering between VM-014/VM-015/VM-016 depending on current team bottleneck.
+
+### What should be done in the future
+- Optionally split VM-013 test matrix into execution tickets (`VM-013A..D`) when ready to implement tests.
+
+### Code review instructions
+- Review these ticket roots:
+  - `ttmp/2026/02/08/VM-013-TEST-STRATEGY-MATRIX--detailed-analysis-of-missing-and-recommended-test-coverage-for-vm-system-and-vm-system-ui`
+  - `ttmp/2026/02/08/VM-014-DECOMPOSE-MONOLITHS--p2-1-decompose-monolithic-files-across-vm-system-and-vm-system-ui`
+  - `ttmp/2026/02/08/VM-015-PANIC-LOGGING-ALIGNMENT--p2-2-align-panic-boundaries-and-logging-strategy`
+  - `ttmp/2026/02/08/VM-016-DOC-DRIFT-HYGIENE--p2-5-resolve-documentation-drift-and-template-link-hygiene`
+
+### Technical details
+- Validation commands:
+  - `docmgr doctor --ticket VM-013-TEST-STRATEGY-MATRIX --stale-after 30`
+  - `docmgr doctor --ticket VM-014-DECOMPOSE-MONOLITHS --stale-after 30`
+  - `docmgr doctor --ticket VM-015-PANIC-LOGGING-ALIGNMENT --stale-after 30`
+  - `docmgr doctor --ticket VM-016-DOC-DRIFT-HYGIENE --stale-after 30`
