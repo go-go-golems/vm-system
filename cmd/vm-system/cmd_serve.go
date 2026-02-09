@@ -8,43 +8,60 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/go-go-golems/glazed/pkg/cmds"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
 	vmhttp "github.com/go-go-golems/vm-system/pkg/vmtransport/http"
 )
 
-func newServeCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "serve",
-		Short: "Run the vm-system daemon host",
-		Long:  "Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			listenAddr, err := cmd.Flags().GetString("listen")
-			if err != nil {
-				return err
-			}
+type serveSettings struct {
+	ListenAddr string `glazed:"listen"`
+}
 
-			cfg := vmdaemon.DefaultConfig(dbPath)
-			cfg.ListenAddr = listenAddr
+type serveCommand struct {
+	*cmds.CommandDescription
+}
 
-			app, err := vmdaemon.New(cfg, http.NewServeMux())
-			if err != nil {
-				return err
-			}
-			defer app.Close()
+var _ cmds.BareCommand = &serveCommand{}
 
-			app.SetHandler(vmhttp.NewHandler(app.Core()))
-			fmt.Printf("vm-system daemon listening on %s\n", cfg.ListenAddr)
-
-			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-			defer stop()
-
-			return app.Run(ctx)
-		},
+func (c *serveCommand) Run(_ context.Context, vals *values.Values) error {
+	settings := &serveSettings{}
+	if err := decodeDefault(vals, settings); err != nil {
+		return err
 	}
 
-	cmd.Flags().String("listen", "127.0.0.1:3210", "HTTP listen address")
+	cfg := vmdaemon.DefaultConfig(dbPath)
+	cfg.ListenAddr = settings.ListenAddr
 
-	return cmd
+	app, err := vmdaemon.New(cfg, http.NewServeMux())
+	if err != nil {
+		return err
+	}
+	defer app.Close()
+
+	app.SetHandler(vmhttp.NewHandler(app.Core()))
+	fmt.Printf("vm-system daemon listening on %s\n", cfg.ListenAddr)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	return app.Run(ctx)
+}
+
+func newServeCommand() *cobra.Command {
+	return buildCobraCommand(&serveCommand{
+		CommandDescription: commandDescription(
+			"serve",
+			"Run the vm-system daemon host",
+			"Start a long-lived daemon process that hosts runtime sessions and serves API requests.",
+			[]*fields.Definition{
+				fields.New("listen", fields.TypeString, fields.WithDefault("127.0.0.1:3210"), fields.WithHelp("HTTP listen address")),
+			},
+			nil,
+			false,
+		),
+	})
 }

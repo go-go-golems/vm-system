@@ -10,6 +10,7 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/main.go
+    - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/glazed_support.go
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_serve.go
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_core.go
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_modules.go
@@ -24,9 +25,9 @@ RelatedFiles:
     - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go
 ExternalSources: []
 Summary: >
-    Updated VM-015 execution guide after removing glazed closure helpers; now focused
-    on remaining panic removal and zerolog standardization work.
-LastUpdated: 2026-02-09T20:05:00-05:00
+    Updated VM-015 execution guide after removing the glazed closure-wrapper layer
+    while keeping commands Glazed-based; includes current panic and logging debt.
+LastUpdated: 2026-02-09T20:45:00-05:00
 WhatFor: Execute VM-015 with precise, current-state file-level refactors.
 WhenToUse: Use when implementing panic removal and zerolog standardization in vm-system.
 ---
@@ -43,20 +44,14 @@ No backwards-compatibility shims.
 
 ## Important Update (Already Done)
 
-The CLI closure-wrapper layer has been removed.
-
 Completed change:
 - `cmd/vm-system/glazed_helpers.go` deleted
-- all command groups now use plain `cobra.Command` directly:
-  - `cmd/vm-system/cmd_serve.go`
-  - `cmd/vm-system/cmd_libs.go`
-  - `cmd/vm-system/cmd_session.go`
-  - `cmd/vm-system/cmd_exec.go`
-  - `cmd/vm-system/cmd_template*.go`
+- commands remain Glazed-based (`cmds.WriterCommand` / `cmds.BareCommand`)
+- closure wrappers were replaced with explicit command structs and action dispatchers
+- shared Glazed wiring now lives in `cmd/vm-system/glazed_support.go`
 
 Implication for VM-015:
-- no helper-panics remain in CLI command wiring
-- panic inventory must now target remaining production sites only
+- helper-panics still exist in `glazed_support.go` and must be removed as part of this ticket
 
 ## Baseline: Logging bootstrap
 
@@ -64,25 +59,31 @@ Root logging bootstrap remains correct:
 - `cmd/vm-system/main.go:24` uses `logging.InitLoggerFromCobra(cmd)`
 - glazed logging flags are registered at root and configure global zerolog
 
-## Systematic Inventory (After helper removal)
+## Systematic Inventory (After wrapper removal)
 
 ## A. Remaining panic call sites (production code)
 
-1. `pkg/vmmodels/ids.go:50`
+1. `cmd/vm-system/glazed_support.go:24`
+- `panic(err)` in `buildCobraCommand`
+
+2. `cmd/vm-system/glazed_support.go:34`
+- `panic(err)` in `commandDescription` (glazed output schema init)
+
+3. `cmd/vm-system/glazed_support.go:41`
+- `panic(err)` in `commandDescription` (command settings section init)
+
+4. `pkg/vmmodels/ids.go:50`
 - `panic(err)` in `MustTemplateID`
 
-2. `pkg/vmmodels/ids.go:58`
+5. `pkg/vmmodels/ids.go:58`
 - `panic(err)` in `MustSessionID`
 
-3. `pkg/vmmodels/ids.go:66`
+6. `pkg/vmmodels/ids.go:66`
 - `panic(err)` in `MustExecutionID`
 
-Classification:
-- utility-library panic APIs, currently unused in production call paths but still exported unsafe surface
-
 Required action:
-- delete all `Must*` functions
-- update tests to assert parse errors instead of panic behavior
+- replace `glazed_support` panic paths with error-returning command construction
+- delete `Must*` ID helpers and update tests
 
 ## B. Remaining runtime/daemon unstructured logging (must become zerolog)
 
@@ -106,7 +107,7 @@ Required action:
 
 ## C. Print sites that should remain output rendering
 
-These are command data outputs, not operational logs, and should stay on stdout:
+These are command data outputs and should stay stdout-oriented:
 - `cmd/vm-system/cmd_exec.go`
 - `cmd/vm-system/cmd_session.go`
 - `cmd/vm-system/cmd_template_*.go`
@@ -119,83 +120,79 @@ Rule:
 
 ## Design for Remaining VM-015 Work
 
-## 1) Remove panic-based ID helpers
+## 1) Remove panic-based command support functions
 
-Target file:
+Target:
+- `cmd/vm-system/glazed_support.go`
+
+Action:
+- convert `buildCobraCommand` and `commandDescription` to error-returning APIs
+- update command constructors to propagate errors up to root wiring
+
+## 2) Remove panic-based ID helpers
+
+Target:
 - `pkg/vmmodels/ids.go`
 
 Action:
-- remove `MustTemplateID`, `MustSessionID`, `MustExecutionID`
+- delete `MustTemplateID`, `MustSessionID`, `MustExecutionID`
 
 Tests:
-- update `pkg/vmmodels/ids_test.go`
-- remove panic assertions and assert parse errors instead
+- update `pkg/vmmodels/ids_test.go` to assert parse errors (not panic)
 
-## 2) Standardize runtime logging on zerolog
+## 3) Standardize runtime logging on zerolog
 
-Preferred approach:
-- inject logger dependency into runtime services (`zerolog.Logger`)
-- avoid package-global ad-hoc logging in runtime code
-
-Required injection points:
+Injection targets:
 1. `pkg/vmsession/session.go`
-- `SessionManager` gets logger field
-- constructor updated to accept logger
-
 2. `pkg/libloader/loader.go`
-- `LibraryCache` gets logger field
-- constructor updated to accept logger
-
 3. `pkg/vmcontrol/core.go`
-- plumb logger into `NewSessionManager`
-
 4. `pkg/vmdaemon/app.go`
-- add lifecycle logging (`listen`, `shutdown`, server errors)
-
 5. `cmd/vm-system/cmd_serve.go`
-- use zerolog for daemon listening event
 
-## 3) Add request/daemon observability baseline
+## 4) Add daemon/request lifecycle observability
 
 1. `pkg/vmdaemon/app.go`
-- log startup and shutdown lifecycle transitions
+- startup/shutdown/error lifecycle logs
 
 2. `pkg/vmtransport/http/server.go`
-- add request summary logging with `request_id`, method, route, status, duration
+- request summary logs (`request_id`, method, route, status, duration)
 
 ## Field naming conventions
 
-Use stable structured keys:
+Use stable keys:
 - `component`: `daemon`, `session_manager`, `library_cache`, `http_server`
 - `listen_addr`, `session_id`, `template_id`, `execution_id`, `library`, `version`
 - `request_id`, `status_code`, `duration_ms`
 
 ## File-by-file change map (remaining)
 
-1. `pkg/vmmodels/ids.go`
+1. `cmd/vm-system/glazed_support.go`
+- remove command-construction panic paths
+
+2. `pkg/vmmodels/ids.go`
 - delete `Must*` panic helpers
 
-2. `pkg/vmmodels/ids_test.go`
+3. `pkg/vmmodels/ids_test.go`
 - replace panic expectations with parse-error assertions
 
-3. `pkg/libloader/loader.go`
-- replace all runtime `fmt.Printf` logging with structured logger calls
+4. `pkg/libloader/loader.go`
+- replace operational `fmt.Printf` with structured logger calls
 - inject logger dependency
 
-4. `pkg/vmsession/session.go`
-- replace runtime `fmt.Println/Printf` logging with structured logger calls
+5. `pkg/vmsession/session.go`
+- replace runtime `fmt.Println/Printf` with structured logger calls
 - inject logger dependency
 
-5. `pkg/vmcontrol/core.go`
+6. `pkg/vmcontrol/core.go`
 - logger plumbing to runtime constructor wiring
 
-6. `pkg/vmdaemon/app.go`
+7. `pkg/vmdaemon/app.go`
 - daemon lifecycle logs
 
-7. `cmd/vm-system/cmd_serve.go`
+8. `cmd/vm-system/cmd_serve.go`
 - replace daemon startup `fmt.Printf` with logger call
 
-8. `pkg/vmtransport/http/server.go`
+9. `pkg/vmtransport/http/server.go`
 - add request summary logging middleware
 
 ## Validation checklist
@@ -203,13 +200,13 @@ Use stable structured keys:
 - `rg -n "\bpanic\(" --glob '*.go'` returns no production panic sites
 - `rg -n "fmt\.Print|fmt\.Printf|fmt\.Println" pkg cmd/vm-system/cmd_serve.go` returns no operational/runtime prints
 - `GOWORK=off go test ./... -count=1` passes
-- smoke check daemon startup and request path logs include structured fields
 
-## Commands used to produce this inventory
+## Commands used for this inventory
 
 ```bash
 rg -n "\bpanic\(" --glob '*.go'
 rg -n "fmt\.Print|fmt\.Printf|fmt\.Println" pkg cmd/vm-system/cmd_serve.go
+nl -ba cmd/vm-system/glazed_support.go
 nl -ba pkg/vmmodels/ids.go
 nl -ba pkg/libloader/loader.go
 nl -ba pkg/vmsession/session.go

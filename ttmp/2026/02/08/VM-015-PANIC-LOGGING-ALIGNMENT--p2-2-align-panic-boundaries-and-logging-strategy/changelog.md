@@ -40,3 +40,22 @@ Removed glazed closure-wrapper helpers from CLI command construction and updated
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/glazed_helpers.go — Deleted closure wrapper and must-helper panic layer
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-015-PANIC-LOGGING-ALIGNMENT--p2-2-align-panic-boundaries-and-logging-strategy/design/02-implementation-guide.md — Updated guide to post-helper-removal state
 
+
+## 2026-02-09
+
+Adjusted CLI refactor to keep Glazed commands while removing closure wrapper layer; replaced helper wrappers with explicit command structs and updated VM-015 guide
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_exec.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_libs.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_serve.go — Bare Glazed command implemented as explicit struct
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_session.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_core.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_libraries.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_modules.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template_startup.go — Writer Glazed commands implemented via explicit action dispatcher
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/glazed_helpers.go — Deleted closure wrapper layer
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/glazed_support.go — Shared Glazed wiring without closure-wrapper command types
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-015-PANIC-LOGGING-ALIGNMENT--p2-2-align-panic-boundaries-and-logging-strategy/design/02-implementation-guide.md — Guide updated to current Glazed-without-wrapper state
+
