@@ -565,8 +565,8 @@ console.log("Factorial(5):", fact5);
                         <li>The last expression in your code is automatically returned</li>
                         <li>All console.log calls are captured and displayed in the output panel</li>
                         <li>Exceptions are caught and displayed with stack traces</li>
-                        <li>Each execution is independent but shares the same session context</li>
-                        <li>Variables from previous executions are not preserved</li>
+                        <li>Executions run in the selected daemon-owned session runtime</li>
+                        <li>Session state persists across REPL calls until the session is closed</li>
                       </ul>
                     </div>
                   </div>
@@ -585,13 +585,10 @@ console.log("Factorial(5):", fact5);
                     This VM system has some intentional limitations for security and performance:
                   </p>
                   <ul className="space-y-2 list-disc list-inside">
-                    <li>No async/await or Promise support (synchronous execution only)</li>
-                    <li>No DOM or browser APIs (window, document, etc.)</li>
-                    <li>No file system access</li>
-                    <li>No network requests (fetch, XMLHttpRequest)</li>
-                    <li>No module imports (import/require)</li>
-                    <li>No setTimeout/setInterval</li>
-                    <li>Limited to standard JavaScript built-ins</li>
+                    <li>No DOM or browser APIs (`window`, `document`, etc.)</li>
+                    <li>File execution is scoped to the configured worktree path</li>
+                    <li>Resource limits (CPU, wall time, memory, events/output) are template-defined</li>
+                    <li>Session lifecycle is daemon-owned; restart policy depends on daemon/runtime behavior</li>
                   </ul>
                   <div className="mt-6 p-4 bg-blue-950/30 border border-blue-800/50 rounded-lg">
                     <p className="text-sm text-blue-300">

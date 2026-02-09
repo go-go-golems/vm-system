@@ -1,6 +1,3 @@
-// Mock VM service that simulates the Go backend
-import { nanoid } from 'nanoid';
-
 export interface VMProfile {
   id: string;
   name: string;
@@ -37,7 +34,7 @@ export interface VMCapability {
   kind: string;
   name: string;
   enabled: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface VMStartupFile {
@@ -52,24 +49,27 @@ export interface VMSession {
   vmId: string;
   vmProfile: string;
   workspaceId: string;
+  baseCommitOID: string;
+  worktreePath: string;
   status: 'starting' | 'ready' | 'crashed' | 'closed';
   createdAt: Date;
   closedAt?: Date;
   lastActivityAt: Date;
+  lastError?: string;
   name: string;
-  vm?: VMProfile; // Reference to the VM configuration
+  vm?: VMProfile;
 }
 
 export interface Execution {
   id: string;
   sessionId: string;
-  kind: 'repl' | 'run-file';
+  kind: 'repl' | 'run-file' | 'startup';
   input?: string;
   path?: string;
-  status: 'running' | 'ok' | 'error';
+  status: 'running' | 'ok' | 'error' | 'timeout' | 'cancelled';
   startedAt: Date;
   endedAt?: Date;
-  result?: any;
+  result?: unknown;
   error?: string;
   events: ExecutionEvent[];
 }
@@ -77,19 +77,31 @@ export interface Execution {
 export interface ExecutionEvent {
   seq: number;
   ts: Date;
-  type: 'input_echo' | 'console' | 'value' | 'exception';
+  type: 'input_echo' | 'console' | 'value' | 'exception' | 'stdout' | 'stderr' | 'system';
   payload: any;
 }
 
-// NOTE: This is a mock frontend implementation for demonstration.
-// In the actual Go backend with goja:
-// 1. Libraries are downloaded from CDN and cached locally (.vm-cache/libraries/)
-// 2. When a session is created, configured libraries are loaded into the goja runtime
-// 3. Library code is executed via runtime.RunString() making globals (like _) available
-// 4. Test confirmed: Lodash successfully loads and all functions work in goja
+interface BuiltinModule {
+  id: string;
+  name: string;
+  kind: string;
+  description: string;
+  functions: string[];
+}
 
-// Built-in modules that can be exposed to VMs
-export const BUILTIN_MODULES = [
+interface BuiltinLibrary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  source: string;
+  type: string;
+  config: {
+    global: string;
+  };
+}
+
+export const BUILTIN_MODULES: BuiltinModule[] = [
   {
     id: 'console',
     name: 'console',
@@ -148,8 +160,7 @@ export const BUILTIN_MODULES = [
   },
 ];
 
-// Built-in libraries that can be loaded
-export const BUILTIN_LIBRARIES = [
+export const BUILTIN_LIBRARIES: BuiltinLibrary[] = [
   {
     id: 'lodash',
     name: 'Lodash',
@@ -206,698 +217,739 @@ export const BUILTIN_LIBRARIES = [
   },
 ];
 
-// Preset examples
 export const PRESET_EXAMPLES = [
   {
     id: 'hello-world',
     name: 'Hello World',
     description: 'Simple console.log example',
-    code: `console.log("Hello from VM!");
-const greeting = "Welcome to the VM System";
-console.log(greeting);
-greeting;`,
+    code: `console.log("Hello from vm-system");\n2 + 2;`,
   },
   {
     id: 'math-operations',
     name: 'Math Operations',
     description: 'Basic arithmetic and math functions',
-    code: `const a = 10;
-const b = 20;
-const sum = a + b;
-const product = a * b;
-
-console.log("Sum:", sum);
-console.log("Product:", product);
-console.log("Square root of 16:", Math.sqrt(16));
-
-{ sum, product, sqrt: Math.sqrt(16) };`,
+    code: `const values = [2, 4, 6, 8];\nconst sum = values.reduce((acc, n) => acc + n, 0);\nconsole.log("sum", sum);\n({ sum, mean: sum / values.length });`,
   },
   {
-    id: 'array-operations',
-    name: 'Array Operations',
-    description: 'Working with arrays',
-    code: `const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(n => n * 2);
-const sum = numbers.reduce((a, b) => a + b, 0);
-const filtered = numbers.filter(n => n > 2);
-
-console.log("Original:", numbers);
-console.log("Doubled:", doubled);
-console.log("Sum:", sum);
-console.log("Filtered (>2):", filtered);
-
-{ doubled, sum, filtered };`,
+    id: 'objects-and-arrays',
+    name: 'Objects and Arrays',
+    description: 'Map/filter/reduce with object output',
+    code: `const users = [{name: "Ana", active: true}, {name: "Bao", active: false}, {name: "Caro", active: true}];\nconst activeNames = users.filter(u => u.active).map(u => u.name);\nconsole.log("active users", activeNames);\n({ count: activeNames.length, activeNames });`,
   },
   {
-    id: 'object-manipulation',
-    name: 'Object Manipulation',
-    description: 'Creating and manipulating objects',
-    code: `const person = {
-  name: "Alice",
-  age: 30,
-  city: "San Francisco"
-};
-
-const updatedPerson = {
-  ...person,
-  age: 31,
-  occupation: "Engineer"
-};
-
-console.log("Original:", person);
-console.log("Updated:", updatedPerson);
-
-updatedPerson;`,
+    id: 'error-demo',
+    name: 'Error Demo',
+    description: 'Throw and inspect exception output',
+    code: `console.log("about to throw");\nthrow new Error("Intentional test error");`,
   },
   {
-    id: 'async-simulation',
-    name: 'Async Simulation',
-    description: 'Simulating asynchronous operations',
-    code: `// Note: Real async/await not supported in this VM
-// This demonstrates synchronous code structure
-
-function fetchData() {
-  console.log("Fetching data...");
-  return { id: 1, name: "Sample Data" };
-}
-
-const data = fetchData();
-console.log("Data received:", data);
-
-data;`,
+    id: 'library-check',
+    name: 'Library Check',
+    description: 'Validate configured global libraries',
+    code: `const globals = ["_", "moment", "axios", "R", "dayjs", "zustand"];\nconst available = globals.filter((name) => typeof globalThis[name] !== "undefined");\nconsole.log("available globals", available);\navailable;`,
   },
-  {
-    id: 'error-handling',
-    name: 'Error Handling',
-    description: 'Try-catch error handling',
-    code: `try {
-  console.log("Attempting operation...");
-  const result = 10 / 2;
-  console.log("Result:", result);
-  
-  // Uncomment to trigger error:
-  // throw new Error("Something went wrong!");
-  
-  result;
-} catch (error) {
-  console.log("Error caught:", error.message);
-  null;
-}`,
-  },
-  {
-    id: 'string-operations',
-    name: 'String Operations',
-    description: 'String manipulation methods',
-    code: `const text = "JavaScript VM System";
-const upper = text.toUpperCase();
-const lower = text.toLowerCase();
-const words = text.split(" ");
-const reversed = text.split("").reverse().join("");
-
-console.log("Original:", text);
-console.log("Uppercase:", upper);
-console.log("Lowercase:", lower);
-console.log("Words:", words);
-console.log("Reversed:", reversed);
-
-{ upper, lower, words, reversed };`,
-  },
-  {
-    id: 'function-demo',
-    name: 'Function Demo',
-    description: 'Defining and using functions',
-    code: `function fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 1) + fibonacci(n - 2);
-}
-
-const fib10 = fibonacci(10);
-console.log("Fibonacci(10):", fib10);
-
-const factorial = (n) => {
-  if (n <= 1) return 1;
-  return n * factorial(n - 1);
-};
-
-const fact5 = factorial(5);
-console.log("Factorial(5):", fact5);
-
-{ fib10, fact5 };`,
-  },
-  {
-    id: 'lodash-demo',
-    name: 'Lodash Utilities',
-    description: 'Using Lodash library functions (requires lodash library)',
-    code: `// This example REQUIRES the 'lodash' library to be enabled in VM Config
-// It will fail if lodash is not configured
-
-if (typeof _ === 'undefined') {
-  throw new Error('Lodash library not loaded! Enable it in VM Config > Libraries.');
-}
-
-const users = [
-  { name: 'Alice', age: 30, active: true },
-  { name: 'Bob', age: 25, active: false },
-  { name: 'Charlie', age: 35, active: true },
-  { name: 'David', age: 28, active: true }
 ];
 
-// Use actual Lodash functions
-const activeUsers = _.filter(users, { active: true });
-console.log("Active users (_.filter):", activeUsers);
-
-// Group by age range using Lodash
-const grouped = _.groupBy(users, user => user.age < 30 ? '20s' : '30s');
-console.log("Grouped by age (_.groupBy):", grouped);
-
-// Get names using Lodash map
-const names = _.map(users, 'name');
-console.log("Names (_.map):", names);
-
-// Find user using Lodash
-const charlie = _.find(users, { name: 'Charlie' });
-console.log("Found Charlie (_.find):", charlie);
-
-{ activeUsers, grouped, names, charlie };`,
-  },
-  {
-    id: 'date-manipulation',
-    name: 'Date Manipulation',
-    description: 'Working with dates using built-in Date module',
-    code: `// Using built-in Date module
-const now = new Date();
-console.log("Current date:", now.toISOString());
-
-// Create specific dates
-const birthday = new Date('2024-01-15');
-console.log("Birthday:", birthday.toDateString());
-
-// Date arithmetic
-const tomorrow = new Date(now);
-tomorrow.setDate(tomorrow.getDate() + 1);
-console.log("Tomorrow:", tomorrow.toDateString());
-
-// Calculate difference
-const diff = tomorrow - now;
-const hours = Math.floor(diff / (1000 * 60 * 60));
-console.log("Hours until tomorrow:", hours);
-
-{ now: now.toISOString(), tomorrow: tomorrow.toISOString(), hoursUntil: hours };`,
-  },
-  {
-    id: 'json-processing',
-    name: 'JSON Processing',
-    description: 'Parse and stringify JSON data',
-    code: `// JSON module demo
-const data = {
-  user: "Alice",
-  preferences: {
-    theme: "dark",
-    notifications: true
-  },
-  tags: ["admin", "developer"]
-};
-
-// Stringify
-const jsonString = JSON.stringify(data, null, 2);
-console.log("JSON string:");
-console.log(jsonString);
-
-// Parse
-const parsed = JSON.parse(jsonString);
-console.log("Parsed back:", parsed);
-
-// Verify
-const isEqual = JSON.stringify(data) === JSON.stringify(parsed);
-console.log("Data preserved:", isEqual);
-
-{ original: data, parsed, isEqual };`,
-  },
-  {
-    id: 'advanced-array',
-    name: 'Advanced Array Operations',
-    description: 'Complex array transformations and reductions',
-    code: `// Advanced array operations
-const products = [
-  { name: 'Laptop', price: 1200, category: 'Electronics' },
-  { name: 'Mouse', price: 25, category: 'Electronics' },
-  { name: 'Desk', price: 300, category: 'Furniture' },
-  { name: 'Chair', price: 200, category: 'Furniture' },
-  { name: 'Monitor', price: 400, category: 'Electronics' }
-];
-
-// Calculate total by category
-const totalByCategory = products.reduce((acc, product) => {
-  if (!acc[product.category]) {
-    acc[product.category] = 0;
-  }
-  acc[product.category] += product.price;
-  return acc;
-}, {});
-console.log("Total by category:", totalByCategory);
-
-// Find expensive items (>$300)
-const expensive = products.filter(p => p.price > 300);
-console.log("Expensive items:", expensive);
-
-// Apply discount
-const discounted = products.map(p => ({
-  ...p,
-  salePrice: Math.round(p.price * 0.9)
-}));
-console.log("With 10% discount:", discounted);
-
-{ totalByCategory, expensive, discounted };`,
-  },
-  {
-    id: 'vm-module-check',
-    name: 'VM Module Check',
-    description: 'Check which modules are available in the current VM',
-    code: `// Check available modules
-console.log("Checking VM capabilities...");
-
-// Test console module
-try {
-  console.log("✓ Console module available");
-} catch (e) {
-  console.log("✗ Console module not available");
-}
-
-// Test Math module
-try {
-  const result = Math.sqrt(16);
-  console.log("✓ Math module available, sqrt(16) =", result);
-} catch (e) {
-  console.log("✗ Math module not available");
-}
-
-// Test JSON module
-try {
-  const obj = { test: true };
-  const str = JSON.stringify(obj);
-  console.log("✓ JSON module available");
-} catch (e) {
-  console.log("✗ JSON module not available");
-}
-
-// Test Array methods
-try {
-  const arr = [1, 2, 3].map(x => x * 2);
-  console.log("✓ Array methods available:", arr);
-} catch (e) {
-  console.log("✗ Array methods not available");
-}
-
-"Module check complete";`,
-  },
-  {
-    id: 'vm-library-check',
-    name: 'VM Library Check',
-    description: 'Check which external libraries are loaded',
-    code: `// Check loaded libraries
-console.log("Checking loaded libraries...");
-
-const libraries = [];
-
-// Check Lodash
-if (typeof _ !== 'undefined') {
-  console.log("✓ Lodash available");
-  libraries.push('lodash');
-} else {
-  console.log("✗ Lodash not loaded (enable in VM Config)");
-}
-
-// Check Moment.js
-if (typeof moment !== 'undefined') {
-  console.log("✓ Moment.js available");
-  libraries.push('moment');
-} else {
-  console.log("✗ Moment.js not loaded");
-}
-
-// Check Ramda
-if (typeof R !== 'undefined') {
-  console.log("✓ Ramda available");
-  libraries.push('ramda');
-} else {
-  console.log("✗ Ramda not loaded");
-}
-
-// Check Day.js
-if (typeof dayjs !== 'undefined') {
-  console.log("✓ Day.js available");
-  libraries.push('dayjs');
-} else {
-  console.log("✗ Day.js not loaded");
-}
-
-// Check Zustand
-if (typeof zustand !== 'undefined') {
-  console.log("✓ Zustand available");
-  libraries.push('zustand');
-} else {
-  console.log("✗ Zustand not loaded");
-}
-
-console.log("\nLoaded libraries:", libraries.length);
-
-{ loadedLibraries: libraries, count: libraries.length };`,
-  },
-  {
-    id: 'zustand-state',
-    name: 'Zustand State Management',
-    description: 'Using Zustand for state management (requires zustand library)',
-    code: `// This example REQUIRES the 'zustand' library to be enabled in VM Config
-// It will fail if zustand is not configured
-
-if (typeof zustand === 'undefined') {
-  throw new Error('Zustand library not loaded! Enable it in VM Config > Libraries.');
-}
-
-// Note: In a real browser/node environment, zustand would be used differently
-// This demonstrates the library availability check
-console.log('Zustand library loaded:', typeof zustand);
-
-// Simulating Zustand state management pattern for demo
-
-// Create a simple state store
-const createStore = (initialState) => {
-  let state = initialState;
-  const listeners = [];
-
-  return {
-    getState: () => state,
-    setState: (partial) => {
-      state = { ...state, ...partial };
-      listeners.forEach(listener => listener(state));
-    },
-    subscribe: (listener) => {
-      listeners.push(listener);
-      return () => {
-        const index = listeners.indexOf(listener);
-        if (index > -1) listeners.splice(index, 1);
-      };
-    }
+interface APIErrorEnvelope {
+  error?: {
+    code?: string;
+    message?: string;
+    details?: unknown;
   };
-};
-
-// Create a counter store
-const counterStore = createStore({
-  count: 0,
-  increment: function() {
-    this.setState({ count: this.getState().count + 1 });
-  },
-  decrement: function() {
-    this.setState({ count: this.getState().count - 1 });
-  }
-});
-
-console.log("Initial state:", counterStore.getState());
-
-// Subscribe to changes
-counterStore.subscribe((state) => {
-  console.log("State changed:", state);
-});
-
-// Update state
-counterStore.setState({ count: counterStore.getState().count + 1 });
-counterStore.setState({ count: counterStore.getState().count + 5 });
-counterStore.setState({ count: counterStore.getState().count - 2 });
-
-const finalState = counterStore.getState();
-console.log("Final state:", finalState);
-
-finalState;`,
-  },
-  {
-    id: 'functional-ramda',
-    name: 'Functional Programming with Ramda',
-    description: 'Using Ramda for functional programming (requires ramda library)',
-    code: `// This example REQUIRES the 'ramda' library to be enabled in VM Config
-// It will fail if ramda is not configured
-
-if (typeof R === 'undefined') {
-  throw new Error('Ramda library not loaded! Enable it in VM Config > Libraries.');
 }
 
-const users = [
-  { id: 1, name: 'Alice', age: 30, role: 'admin' },
-  { id: 2, name: 'Bob', age: 25, role: 'user' },
-  { id: 3, name: 'Charlie', age: 35, role: 'admin' },
-  { id: 4, name: 'David', age: 28, role: 'user' }
-];
+class APIError extends Error {
+  status: number;
+  code?: string;
+  details?: unknown;
 
-// Use actual Ramda functions
-const isAdmin = R.propEq('role', 'admin');
-const isOver30 = R.propSatisfies(age => age > 30, 'age');
-const getName = R.prop('name');
+  constructor(status: number, message: string, code?: string, details?: unknown) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
 
-// Filter admins using Ramda
-const admins = R.filter(isAdmin, users);
-console.log("Admins (R.filter):", R.map(getName, admins));
+interface RawTemplate {
+  id: string;
+  name: string;
+  engine: string;
+  is_active: boolean;
+  exposed_modules: string[];
+  libraries: string[];
+  created_at: string;
+  updated_at: string;
+}
 
-// Filter users over 30
-const over30 = R.filter(isOver30, users);
-console.log("Over 30 (R.filter):", R.map(getName, over30));
+interface RawTemplateDetail {
+  template: RawTemplate;
+  settings?: {
+    limits?: unknown;
+    resolver?: unknown;
+    runtime?: unknown;
+  };
+  capabilities: Array<{
+    id: string;
+    kind: string;
+    name: string;
+    enabled: boolean;
+    config?: unknown;
+  }> | null;
+  startup_files: Array<{
+    id: string;
+    path: string;
+    order_index: number;
+    mode: 'eval' | 'import';
+  }> | null;
+}
 
-// Compose: admins over 30 using Ramda composition
-const adminAndOver30 = R.both(isAdmin, isOver30);
-const adminOver30 = R.filter(adminAndOver30, users);
-console.log("Admin over 30 (R.both + R.filter):", R.map(getName, adminOver30));
+interface RawSession {
+  id: string;
+  vm_id: string;
+  workspace_id: string;
+  base_commit_oid: string;
+  worktree_path: string;
+  status: 'starting' | 'ready' | 'crashed' | 'closed';
+  created_at: string;
+  closed_at?: string;
+  last_error?: string;
+}
 
-// Transform data using Ramda
-const createSummary = user => ({
-  name: user.name,
-  summary: \`\${user.name} (\${user.age}) - \${user.role}\`
-});
-const userSummaries = R.map(createSummary, users);
+interface RawExecution {
+  id: string;
+  session_id: string;
+  kind: 'repl' | 'run_file' | 'startup';
+  input?: string;
+  path?: string;
+  status: 'running' | 'ok' | 'error' | 'timeout' | 'cancelled';
+  started_at: string;
+  ended_at?: string;
+  result?: unknown;
+  error?: unknown;
+}
 
-console.log("Summaries (R.map):", userSummaries);
+interface RawExecutionEvent {
+  seq: number;
+  ts: string;
+  type: 'input_echo' | 'console' | 'value' | 'exception' | 'stdout' | 'stderr' | 'system';
+  payload: any;
+}
 
-// Demonstrate pipe
-const getAdminNames = R.pipe(
-  R.filter(isAdmin),
-  R.map(getName),
-  R.join(', ')
-);
-console.log("Admin names (R.pipe):", getAdminNames(users));
+interface TemplateBootstrapSpec {
+  name: string;
+  engine: string;
+  modules?: string[];
+  libraries?: string[];
+}
 
-{ admins: admins.length, over30: over30.length, adminOver30, userSummaries };`,
+const SESSION_NAME_STORAGE_KEY = 'vm-system-ui.session-names';
+const CURRENT_SESSION_STORAGE_KEY = 'vm-system-ui.current-session-id';
+
+const API_BASE_URL = (import.meta.env.VITE_VM_SYSTEM_API_BASE_URL || '').trim().replace(/\/$/, '');
+const DEFAULT_WORKSPACE_ID = (import.meta.env.VITE_VM_SYSTEM_WORKSPACE_ID || 'ws-web-ui').trim();
+const DEFAULT_BASE_COMMIT_OID = (import.meta.env.VITE_VM_SYSTEM_BASE_COMMIT_OID || 'web-ui').trim();
+const DEFAULT_WORKTREE_PATH = (import.meta.env.VITE_VM_SYSTEM_WORKTREE_PATH || '/tmp').trim();
+
+const DEFAULT_LIMITS = {
+  cpu_ms: 2000,
+  wall_ms: 5000,
+  mem_mb: 128,
+  max_events: 50000,
+  max_output_kb: 256,
+};
+
+const DEFAULT_RESOLVER = {
+  roots: ['.'],
+  extensions: ['.js', '.mjs'],
+  allow_absolute_repo_imports: true,
+};
+
+const DEFAULT_RUNTIME = {
+  esm: true,
+  strict: true,
+  console: true,
+};
+
+const DEFAULT_TEMPLATE_SPECS: TemplateBootstrapSpec[] = [
+  {
+    name: 'Default JavaScript',
+    engine: 'goja',
+    modules: ['console', 'math', 'json', 'date'],
   },
   {
-    id: 'vm-capability-demo',
-    name: 'VM Capability Demo',
-    description: 'Demonstrate different VM capabilities working together',
-    code: `// Comprehensive VM capability demonstration
-console.log("=== VM Capability Demo ===");
-
-// 1. Console module
-console.log("\n1. Console logging:");
-console.log("Standard log");
-console.log("Multiple", "arguments", 123);
-
-// 2. Math module
-console.log("\n2. Math operations:");
-const calculations = {
-  sqrt: Math.sqrt(144),
-  pow: Math.pow(2, 8),
-  random: Math.floor(Math.random() * 100),
-  pi: Math.PI
-};
-console.log("Calculations:", calculations);
-
-// 3. Array methods
-console.log("\n3. Array operations:");
-const numbers = [1, 2, 3, 4, 5];
-const processed = {
-  doubled: numbers.map(n => n * 2),
-  filtered: numbers.filter(n => n > 2),
-  sum: numbers.reduce((a, b) => a + b, 0)
-};
-console.log("Array processing:", processed);
-
-// 4. Object methods
-console.log("\n4. Object operations:");
-const obj = { a: 1, b: 2, c: 3 };
-const objOps = {
-  keys: Object.keys(obj),
-  values: Object.values(obj),
-  entries: Object.entries(obj)
-};
-console.log("Object operations:", objOps);
-
-// 5. JSON module
-console.log("\n5. JSON operations:");
-const data = { name: "Test", values: [1, 2, 3] };
-const jsonStr = JSON.stringify(data);
-const parsed = JSON.parse(jsonStr);
-console.log("JSON round-trip successful:", JSON.stringify(data) === JSON.stringify(parsed));
-
-// 6. Date module
-console.log("\n6. Date operations:");
-const now = new Date();
-console.log("Current time:", now.toISOString());
-
-console.log("\n=== Demo Complete ===");
-
-{ calculations, processed, objOps, timestamp: now.toISOString() };`,
+    name: 'Utility Playground',
+    engine: 'goja',
+    modules: ['console', 'math', 'json', 'array', 'object'],
+    libraries: ['lodash'],
+  },
+  {
+    name: 'Library Sandbox',
+    engine: 'goja',
+    modules: ['console', 'json'],
+    libraries: ['dayjs', 'ramda'],
   },
 ];
 
-// Mock VM service
+const ABSOLUTE_HTTP_URL_RE = /^https?:\/\//i;
+
+function toDate(value: string | undefined | null): Date | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function parseNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function parseBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function parseStringArray(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+  return value.filter((entry): entry is string => typeof entry === 'string');
+}
+
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeLimits(raw: unknown): VMProfile['settings']['limits'] {
+  const obj = toRecord(raw);
+  return {
+    cpu_ms: parseNumber(obj.cpu_ms, DEFAULT_LIMITS.cpu_ms),
+    wall_ms: parseNumber(obj.wall_ms, DEFAULT_LIMITS.wall_ms),
+    mem_mb: parseNumber(obj.mem_mb, DEFAULT_LIMITS.mem_mb),
+    max_events: parseNumber(obj.max_events, DEFAULT_LIMITS.max_events),
+    max_output_kb: parseNumber(obj.max_output_kb, DEFAULT_LIMITS.max_output_kb),
+  };
+}
+
+function normalizeResolver(raw: unknown): VMProfile['settings']['resolver'] {
+  const obj = toRecord(raw);
+  return {
+    roots: parseStringArray(obj.roots, DEFAULT_RESOLVER.roots),
+    extensions: parseStringArray(obj.extensions, DEFAULT_RESOLVER.extensions),
+    allow_absolute_repo_imports: parseBool(
+      obj.allow_absolute_repo_imports,
+      DEFAULT_RESOLVER.allow_absolute_repo_imports
+    ),
+  };
+}
+
+function normalizeRuntime(raw: unknown): VMProfile['settings']['runtime'] {
+  const obj = toRecord(raw);
+  return {
+    esm: parseBool(obj.esm, DEFAULT_RUNTIME.esm),
+    strict: parseBool(obj.strict, DEFAULT_RUNTIME.strict),
+    console: parseBool(obj.console, DEFAULT_RUNTIME.console),
+  };
+}
+
+function normalizeExecutionResult(rawResult: unknown): unknown {
+  const result = toRecord(rawResult);
+  if ('json' in result) {
+    return result.json;
+  }
+  return rawResult;
+}
+
+function normalizeExecutionError(rawError: unknown): string {
+  if (!rawError) {
+    return '';
+  }
+  if (typeof rawError === 'string') {
+    return rawError;
+  }
+  const errorObj = toRecord(rawError);
+  if (typeof errorObj.message === 'string') {
+    return errorObj.message;
+  }
+  return JSON.stringify(rawError);
+}
+
+function mapExecutionKind(kind: RawExecution['kind']): Execution['kind'] {
+  if (kind === 'run_file') {
+    return 'run-file';
+  }
+  return kind;
+}
+
+function encodePathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
+function getURL(path: string, query?: Record<string, string | number | undefined>): string {
+  const hasAbsoluteBase = ABSOLUTE_HTTP_URL_RE.test(API_BASE_URL);
+  const baseURL = hasAbsoluteBase
+    ? new URL(API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`)
+    : new URL(window.location.origin);
+  const url = hasAbsoluteBase
+    ? new URL(path, baseURL)
+    : new URL(`${API_BASE_URL}${path}`, baseURL);
+  if (query) {
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined || value === '') {
+        return;
+      }
+      url.searchParams.set(key, String(value));
+    });
+  }
+  if (hasAbsoluteBase) {
+    return url.toString();
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options?: {
+    body?: unknown;
+    query?: Record<string, string | number | undefined>;
+  }
+): Promise<T> {
+  const response = await fetch(getURL(path, options?.query), {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    let code: string | undefined;
+    let details: unknown;
+
+    try {
+      const envelope = (await response.json()) as APIErrorEnvelope;
+      if (envelope.error?.message) {
+        message = envelope.error.message;
+      }
+      code = envelope.error?.code;
+      details = envelope.error?.details;
+    } catch {
+      // ignore parse errors
+    }
+
+    throw new APIError(response.status, message, code, details);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
 class VMService {
   private vms: Map<string, VMProfile> = new Map();
   private sessions: Map<string, VMSession> = new Map();
   private executions: Map<string, Execution> = new Map();
   private executionsBySession: Map<string, string[]> = new Map();
+  private sessionActivity: Map<string, Date> = new Map();
+  private sessionNames: Record<string, string> = {};
   private currentSessionId: string | null = null;
-  private gcInterval: number | null = null;
-  private readonly IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-  private readonly GC_CHECK_INTERVAL_MS = 60 * 1000; // 1 minute
+  private initialized = false;
+  private initializing: Promise<void> | null = null;
 
   constructor() {
-    // Create default VM profile
-    this.createDefaultVM();
-    this.startGarbageCollection();
+    this.loadSessionNames();
+    this.loadCurrentSessionId();
   }
 
-  private startGarbageCollection() {
-    if (this.gcInterval) return;
-
-    this.gcInterval = window.setInterval(() => {
-      const now = Date.now();
-      const sessionsToClose: string[] = [];
-
-      this.sessions.forEach((session, sessionId) => {
-        if (
-          session.status === 'ready' &&
-          now - session.lastActivityAt.getTime() > this.IDLE_TIMEOUT_MS
-        ) {
-          sessionsToClose.push(sessionId);
-        }
-      });
-
-      sessionsToClose.forEach((sessionId) => {
-        console.log(`[GC] Closing idle session: ${sessionId}`);
-        this.closeSession(sessionId);
-      });
-    }, this.GC_CHECK_INTERVAL_MS);
+  async initialize(): Promise<VMProfile | null> {
+    await this.ensureInitialized();
+    const currentSession = this.getCurrentSession();
+    if (currentSession?.vm) {
+      return currentSession.vm;
+    }
+    return this.getVMs()[0] || null;
   }
 
-  private stopGarbageCollection() {
-    if (this.gcInterval) {
-      clearInterval(this.gcInterval);
-      this.gcInterval = null;
+  private loadSessionNames() {
+    try {
+      const raw = window.localStorage.getItem(SESSION_NAME_STORAGE_KEY);
+      this.sessionNames = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+      this.sessionNames = {};
     }
   }
 
-  private createDefaultVM() {
-    const vm: VMProfile = {
-      id: nanoid(),
-      name: 'Default VM',
-      engine: 'goja',
-      isActive: true,
-      createdAt: new Date(),
-      exposedModules: ['console', 'math', 'json', 'array', 'object'],
-      libraries: [],
-      settings: {
-        limits: {
-          cpu_ms: 2000,
-          wall_ms: 5000,
-          mem_mb: 128,
-          max_events: 50000,
-          max_output_kb: 256,
-        },
-        resolver: {
-          roots: ['.'],
-          extensions: ['.js', '.mjs'],
-          allow_absolute_repo_imports: true,
-        },
-        runtime: {
-          esm: true,
-          strict: true,
-          console: true,
-        },
-      },
-      capabilities: [
-        {
-          id: nanoid(),
-          kind: 'module',
-          name: 'console',
-          enabled: true,
-          config: {},
-        },
-      ],
-      startupFiles: [],
-    };
-
-    this.vms.set(vm.id, vm);
-
-    // Create a default session
-    const session = this.createSessionSync(vm.id, 'default-workspace', 'Default Session');
-    this.currentSessionId = session.id;
+  private persistSessionNames() {
+    try {
+      window.localStorage.setItem(SESSION_NAME_STORAGE_KEY, JSON.stringify(this.sessionNames));
+    } catch {
+      // ignore local storage failures
+    }
   }
 
-  private createSessionSync(vmId: string, workspaceId: string, name: string): VMSession {
-    const vm = this.vms.get(vmId);
-    const session: VMSession = {
-      id: nanoid(),
-      vmId,
-      vmProfile: vm?.name || 'Unknown VM',
-      workspaceId,
-      status: 'ready',
-      createdAt: new Date(),
-      lastActivityAt: new Date(),
-      name,
-      vm, // Include full VM configuration
-    };
+  private loadCurrentSessionId() {
+    try {
+      this.currentSessionId = window.localStorage.getItem(CURRENT_SESSION_STORAGE_KEY);
+    } catch {
+      this.currentSessionId = null;
+    }
+  }
 
+  private persistCurrentSessionId() {
+    try {
+      if (this.currentSessionId) {
+        window.localStorage.setItem(CURRENT_SESSION_STORAGE_KEY, this.currentSessionId);
+      } else {
+        window.localStorage.removeItem(CURRENT_SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // ignore local storage failures
+    }
+  }
+
+  private defaultSessionName(raw: RawSession, vm?: VMProfile): string {
+    return vm ? `${vm.name} ${raw.id.slice(0, 8)}` : `Session ${raw.id.slice(0, 8)}`;
+  }
+
+  private setSessionAlias(sessionId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      delete this.sessionNames[sessionId];
+    } else {
+      this.sessionNames[sessionId] = trimmed;
+    }
+    this.persistSessionNames();
+  }
+
+  private async mapSession(raw: RawSession): Promise<VMSession> {
+    const vm = this.vms.get(raw.vm_id) || (await this.fetchTemplateProfile(raw.vm_id));
+    const createdAt = toDate(raw.created_at) || new Date();
+    const closedAt = toDate(raw.closed_at);
+    const lastActivityAt = this.sessionActivity.get(raw.id) || closedAt || createdAt;
+    const name = this.sessionNames[raw.id] || this.defaultSessionName(raw, vm);
+
+    return {
+      id: raw.id,
+      vmId: raw.vm_id,
+      vmProfile: vm?.name || 'Template',
+      workspaceId: raw.workspace_id,
+      baseCommitOID: raw.base_commit_oid,
+      worktreePath: raw.worktree_path,
+      status: raw.status,
+      createdAt,
+      closedAt,
+      lastActivityAt,
+      lastError: raw.last_error,
+      name,
+      vm,
+    };
+  }
+
+  private mapExecution(raw: RawExecution, events: ExecutionEvent[]): Execution {
+    return {
+      id: raw.id,
+      sessionId: raw.session_id,
+      kind: mapExecutionKind(raw.kind),
+      input: raw.input,
+      path: raw.path,
+      status: raw.status,
+      startedAt: toDate(raw.started_at) || new Date(),
+      endedAt: toDate(raw.ended_at),
+      result: normalizeExecutionResult(raw.result),
+      error: normalizeExecutionError(raw.error),
+      events,
+    };
+  }
+
+  private mapEvents(rawEvents: RawExecutionEvent[]): ExecutionEvent[] {
+    return rawEvents.map((event) => ({
+      seq: event.seq,
+      ts: toDate(event.ts) || new Date(),
+      type: event.type,
+      payload: event.payload,
+    }));
+  }
+
+  private mapTemplateDetail(detail: RawTemplateDetail): VMProfile {
+    const settings = detail.settings || {};
+    return {
+      id: detail.template.id,
+      name: detail.template.name,
+      engine: detail.template.engine,
+      isActive: detail.template.is_active,
+      createdAt: toDate(detail.template.created_at) || new Date(),
+      exposedModules: detail.template.exposed_modules || [],
+      libraries: detail.template.libraries || [],
+      settings: {
+        limits: normalizeLimits(settings.limits),
+        resolver: normalizeResolver(settings.resolver),
+        runtime: normalizeRuntime(settings.runtime),
+      },
+      capabilities: asArray(detail.capabilities).map((capability) => ({
+        id: capability.id,
+        kind: capability.kind,
+        name: capability.name,
+        enabled: capability.enabled,
+        config: toRecord(capability.config),
+      })),
+      startupFiles: asArray(detail.startup_files).map((file) => ({
+        id: file.id,
+        path: file.path,
+        orderIndex: file.order_index,
+        mode: file.mode,
+      })),
+    };
+  }
+
+  private async fetchTemplateProfile(templateID: string): Promise<VMProfile> {
+    const detail = await request<RawTemplateDetail>('GET', `/api/v1/templates/${templateID}`);
+    const profile = this.mapTemplateDetail(detail);
+    this.vms.set(profile.id, profile);
+    return profile;
+  }
+
+  private async createTemplateFromSpec(spec: TemplateBootstrapSpec): Promise<RawTemplate> {
+    const created = await request<RawTemplate>('POST', '/api/v1/templates', {
+      body: {
+        name: spec.name,
+        engine: spec.engine,
+      },
+    });
+
+    const modules = spec.modules || [];
+    const libraries = spec.libraries || [];
+
+    await Promise.all(
+      modules.map((moduleName) =>
+        request('POST', `/api/v1/templates/${created.id}/modules`, {
+          body: { name: moduleName },
+        })
+      )
+    );
+
+    await Promise.all(
+      libraries.map((libraryName) =>
+        request('POST', `/api/v1/templates/${created.id}/libraries`, {
+          body: { name: libraryName },
+        })
+      )
+    );
+
+    return created;
+  }
+
+  private async bootstrapDefaultTemplates(): Promise<RawTemplate[]> {
+    const created: RawTemplate[] = [];
+    for (const spec of DEFAULT_TEMPLATE_SPECS) {
+      created.push(await this.createTemplateFromSpec(spec));
+    }
+    return created;
+  }
+
+  private async refreshTemplates(): Promise<VMProfile[]> {
+    let templates = asArray(await request<RawTemplate[] | null>('GET', '/api/v1/templates'));
+    if (templates.length === 0) {
+      templates = await this.bootstrapDefaultTemplates();
+    }
+
+    const details = await Promise.all(
+      templates.map((template) => this.fetchTemplateProfile(template.id))
+    );
+
+    const activeIDs = new Set(details.map((template) => template.id));
+    for (const id of Array.from(this.vms.keys())) {
+      if (!activeIDs.has(id)) {
+        this.vms.delete(id);
+      }
+    }
+
+    return details;
+  }
+
+  private async loadSessions(status?: string): Promise<VMSession[]> {
+    const rawSessions = asArray(
+      await request<RawSession[] | null>('GET', '/api/v1/sessions', {
+        query: { status },
+      })
+    );
+
+    const mapped = await Promise.all(rawSessions.map((rawSession) => this.mapSession(rawSession)));
+
+    const activeIDs = new Set(mapped.map((session) => session.id));
+    for (const existingID of Array.from(this.sessions.keys())) {
+      if (!activeIDs.has(existingID)) {
+        this.sessions.delete(existingID);
+      }
+    }
+
+    mapped.forEach((session) => {
+      this.sessions.set(session.id, session);
+    });
+
+    if (this.currentSessionId && !this.sessions.has(this.currentSessionId)) {
+      this.currentSessionId = null;
+      this.persistCurrentSessionId();
+    }
+
+    if (!this.currentSessionId) {
+      const firstReady = mapped.find((session) => session.status === 'ready');
+      if (firstReady) {
+        this.currentSessionId = firstReady.id;
+        this.persistCurrentSessionId();
+      }
+    }
+
+    return mapped.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  private async createSessionInternal(templateID: string, name?: string): Promise<VMSession> {
+    const rawSession = await request<RawSession>('POST', '/api/v1/sessions', {
+      body: {
+        template_id: templateID,
+        workspace_id: DEFAULT_WORKSPACE_ID,
+        base_commit_oid: DEFAULT_BASE_COMMIT_OID,
+        worktree_path: DEFAULT_WORKTREE_PATH,
+      },
+    });
+
+    if (name?.trim()) {
+      this.setSessionAlias(rawSession.id, name);
+    }
+
+    const session = await this.mapSession(rawSession);
     this.sessions.set(session.id, session);
-    this.executionsBySession.set(session.id, []);
+    this.currentSessionId = session.id;
+    this.persistCurrentSessionId();
     return session;
   }
 
+  private async ensureInitialized() {
+    if (!this.initialized) {
+      if (!this.initializing) {
+        this.initializing = (async () => {
+          const templates = await this.refreshTemplates();
+          const sessions = await this.loadSessions();
+          if (sessions.length === 0 && templates.length > 0) {
+            await this.createSessionInternal(templates[0].id, 'Default Session');
+            await this.loadSessions();
+          }
+          this.initialized = true;
+        })().finally(() => {
+          this.initializing = null;
+        });
+      }
+      await this.initializing;
+    }
+  }
+
+  private async getExecutionEvents(executionID: string): Promise<ExecutionEvent[]> {
+    const rawEvents = asArray(
+      await request<RawExecutionEvent[] | null>(
+        'GET',
+        `/api/v1/executions/${executionID}/events`,
+        {
+          query: { after_seq: 0 },
+        }
+      )
+    );
+    return this.mapEvents(rawEvents);
+  }
+
+  private async hydrateExecution(raw: RawExecution): Promise<Execution> {
+    const events = await this.getExecutionEvents(raw.id);
+    const execution = this.mapExecution(raw, events);
+    this.executions.set(execution.id, execution);
+
+    const known = this.executionsBySession.get(execution.sessionId) || [];
+    if (!known.includes(execution.id)) {
+      known.push(execution.id);
+      this.executionsBySession.set(execution.sessionId, known);
+    }
+
+    return execution;
+  }
+
+  private pickDefaultTemplateID(preferredTemplateID?: string): string {
+    if (preferredTemplateID) {
+      return preferredTemplateID;
+    }
+    const existing = this.getCurrentSession();
+    if (existing?.vmId) {
+      return existing.vmId;
+    }
+    const first = this.getVMs()[0];
+    if (!first) {
+      throw new Error('No template available');
+    }
+    return first.id;
+  }
+
   getVMs(): VMProfile[] {
-    return Array.from(this.vms.values());
+    return Array.from(this.vms.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
   getVM(id: string): VMProfile | undefined {
     return this.vms.get(id);
   }
 
-  async createSession(name?: string): Promise<VMSession> {
-    const defaultVM = Array.from(this.vms.values())[0];
-    if (!defaultVM) {
-      throw new Error('No VM profile available');
-    }
+  async createSession(templateID?: string, name?: string): Promise<VMSession> {
+    await this.ensureInitialized();
 
-    const sessionName = name || `Session ${this.sessions.size + 1}`;
-    const session = this.createSessionSync(
-      defaultVM.id,
-      `workspace-${nanoid()}`,
-      sessionName
-    );
-
-    return session;
+    const targetTemplateID = this.pickDefaultTemplateID(templateID);
+    return this.createSessionInternal(targetTemplateID, name);
   }
 
-  async listSessions(): Promise<VMSession[]> {
-    return Array.from(this.sessions.values()).sort(
-      (a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime()
-    );
+  async listSessions(status?: string): Promise<VMSession[]> {
+    await this.ensureInitialized();
+    return this.loadSessions(status);
   }
 
   async getSession(sessionId: string): Promise<VMSession | null> {
-    return this.sessions.get(sessionId) || null;
+    await this.ensureInitialized();
+
+    try {
+      const rawSession = await request<RawSession>('GET', `/api/v1/sessions/${sessionId}`);
+      const session = await this.mapSession(rawSession);
+      this.sessions.set(session.id, session);
+      return session;
+    } catch (error) {
+      if (error instanceof APIError && error.code === 'SESSION_NOT_FOUND') {
+        this.sessions.delete(sessionId);
+        if (this.currentSessionId === sessionId) {
+          this.currentSessionId = null;
+          this.persistCurrentSessionId();
+        }
+        return null;
+      }
+      throw error;
+    }
   }
 
   getCurrentSession(): VMSession | null {
-    if (!this.currentSessionId) return null;
+    if (!this.currentSessionId) {
+      return null;
+    }
     return this.sessions.get(this.currentSessionId) || null;
   }
 
   async setCurrentSession(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
+    await this.ensureInitialized();
+    let session = this.sessions.get(sessionId) || null;
+    if (!session) {
+      session = await this.getSession(sessionId);
+    }
     if (!session) {
       throw new Error('Session not found');
     }
@@ -905,202 +957,183 @@ class VMService {
       throw new Error('Session is not ready');
     }
     this.currentSessionId = sessionId;
-    this.touchSession(sessionId);
+    this.persistCurrentSessionId();
   }
 
   async closeSession(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) return;
+    await this.ensureInitialized();
 
-    session.status = 'closed';
-    session.closedAt = new Date();
-    this.sessions.set(sessionId, session);
+    const rawSession = await request<RawSession>('POST', `/api/v1/sessions/${sessionId}/close`, {
+      body: {},
+    });
+    const session = await this.mapSession(rawSession);
+    this.sessions.set(session.id, session);
 
-    // If this was the current session, clear it
     if (this.currentSessionId === sessionId) {
       this.currentSessionId = null;
+      this.persistCurrentSessionId();
     }
   }
 
   async deleteSession(sessionId: string): Promise<void> {
-    this.sessions.delete(sessionId);
-    this.executionsBySession.delete(sessionId);
+    await this.ensureInitialized();
+
+    const rawSession = await request<RawSession>('DELETE', `/api/v1/sessions/${sessionId}`);
+    const session = await this.mapSession(rawSession);
+    this.sessions.set(session.id, session);
 
     if (this.currentSessionId === sessionId) {
       this.currentSessionId = null;
-    }
-  }
-
-  private touchSession(sessionId: string) {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.lastActivityAt = new Date();
-      this.sessions.set(sessionId, session);
+      this.persistCurrentSessionId();
     }
   }
 
   async executeREPL(code: string, sessionId?: string): Promise<Execution> {
-    const targetSessionId = sessionId || this.currentSessionId;
-    if (!targetSessionId) {
+    await this.ensureInitialized();
+
+    const targetSessionID = sessionId || this.currentSessionId;
+    if (!targetSessionID) {
       throw new Error('No active session');
     }
 
-    const session = this.sessions.get(targetSessionId);
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
-    if (session.status !== 'ready') {
-      throw new Error('Session is not ready');
-    }
-
-    this.touchSession(targetSessionId);
-
-    const execution: Execution = {
-      id: nanoid(),
-      sessionId: targetSessionId,
-      kind: 'repl',
-      input: code,
-      status: 'running',
-      startedAt: new Date(),
-      events: [],
-    };
-
-    this.executions.set(execution.id, execution);
-
-    // Track execution by session
-    const sessionExecutions = this.executionsBySession.get(targetSessionId) || [];
-    sessionExecutions.push(execution.id);
-    this.executionsBySession.set(targetSessionId, sessionExecutions);
-
-    // Simulate execution with setTimeout
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Add input echo event
-    execution.events.push({
-      seq: 1,
-      ts: new Date(),
-      type: 'input_echo',
-      payload: { text: code },
+    const rawExecution = await request<RawExecution>('POST', '/api/v1/executions/repl', {
+      body: {
+        session_id: targetSessionID,
+        input: code,
+      },
     });
 
-    try {
-      // Execute code using eval (in a real implementation, this would use goja)
-      const result = this.safeEval(code, execution);
+    const execution = await this.hydrateExecution(rawExecution);
+    this.sessionActivity.set(targetSessionID, new Date());
 
-      execution.status = 'ok';
-      execution.endedAt = new Date();
-      execution.result = result;
-
-      // Add value event
-      execution.events.push({
-        seq: execution.events.length + 1,
-        ts: new Date(),
-        type: 'value',
-        payload: {
-          type: typeof result,
-          preview: String(result),
-          json: result,
-        },
-      });
-    } catch (error: any) {
-      execution.status = 'error';
-      execution.endedAt = new Date();
-      execution.error = error.message;
-
-      // Add exception event
-      execution.events.push({
-        seq: execution.events.length + 1,
-        ts: new Date(),
-        type: 'exception',
-        payload: {
-          message: error.message,
-          stack: error.stack,
-        },
-      });
+    const session = this.sessions.get(targetSessionID);
+    if (session) {
+      session.lastActivityAt = new Date();
+      this.sessions.set(targetSessionID, session);
     }
 
     return execution;
   }
 
-  private safeEval(code: string, execution: Execution): any {
-    // Create a custom console that captures output
-    const consoleOutput: string[] = [];
-    const customConsole = {
-      log: (...args: any[]) => {
-        const message = args.map((arg) => String(arg)).join(' ');
-        consoleOutput.push(message);
-
-        // Add console event
-        execution.events.push({
-          seq: execution.events.length + 1,
-          ts: new Date(),
-          type: 'console',
-          payload: {
-            level: 'log',
-            text: message,
-          },
-        });
-      },
-    };
-
-    // Create a safe execution context
-    const context = {
-      console: customConsole,
-      Math,
-      Date,
-      Array,
-      Object,
-      String,
-      Number,
-      Boolean,
-      JSON,
-    };
-
-    // Wrap code in a function to create a scope
-    const wrappedCode = `
-      with (context) {
-        return (function() {
-          ${code}
-        })();
-      }
-    `;
+  async getExecution(id: string): Promise<Execution | null> {
+    await this.ensureInitialized();
 
     try {
-      // Execute the code
-      const func = new Function('context', wrappedCode);
-      return func(context);
+      const rawExecution = await request<RawExecution>('GET', `/api/v1/executions/${id}`);
+      return await this.hydrateExecution(rawExecution);
     } catch (error) {
+      if (error instanceof APIError && error.code === 'EXECUTION_NOT_FOUND') {
+        this.executions.delete(id);
+        return null;
+      }
       throw error;
     }
   }
 
-  async getExecution(id: string): Promise<Execution | null> {
-    return this.executions.get(id) || null;
-  }
-
   async getExecutionsBySession(sessionId: string): Promise<Execution[]> {
-    const executionIds = this.executionsBySession.get(sessionId) || [];
-    return executionIds
-      .map((id) => this.executions.get(id))
-      .filter((exec): exec is Execution => exec !== undefined)
-      .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+    await this.ensureInitialized();
+
+    const rawExecutions = asArray(
+      await request<RawExecution[] | null>('GET', '/api/v1/executions', {
+        query: {
+          session_id: sessionId,
+          limit: 50,
+        },
+      })
+    );
+
+    const executions = await Promise.all(rawExecutions.map((rawExecution) => this.hydrateExecution(rawExecution)));
+    this.executionsBySession.set(
+      sessionId,
+      executions.map((execution) => execution.id)
+    );
+
+    return executions.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   }
 
   async getAllExecutions(): Promise<Execution[]> {
-    return Array.from(this.executions.values()).sort(
-      (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
-    );
+    await this.ensureInitialized();
+    return Array.from(this.executions.values()).sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   }
 
-  getRecentExecutions(limit: number = 10): Execution[] {
+  getRecentExecutions(limit = 10): Execution[] {
     return Array.from(this.executions.values())
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
       .slice(0, limit);
   }
 
-  destroy() {
-    this.stopGarbageCollection();
+  async updateTemplateModules(templateID: string, modules: string[]): Promise<VMProfile> {
+    await this.ensureInitialized();
+
+    const currentModules = asArray(
+      await request<string[] | null>('GET', `/api/v1/templates/${templateID}/modules`)
+    );
+    const wanted = new Set(modules);
+    const existing = new Set(currentModules);
+
+    const toAdd = modules.filter((module) => !existing.has(module));
+    const toRemove = currentModules.filter((module) => !wanted.has(module));
+
+    await Promise.all(
+      toAdd.map((module) =>
+        request('POST', `/api/v1/templates/${templateID}/modules`, {
+          body: { name: module },
+        })
+      )
+    );
+
+    await Promise.all(
+      toRemove.map((module) =>
+        request('DELETE', `/api/v1/templates/${templateID}/modules/${encodePathSegment(module)}`)
+      )
+    );
+
+    const updated = await this.fetchTemplateProfile(templateID);
+    this.refreshSessionsForTemplate(updated);
+    return updated;
+  }
+
+  async updateTemplateLibraries(templateID: string, libraries: string[]): Promise<VMProfile> {
+    await this.ensureInitialized();
+
+    const currentLibraries = asArray(
+      await request<string[] | null>('GET', `/api/v1/templates/${templateID}/libraries`)
+    );
+    const wanted = new Set(libraries);
+    const existing = new Set(currentLibraries);
+
+    const toAdd = libraries.filter((library) => !existing.has(library));
+    const toRemove = currentLibraries.filter((library) => !wanted.has(library));
+
+    await Promise.all(
+      toAdd.map((library) =>
+        request('POST', `/api/v1/templates/${templateID}/libraries`, {
+          body: { name: library },
+        })
+      )
+    );
+
+    await Promise.all(
+      toRemove.map((library) =>
+        request('DELETE', `/api/v1/templates/${templateID}/libraries/${encodePathSegment(library)}`)
+      )
+    );
+
+    const updated = await this.fetchTemplateProfile(templateID);
+    this.refreshSessionsForTemplate(updated);
+    return updated;
+  }
+
+  private refreshSessionsForTemplate(vm: VMProfile) {
+    this.sessions.forEach((session) => {
+      if (session.vmId === vm.id) {
+        this.sessions.set(session.id, {
+          ...session,
+          vm,
+          vmProfile: vm.name,
+        });
+      }
+    });
   }
 }
 

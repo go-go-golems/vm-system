@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import type { VMSession } from '@/lib/vmService';
 import {
   AlertCircle,
@@ -11,7 +10,6 @@ import {
   Loader2,
   Plus,
   Terminal,
-  Trash2,
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -22,7 +20,6 @@ interface SessionManagerProps {
   onCreateSession: (name?: string) => Promise<void>;
   onSelectSession: (sessionId: string) => Promise<void>;
   onCloseSession: (sessionId: string) => Promise<void>;
-  onDeleteSession: (sessionId: string) => Promise<void>;
 }
 
 export function SessionManager({
@@ -31,7 +28,6 @@ export function SessionManager({
   onCreateSession,
   onSelectSession,
   onCloseSession,
-  onDeleteSession,
 }: SessionManagerProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
@@ -99,7 +95,7 @@ export function SessionManager({
     const minutes = Math.floor(seconds / 60);
 
     if (minutes >= 5) {
-      return <span className="text-amber-500">Idle {minutes}m (will GC soon)</span>;
+      return <span className="text-amber-500">Idle {minutes}m</span>;
     }
     if (minutes > 0) {
       return <span className="text-slate-500">Active {minutes}m ago</span>;
@@ -181,7 +177,6 @@ export function SessionManager({
             const isActive = currentSession?.id === session.id;
             const canSelect = session.status === 'ready' && !isActive;
             const canClose = session.status === 'ready';
-            const canDelete = session.status === 'closed';
 
             return (
               <Card
@@ -295,17 +290,6 @@ export function SessionManager({
                           Close
                         </Button>
                       )}
-
-                      {canDelete && (
-                        <Button
-                          onClick={() => onDeleteSession(session.id)}
-                          size="sm"
-                          variant="outline"
-                          className="bg-slate-800 border-red-900/50 text-red-400 hover:bg-red-950"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -318,8 +302,8 @@ export function SessionManager({
       {/* Footer info */}
       <div className="p-4 border-t border-slate-800 bg-slate-900/50">
         <div className="text-xs text-slate-500 space-y-1">
-          <p>💡 Sessions are automatically closed after 5 minutes of inactivity</p>
-          <p>🔄 Closed sessions can be deleted to free up resources</p>
+          <p>Sessions are daemon-owned runtime instances.</p>
+          <p>Close a ready session to release backend runtime resources.</p>
         </div>
       </div>
     </div>

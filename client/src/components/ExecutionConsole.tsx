@@ -74,21 +74,35 @@ function ExecutionBlock({ execution }: { execution: Execution }) {
 }
 
 function EventLine({ event }: { event: ExecutionEvent }) {
+  const textPayload =
+    typeof event.payload === 'string'
+      ? event.payload
+      : event.payload?.text || event.payload?.message || JSON.stringify(event.payload);
+
   switch (event.type) {
     case 'input_echo':
       return (
         <div className="font-mono text-sm text-slate-400">
           <span className="text-slate-600">&gt; </span>
-          {event.payload.text}
+          {textPayload}
         </div>
       );
 
     case 'console':
       return (
         <div className="font-mono text-sm text-slate-300">
-          {event.payload.text}
+          {textPayload}
         </div>
       );
+
+    case 'stdout':
+      return <div className="font-mono text-sm text-slate-300">{textPayload}</div>;
+
+    case 'stderr':
+      return <div className="font-mono text-sm text-amber-400">{textPayload}</div>;
+
+    case 'system':
+      return <div className="font-mono text-sm text-blue-300">{textPayload}</div>;
 
     case 'value':
       return null; // Handled separately in ExecutionBlock
@@ -97,7 +111,7 @@ function EventLine({ event }: { event: ExecutionEvent }) {
       return (
         <div className="font-mono text-sm text-rose-400">
           <span className="text-slate-600">✗ </span>
-          {event.payload.message}
+          {textPayload}
         </div>
       );
 

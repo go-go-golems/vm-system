@@ -7,7 +7,7 @@ import { PresetSelector } from '@/components/PresetSelector';
 import { SessionManager } from '@/components/SessionManager';
 import { VMInfo } from '@/components/VMInfo';
 import { VMConfig } from '@/components/VMConfig';
-import { vmService, type Execution, type VMSession } from '@/lib/vmService';
+import { vmService, type Execution, type VMProfile, type VMSession } from '@/lib/vmService';
 import { BookOpen, History, Layers, Play, RotateCcw, Settings, Terminal } from 'lucide-react';
 import { Link } from 'wouter';
 import { useEffect, useState } from 'react';
@@ -20,12 +20,23 @@ export default function Home() {
   const [sessions, setSessions] = useState<VMSession[]>([]);
   const [currentSession, setCurrentSession] = useState<VMSession | null>(null);
   const [activeTab, setActiveTab] = useState('editor');
-  const [vmProfile, setVMProfile] = useState(vmService.getVMs()[0]);
+  const [vmProfile, setVMProfile] = useState<VMProfile | null>(null);
 
   // Load sessions and executions on mount
   useEffect(() => {
-    loadSessions();
-    loadExecutions();
+    const load = async () => {
+      try {
+        const initializedTemplate = await vmService.initialize();
+        setVMProfile(initializedTemplate);
+        await loadSessions();
+        await loadExecutions();
+      } catch (error: any) {
+        toast.error('Failed to initialize VM UI', {
+          description: error.message,
+        });
+      }
+    };
+    load();
   }, []);
 
   const loadSessions = async () => {
@@ -33,6 +44,11 @@ export default function Home() {
     setSessions(sessionList);
     const current = vmService.getCurrentSession();
     setCurrentSession(current);
+    if (current?.vm) {
+      setVMProfile(current.vm);
+    } else if (!vmProfile) {
+      setVMProfile(vmService.getVMs()[0] || null);
+    }
   };
 
   const loadExecutions = async () => {
@@ -90,10 +106,14 @@ export default function Home() {
 
   const handleCreateSession = async (name?: string) => {
     try {
-      const session = await vmService.createSession(name);
+      const session = await vmService.createSession(vmProfile?.id, name);
       await loadSessions();
       await vmService.setCurrentSession(session.id);
-      setCurrentSession(session);
+      const current = await vmService.getSession(session.id);
+      setCurrentSession(current);
+      if (current?.vm) {
+        setVMProfile(current.vm);
+      }
       setExecutions([]);
       toast.success('Session created', {
         description: `Now using ${session.name}`,
@@ -110,6 +130,9 @@ export default function Home() {
       await vmService.setCurrentSession(sessionId);
       const session = await vmService.getSession(sessionId);
       setCurrentSession(session);
+      if (session?.vm) {
+        setVMProfile(session.vm);
+      }
       const sessionExecs = await vmService.getExecutionsBySession(sessionId);
       setExecutions(sessionExecs);
       toast.success('Session switched', {
@@ -130,18 +153,6 @@ export default function Home() {
       toast.success('Session closed');
     } catch (error: any) {
       toast.error('Failed to close session', {
-        description: error.message,
-      });
-    }
-  };
-
-  const handleDeleteSession = async (sessionId: string) => {
-    try {
-      await vmService.deleteSession(sessionId);
-      await loadSessions();
-      toast.success('Session deleted');
-    } catch (error: any) {
-      toast.error('Failed to delete session', {
         description: error.message,
       });
     }
@@ -231,9 +242,9 @@ export default function Home() {
               {/* Left: Code editor */}
               <div className="flex flex-col gap-4">
                 <CodeEditor value={code} onChange={setCode} />
-                {currentSession && (
+                {currentSession && (currentSession.vm || vmProfile) && (
                   <VMInfo
-                    vm={vmService.getVMs()[0]}
+                    vm={currentSession.vm || vmProfile!}
                     session={currentSession}
                   />
                 )}
@@ -263,7 +274,6 @@ export default function Home() {
                 onCreateSession={handleCreateSession}
                 onSelectSession={handleSelectSession}
                 onCloseSession={handleCloseSession}
-                onDeleteSession={handleDeleteSession}
               />
             </div>
           </TabsContent>
@@ -287,7 +297,13 @@ export default function Home() {
 
           <TabsContent value="config" className="flex-1 mt-0">
             <div className="h-[calc(100vh-12rem)] overflow-auto px-4">
-              <VMConfig vm={vmProfile} onUpdate={setVMProfile} />
+              {vmProfile ? (
+                <VMConfig vm={vmProfile} onUpdate={setVMProfile} />
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-500">
+                  No template loaded yet
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

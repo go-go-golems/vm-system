@@ -35,3 +35,17 @@
 - Display: JetBrains Mono Bold for headers
 - Code: JetBrains Mono Regular for editor
 - UI: Inter for controls and labels
+
+## Runtime Integration
+
+- The UI is a real client of the daemon HTTP API:
+  - `GET/POST /api/v1/templates...`
+  - `GET/POST/DELETE /api/v1/sessions...`
+  - `GET/POST /api/v1/executions...`
+- Browser code does not execute user snippets; all execution happens in daemon-owned goja sessions.
+- In dev mode, Vite proxies `/api/v1` to `VM_SYSTEM_API_PROXY_TARGET` (default `http://127.0.0.1:3210`).
+- Optional client environment variables:
+  - `VITE_VM_SYSTEM_API_BASE_URL` (absolute or path prefix for API requests)
+  - `VITE_VM_SYSTEM_WORKSPACE_ID`
+  - `VITE_VM_SYSTEM_BASE_COMMIT_OID`
+  - `VITE_VM_SYSTEM_WORKTREE_PATH`

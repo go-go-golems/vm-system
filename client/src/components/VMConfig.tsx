@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Settings, Package, Layers } from 'lucide-react';
-import { BUILTIN_MODULES, BUILTIN_LIBRARIES, type VMProfile } from '@/lib/vmService';
+import { toast } from 'sonner';
+import { BUILTIN_MODULES, BUILTIN_LIBRARIES, type VMProfile, vmService } from '@/lib/vmService';
 
 interface VMConfigProps {
   vm: VMProfile;
@@ -21,33 +22,65 @@ export function VMConfig({ vm, onUpdate }: VMConfigProps) {
   const [selectedLibraries, setSelectedLibraries] = useState<Set<string>>(
     new Set(vm.libraries)
   );
+  const [updatingModules, setUpdatingModules] = useState(false);
+  const [updatingLibraries, setUpdatingLibraries] = useState(false);
 
-  const handleModuleToggle = (moduleId: string) => {
-    const newModules = new Set(selectedModules);
+  useEffect(() => {
+    setSelectedModules(new Set(vm.exposedModules));
+    setSelectedLibraries(new Set(vm.libraries));
+  }, [vm]);
+
+  const handleModuleToggle = async (moduleId: string) => {
+    const previousModules = new Set(selectedModules);
+    const newModules = new Set(previousModules);
     if (newModules.has(moduleId)) {
       newModules.delete(moduleId);
     } else {
       newModules.add(moduleId);
     }
     setSelectedModules(newModules);
-    onUpdate({
-      ...vm,
-      exposedModules: Array.from(newModules),
-    });
+    setUpdatingModules(true);
+
+    try {
+      const updated = await vmService.updateTemplateModules(vm.id, Array.from(newModules));
+      onUpdate(updated);
+      setSelectedModules(new Set(updated.exposedModules));
+      toast.success('Template modules updated');
+    } catch (error: any) {
+      setSelectedModules(previousModules);
+      toast.error('Failed to update modules', {
+        description: error.message,
+      });
+    } finally {
+      setUpdatingModules(false);
+    }
   };
 
-  const handleLibraryToggle = (libraryId: string) => {
-    const newLibraries = new Set(selectedLibraries);
+  const handleLibraryToggle = async (libraryId: string) => {
+    const previousLibraries = new Set(selectedLibraries);
+    const newLibraries = new Set(previousLibraries);
     if (newLibraries.has(libraryId)) {
       newLibraries.delete(libraryId);
     } else {
       newLibraries.add(libraryId);
     }
     setSelectedLibraries(newLibraries);
-    onUpdate({
-      ...vm,
-      libraries: Array.from(newLibraries),
-    });
+    setUpdatingLibraries(true);
+
+    try {
+      const updated = await vmService.updateTemplateLibraries(vm.id, Array.from(newLibraries));
+      onUpdate(updated);
+      setSelectedLibraries(new Set(updated.libraries));
+      toast.success('Template libraries updated');
+      toast.info('Existing sessions keep current runtime state. Create a new session to pick up changes.');
+    } catch (error: any) {
+      setSelectedLibraries(previousLibraries);
+      toast.error('Failed to update libraries', {
+        description: error.message,
+      });
+    } finally {
+      setUpdatingLibraries(false);
+    }
   };
 
   return (
@@ -102,6 +135,7 @@ export function VMConfig({ vm, onUpdate }: VMConfigProps) {
                     id={`module-${module.id}`}
                     checked={selectedModules.has(module.id)}
                     onCheckedChange={() => handleModuleToggle(module.id)}
+                    disabled={updatingModules}
                     className="mt-1"
                   />
                   <div className="flex-1">
@@ -158,6 +192,7 @@ export function VMConfig({ vm, onUpdate }: VMConfigProps) {
                     id={`library-${library.id}`}
                     checked={selectedLibraries.has(library.id)}
                     onCheckedChange={() => handleLibraryToggle(library.id)}
+                    disabled={updatingLibraries}
                     className="mt-1"
                   />
                   <div className="flex-1">

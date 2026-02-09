@@ -108,8 +108,43 @@ export function ExecutionLogViewer({ executions, onSelectExecution }: ExecutionL
         return <XCircle className="w-3 h-3 text-red-400" />;
       case 'input_echo':
         return <FileCode className="w-3 h-3 text-slate-400" />;
+      case 'stdout':
+        return <Terminal className="w-3 h-3 text-slate-300" />;
+      case 'stderr':
+        return <AlertCircle className="w-3 h-3 text-amber-400" />;
+      case 'system':
+        return <AlertCircle className="w-3 h-3 text-blue-400" />;
       default:
         return <Terminal className="w-3 h-3 text-slate-400" />;
+    }
+  };
+
+  const formatEventPayload = (event: ExecutionEvent) => {
+    if (typeof event.payload === 'string') {
+      return event.payload;
+    }
+    if (event.payload?.text) {
+      return event.payload.text;
+    }
+    if (event.payload?.message) {
+      return event.payload.message;
+    }
+    if (event.type === 'value' && event.payload?.preview) {
+      return event.payload.preview;
+    }
+    return JSON.stringify(event.payload, null, 2);
+  };
+
+  const formatKind = (kind: Execution['kind']) => {
+    switch (kind) {
+      case 'repl':
+        return 'REPL';
+      case 'run-file':
+        return 'Run File';
+      case 'startup':
+        return 'Startup';
+      default:
+        return kind;
     }
   };
 
@@ -211,7 +246,7 @@ export function ExecutionLogViewer({ executions, onSelectExecution }: ExecutionL
                             {execution.status}
                           </span>
                           <span className="text-xs text-slate-500">
-                            {execution.kind === 'repl' ? 'REPL' : 'Run File'}
+                            {formatKind(execution.kind)}
                           </span>
                           <span className="text-xs text-slate-600">•</span>
                           <span className="text-xs text-slate-500">
@@ -300,10 +335,7 @@ export function ExecutionLogViewer({ executions, onSelectExecution }: ExecutionL
                               </div>
 
                               <pre className="text-xs text-slate-400 font-mono overflow-x-auto">
-                                {event.type === 'console' && event.payload.text}
-                                {event.type === 'value' && event.payload.preview}
-                                {event.type === 'exception' && event.payload.message}
-                                {event.type === 'input_echo' && event.payload.text}
+                                {formatEventPayload(event)}
                               </pre>
                             </div>
                           </div>

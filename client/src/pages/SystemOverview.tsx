@@ -529,16 +529,15 @@ export default function SystemOverview() {
                 <div>
                   <h3 className="text-xl font-semibold text-slate-200 mb-3">This Web Interface</h3>
                   <p className="leading-relaxed mb-4">
-                    This web UI is a <strong className="text-blue-400">demonstration interface</strong>{' '}
-                    that simulates the VM system's behavior in the browser. It implements a mock
-                    backend using browser-based JavaScript execution to showcase the user experience
-                    and API design.
+                    This web UI is a <strong className="text-blue-400">real daemon client</strong>{' '}
+                    that calls the vm-system REST API (`/api/v1/templates`, `/api/v1/sessions`,
+                    `/api/v1/executions`) for state and execution behavior.
                   </p>
                   <div className="p-4 bg-blue-950/30 border border-blue-800/50 rounded-lg">
                     <p className="text-sm text-blue-300 leading-relaxed">
-                      <strong>Note:</strong> The actual VM system is implemented in Go with goja and
-                      integrates with a real dual-storage filesystem. This web interface provides an
-                      interactive way to explore the concepts and test JavaScript code execution.
+                      <strong>Note:</strong> Runtime state is owned by the long-lived vm-system daemon.
+                      Closing the daemon clears in-memory runtime sessions even though persisted records
+                      remain in SQLite.
                     </p>
                   </div>
                 </div>
