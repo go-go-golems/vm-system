@@ -289,6 +289,5 @@ curl -sS http://127.0.0.1:3210/api/v1/runtime/summary
 ## See Also
 
 - `vm-system help getting-started`
-- `vm-system help how-to-use`
 - `vm-system help cli-command-reference`
 - `vm-system help templates-and-sessions`

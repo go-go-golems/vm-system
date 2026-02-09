@@ -46,12 +46,20 @@ GOWORK=off go build -o vm-system ./cmd/vm-system
 ./vm-system --server-url http://127.0.0.1:3210 session close <session-id>
 ```
 
-## Developer Guide
+## Developer Documentation
 
-For a full onboarding and contribution guide (first VM run, architecture deep dive,
-API contracts, test coverage, and contribution workflow), see:
+All documentation lives in `pkg/doc/` as Glazed help pages, accessible via `vm-system help`:
 
-- `docs/getting-started-from-first-vm-to-contributor-guide.md`
+```bash
+vm-system help                        # List all topics
+vm-system help getting-started        # First run + daily workflows
+vm-system help architecture           # Package layout and design
+vm-system help templates-and-sessions  # Core domain concepts
+vm-system help api-reference          # REST endpoint contracts
+vm-system help cli-command-reference   # Every CLI command with flags
+vm-system help examples               # Runnable recipes
+vm-system help contributing            # How to contribute + testing
+```
 
 ## API Endpoints (Current)
 
@@ -77,10 +85,10 @@ API contracts, test coverage, and contribution workflow), see:
 GOWORK=off go test ./...
 
 # full shell integration suite
-bash ./test-all.sh
+bash ./test/scripts/test-all.sh
 
 # or run individually
-bash ./smoke-test.sh
-bash ./test-e2e.sh
-bash ./test-library-matrix.sh
+bash ./test/scripts/smoke-test.sh
+bash ./test/scripts/test-e2e.sh
+bash ./test/scripts/test-library-matrix.sh
 ```

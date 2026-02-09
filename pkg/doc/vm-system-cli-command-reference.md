@@ -19,9 +19,45 @@ ShowPerDefault: true
 SectionType: GeneralTopic
 ---
 
-This reference covers every command in the vm-system CLI. All client-mode
-commands communicate with a running daemon at the address specified by
-`--server-url` (default `http://127.0.0.1:3210`).
+## Command tree
+
+```
+vm-system
+├── serve                        Start the daemon host
+├── template                     Manage templates (runtime profiles)
+│   ├── create                   Create a new template
+│   ├── list                     List all templates
+│   ├── get                      Get template detail with settings
+│   ├── delete                   Delete a template (cascades)
+│   ├── add-startup              Add a startup file to a template
+│   ├── list-startup             List startup files
+│   ├── add-capability           Add capability metadata
+│   ├── list-capabilities        List capabilities
+│   ├── add-module               Add a native module
+│   ├── remove-module            Remove a native module
+│   ├── list-modules             List configured modules
+│   ├── add-library              Add a third-party library
+│   ├── remove-library           Remove a library
+│   ├── list-libraries           List configured libraries
+│   ├── list-available-modules   Show configurable module catalog
+│   └── list-available-libraries Show downloadable library catalog
+├── session                      Manage VM sessions (live runtimes)
+│   ├── create                   Create session from template
+│   ├── list                     List sessions (optionally by status)
+│   ├── get                      Get session detail
+│   └── close                    Close session (discard runtime)
+├── exec                         Execute code in sessions
+│   ├── repl                     Run a REPL snippet
+│   ├── run-file                 Run a file from the worktree
+│   ├── list                     List executions for a session
+│   ├── get                      Get execution detail
+│   └── events                   Get execution events
+├── ops                          Operational commands
+│   ├── health                   Daemon health check
+│   └── runtime-summary          Active runtime state
+└── libs                         Library cache management
+    └── download                 Download libraries to cache
+```
 
 ## Global flags
 
@@ -31,7 +67,7 @@ commands communicate with a running daemon at the address specified by
 | `--server-url` | string | `http://127.0.0.1:3210` | Daemon base URL (used by client commands) |
 | `--log-level` | string | `warn` | Logging level (debug, info, warn, error) |
 
-## serve — Start the daemon
+## serve
 
 ```bash
 vm-system serve [--listen ADDRESS]
@@ -41,10 +77,9 @@ vm-system serve [--listen ADDRESS]
 |------|------|---------|-------------|
 | `--listen` | string | `127.0.0.1:3210` | HTTP listen address |
 
-Starts the daemon process in the foreground. Uses the `--db` global flag for
-SQLite storage. Stop with Ctrl+C for graceful shutdown.
+Starts the daemon in the foreground. Uses `--db` for SQLite storage.
 
-## template — Manage templates
+## template
 
 ### template create
 
@@ -57,37 +92,19 @@ vm-system template create --name NAME [--engine ENGINE]
 | `--name` | string | (required) | Template name |
 | `--engine` | string | `goja` | Engine type |
 
-Creates a template with default settings (limits, resolver, runtime config).
-
-### template list
+### template list / get / delete
 
 ```bash
 vm-system template list
-```
-
-Lists all templates with ID, name, engine, and active status.
-
-### template get
-
-```bash
 vm-system template get TEMPLATE_ID
-```
-
-Shows full template detail: settings JSON, capabilities, startup files, modules,
-and libraries.
-
-### template delete
-
-```bash
 vm-system template delete TEMPLATE_ID
 ```
 
-Deletes a template and all associated settings, capabilities, and startup files.
-
-### template add-startup
+### template add-startup / list-startup
 
 ```bash
 vm-system template add-startup TEMPLATE_ID --path PATH --order N [--mode MODE]
+vm-system template list-startup TEMPLATE_ID
 ```
 
 | Flag | Type | Default | Description |
@@ -96,16 +113,11 @@ vm-system template add-startup TEMPLATE_ID --path PATH --order N [--mode MODE]
 | `--order` | int | 0 | Execution order (ascending) |
 | `--mode` | string | `eval` | Execution mode (`eval` only currently) |
 
-### template list-startup
-
-```bash
-vm-system template list-startup TEMPLATE_ID
-```
-
-### template add-capability
+### template add-capability / list-capabilities
 
 ```bash
 vm-system template add-capability TEMPLATE_ID --name NAME [--kind KIND] [--config JSON] [--enabled]
+vm-system template list-capabilities TEMPLATE_ID
 ```
 
 | Flag | Type | Default | Description |
@@ -115,118 +127,53 @@ vm-system template add-capability TEMPLATE_ID --name NAME [--kind KIND] [--confi
 | `--config` | string | `{}` | Config JSON |
 | `--enabled` | bool | `true` | Enable the capability |
 
-### template list-capabilities
-
-```bash
-vm-system template list-capabilities TEMPLATE_ID
-```
-
-### template add-module
+### template add-module / remove-module / list-modules
 
 ```bash
 vm-system template add-module TEMPLATE_ID --name NAME
-```
-
-Adds a native module from the configurable catalog. Built-in JS globals cannot
-be added (returns `MODULE_NOT_ALLOWED`).
-
-### template remove-module
-
-```bash
 vm-system template remove-module TEMPLATE_ID --name NAME
-```
-
-### template list-modules
-
-```bash
 vm-system template list-modules TEMPLATE_ID
 ```
 
-### template add-library
+Only modules from the configurable catalog are allowed (`MODULE_NOT_ALLOWED`
+for built-ins like JSON, Math).
+
+### template add-library / remove-library / list-libraries
 
 ```bash
 vm-system template add-library TEMPLATE_ID --name NAME
-```
-
-Adds a third-party library to the template.
-
-### template remove-library
-
-```bash
 vm-system template remove-library TEMPLATE_ID --name NAME
-```
-
-### template list-libraries
-
-```bash
 vm-system template list-libraries TEMPLATE_ID
 ```
 
-### template list-available-modules
+### template list-available-modules / list-available-libraries
 
 ```bash
-vm-system template list-available-modules
+vm-system template list-available-modules     # database, exec, fs
+vm-system template list-available-libraries   # lodash, moment, axios, ramda, dayjs, zustand
 ```
 
-Shows the catalog of native modules that can be configured per template:
-`database`, `exec`, `fs`.
-
-### template list-available-libraries
-
-```bash
-vm-system template list-available-libraries
-```
-
-Shows the built-in library catalog: lodash, moment, axios, ramda, dayjs, zustand.
-
-## session — Manage sessions
+## session
 
 ### session create
 
 ```bash
 vm-system session create \
-  --template-id ID \
-  --workspace-id ID \
-  --base-commit OID \
-  --worktree-path /absolute/path
+  --template-id ID --workspace-id ID \
+  --base-commit OID --worktree-path /absolute/path
 ```
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--template-id` | string | Template ID (required) |
-| `--workspace-id` | string | Logical workspace identifier (required) |
-| `--base-commit` | string | Git commit OID (required) |
-| `--worktree-path` | string | Absolute worktree directory (required, must exist) |
+All four flags required. Worktree directory must exist.
 
-Creates a session, allocates goja runtime, loads libraries and startup files.
-
-### session list
+### session list / get / close
 
 ```bash
-vm-system session list [--status STATUS]
-```
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--status` | string | (all) | Filter: starting, ready, crashed, closed |
-
-### session get
-
-```bash
+vm-system session list [--status STATUS]    # starting, ready, crashed, closed
 vm-system session get SESSION_ID
-```
-
-Shows full session detail including timestamps, status, and last error.
-
-### session close
-
-```bash
 vm-system session close SESSION_ID
 ```
 
-Discards the in-memory runtime and marks the session closed.
-
-## exec — Execute code
+## exec
 
 ### exec repl
 
@@ -234,115 +181,34 @@ Discards the in-memory runtime and marks the session closed.
 vm-system exec repl SESSION_ID 'JAVASCRIPT_CODE'
 ```
 
-Executes a JavaScript snippet in the session runtime. Returns the execution
-record with captured events.
-
 ### exec run-file
 
 ```bash
 vm-system exec run-file SESSION_ID FILE_PATH
 ```
 
-Executes a file from the session worktree. Path must be relative and within the
-worktree boundary.
+Path must be relative to worktree; no `../` traversal.
 
-### exec list
-
-```bash
-vm-system exec list SESSION_ID [--limit N]
-```
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--limit` | int | 50 | Maximum executions to return |
-
-### exec get
+### exec list / get / events
 
 ```bash
+vm-system exec list SESSION_ID [--limit N]          # default 50
 vm-system exec get EXECUTION_ID
+vm-system exec events EXECUTION_ID [--after-seq N]  # default 0
 ```
 
-Shows execution detail: kind, status, input/path, result, timing.
-
-### exec events
+## ops
 
 ```bash
-vm-system exec events EXECUTION_ID [--after-seq N]
+vm-system ops health              # daemon health (JSON)
+vm-system ops runtime-summary     # active session count and IDs (JSON)
 ```
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--after-seq` | int | 0 | Return events after this sequence number |
-
-## ops — Operational commands
-
-### ops health
+## libs
 
 ```bash
-vm-system ops health
+vm-system libs download [--cache-dir DIR]   # default .vm-cache/libraries
 ```
-
-Returns daemon health status as JSON.
-
-### ops runtime-summary
-
-```bash
-vm-system ops runtime-summary
-```
-
-Returns active session count and IDs as JSON.
-
-## libs — Library management
-
-### libs download
-
-```bash
-vm-system libs download [--cache-dir DIR]
-```
-
-Downloads libraries from the built-in catalog into the local cache
-(default `.vm-cache/libraries`).
-
-## Common patterns
-
-### Full loop from scratch
-
-```bash
-./vm-system serve --db /tmp/demo.db --listen 127.0.0.1:3210 &
-TEMPLATE=$(./vm-system template create --name demo | grep -oP 'ID: \K[^ )]+')
-./vm-system template add-startup "$TEMPLATE" --path init.js --order 10 --mode eval
-SESSION=$(./vm-system session create --template-id "$TEMPLATE" \
-  --workspace-id ws --base-commit dead --worktree-path /tmp/demo-ws \
-  | awk '/Created session:/ {print $3}')
-./vm-system exec repl "$SESSION" '1+1'
-./vm-system session close "$SESSION"
-```
-
-### Inspect execution history
-
-```bash
-vm-system exec list <session-id> --limit 20
-vm-system exec get <execution-id>
-vm-system exec events <execution-id> --after-seq 0
-```
-
-### Direct API verification
-
-```bash
-curl -sS http://127.0.0.1:3210/api/v1/health
-curl -sS http://127.0.0.1:3210/api/v1/runtime/summary
-curl -sS http://127.0.0.1:3210/api/v1/templates
-curl -sS "http://127.0.0.1:3210/api/v1/sessions?status=ready"
-```
-
-## Troubleshooting
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| All client commands fail with connection error | Daemon not running | Start `vm-system serve` first |
-| Wrong daemon contacted | `--server-url` mismatch | Pass explicit `--server-url http://host:port` |
-| `MODULE_NOT_ALLOWED` on add-module | Tried to add a built-in (JSON, Math) | Only catalog modules are configurable; check `list-available-modules` |
-| Template ID not recognized | Copy-paste error or template was deleted | Verify with `template list` |
 
 ## See Also
 

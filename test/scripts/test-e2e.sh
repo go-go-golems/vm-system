@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=test/lib/e2e-common.sh
-source "${SCRIPT_DIR}/test/lib/e2e-common.sh"
+# shellcheck source=../lib/e2e-common.sh
+source "${SCRIPT_DIR}/../lib/e2e-common.sh"
 
 echo "=== VM System End-to-End Test (Daemon-First) ==="
 echo ""
