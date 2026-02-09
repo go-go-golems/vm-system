@@ -5,7 +5,7 @@ Status: active
 Topics:
     - backend
     - frontend
-    - architecture
+    - infrastructure
 DocType: reference
 Intent: long-term
 Owners: []
@@ -18,7 +18,7 @@ ExternalSources: []
 Summary: >
     Implementation diary for VM-017 with task-by-task progress, commits,
     failures, and verification commands.
-LastUpdated: 2026-02-09T00:18:56-05:00
+LastUpdated: 2026-02-09T00:20:37-05:00
 WhatFor: Preserve a strict execution trail while implementing VM-017 in incremental commits.
 WhenToUse: Use while reviewing or continuing VM-017 work.
 ---
@@ -203,7 +203,7 @@ This step focused on consistency, not new runtime capability: it updated CLI wor
 
 **Inferred user intent:** Ensure consumers do not see contradictory language or contract behavior after backend changes.
 
-**Commit (code):** pending (filled after Task 3 commit)
+**Commit (code):** c16f740 — "chore(vm-017): align API and CLI module contracts"
 
 ### What I did
 
@@ -253,3 +253,79 @@ This step focused on consistency, not new runtime capability: it updated CLI wor
 ### Technical details
 
 - New contract assertion: `POST /api/v1/templates/:id/modules` with `{ \"name\": \"json\" }` -> `422 MODULE_NOT_ALLOWED`.
+
+## Step 4: Align UI module catalog/presets and validate frontend build
+
+This step removed the last user-facing mismatch by updating vm-system-ui to treat template modules as native modules only. Built-in JavaScript globals are now presented as always available rather than checkbox-configurable template options.
+
+I adjusted both data definitions and screen copy so defaults, settings screens, and reference docs all reflect the same behavior now enforced in backend.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Finish UI alignment as the final task, then validate with frontend checks.
+
+**Inferred user intent:** Ensure users cannot be misled by UI terminology after backend policy changes.
+
+**Commit (code):** afd6e3e (vm-system-ui repo) — "chore(vm-017): align UI module semantics to native modules"
+
+### What I did
+
+- Updated module catalog and template presets in:
+  - `vm-system-ui/client/src/lib/types.ts`
+  - configurable modules now: `database`, `exec`, `fs`.
+  - default template presets no longer try to configure built-in module IDs.
+- Updated template detail UX copy in:
+  - `vm-system-ui/client/src/pages/TemplateDetail.tsx`
+  - labels/toasts now explicitly refer to \"native modules\".
+  - added note that built-ins (JSON/Math/etc.) are always available.
+- Updated reference docs page in:
+  - `vm-system-ui/client/src/pages/Reference.tsx`
+  - object model/API descriptions updated to native module semantics.
+  - runtime note now distinguishes built-ins vs template-configured native modules.
+- Validation:
+  - `pnpm check` passed.
+  - `pnpm build` passed (with existing analytics/chunk-size warnings only).
+
+### Why
+
+- Without UI alignment, users would still see built-in modules as template toggles and infer incorrect behavior.
+
+### What worked
+
+- Frontend typecheck/build passed after updates.
+
+### What didn't work
+
+- N/A; only non-blocking build warnings were emitted for existing analytics env placeholders and chunk size.
+
+### What I learned
+
+- Aligning defaults (`DEFAULT_TEMPLATE_SPECS`) was critical to avoid silent bootstrap regressions when backend rejects built-in module IDs.
+
+### What was tricky to build
+
+- The tricky part was ensuring language, presets, and module catalogs were all updated together so no stale UX path remained.
+
+### What warrants a second pair of eyes
+
+- Confirm whether the UI should fetch native module catalog dynamically from backend in a follow-up, rather than relying on static constants.
+
+### What should be done in the future
+
+- Add a backend endpoint for configurable native module catalog if live sync is required.
+
+### Code review instructions
+
+- Check `client/src/lib/types.ts` for module list and default presets.
+- Check `client/src/pages/TemplateDetail.tsx` for user-facing semantics and note text.
+- Check `client/src/pages/Reference.tsx` for API/object-model phrasing consistency.
+- Re-run:
+  - `pnpm check`
+  - `pnpm build`
+
+### Technical details
+
+- Build warnings observed (non-blocking):
+  - missing `%VITE_ANALYTICS_ENDPOINT%` and `%VITE_ANALYTICS_WEBSITE_ID%` placeholders.

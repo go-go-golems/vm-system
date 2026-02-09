@@ -37,3 +37,14 @@ Aligned API/CLI contracts and catalog language with native-module-only configura
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — CLI module catalog wording now reflects native module policy
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_error_contracts_integration_test.go — API error contract coverage for MODULE_NOT_ALLOWED
 
+
+## 2026-02-09
+
+Aligned vm-system-ui module catalog, template presets, and reference copy to native-module-only semantics; frontend typecheck/build pass after updates.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/types.ts — Native module catalog and default template presets updated
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/Reference.tsx — Reference page API/object model semantics updated
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/TemplateDetail.tsx — Template detail UI text and controls updated for native module semantics
+

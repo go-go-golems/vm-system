@@ -5,7 +5,7 @@ Status: active
 Topics:
     - backend
     - frontend
-    - architecture
+    - infrastructure
 DocType: index
 Intent: long-term
 Owners: []
@@ -48,4 +48,4 @@ Current status: **active**
 
 - backend
 - frontend
-- architecture
+- infrastructure

@@ -5,7 +5,7 @@ Status: active
 Topics:
     - backend
     - frontend
-    - architecture
+    - infrastructure
 DocType: design
 Intent: long-term
 Owners: []
