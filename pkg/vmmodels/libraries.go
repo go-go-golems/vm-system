@@ -71,81 +71,44 @@ func BuiltinLibraries() []Library {
 	}
 }
 
-// ExposedModule represents a host module exposed to the VM
+// ExposedModule represents a configurable host module exposed to the VM runtime.
 type ExposedModule struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
-	Kind        string            `json:"kind"` // "builtin", "host", "custom"
+	Kind        string            `json:"kind"` // "native", "host", "custom"
 	Description string            `json:"description"`
 	Functions   []string          `json:"functions"` // List of exposed functions
 	Config      map[string]string `json:"config"`
 }
 
-// BuiltinModules returns a list of built-in modules that can be exposed to VMs
+// BuiltinModules returns the catalog of template-configurable native modules.
+//
+// Note: JavaScript language built-ins (JSON, Math, Date, etc.) are always
+// available and are intentionally not configurable per template.
 func BuiltinModules() []ExposedModule {
 	return []ExposedModule{
 		{
-			ID:          "console",
-			Name:        "console",
-			Kind:        "builtin",
-			Description: "Console logging and debugging",
-			Functions:   []string{"log", "warn", "error", "info", "debug"},
+			ID:          "database",
+			Name:        "database",
+			Kind:        "native",
+			Description: "SQLite database access from JavaScript via go-go-goja native module",
+			Functions:   []string{"configure", "query", "exec", "close"},
 			Config:      map[string]string{},
 		},
 		{
-			ID:          "math",
-			Name:        "Math",
-			Kind:        "builtin",
-			Description: "Mathematical functions and constants",
-			Functions:   []string{"abs", "ceil", "floor", "round", "sqrt", "pow", "random"},
+			ID:          "exec",
+			Name:        "exec",
+			Kind:        "native",
+			Description: "Run external commands from JavaScript",
+			Functions:   []string{"run"},
 			Config:      map[string]string{},
 		},
 		{
-			ID:          "json",
-			Name:        "JSON",
-			Kind:        "builtin",
-			Description: "JSON parsing and stringification",
-			Functions:   []string{"parse", "stringify"},
-			Config:      map[string]string{},
-		},
-		{
-			ID:          "date",
-			Name:        "Date",
-			Kind:        "builtin",
-			Description: "Date and time manipulation",
-			Functions:   []string{"now", "parse", "UTC"},
-			Config:      map[string]string{},
-		},
-		{
-			ID:          "array",
-			Name:        "Array",
-			Kind:        "builtin",
-			Description: "Array manipulation methods",
-			Functions:   []string{"map", "filter", "reduce", "forEach", "find", "some", "every"},
-			Config:      map[string]string{},
-		},
-		{
-			ID:          "string",
-			Name:        "String",
-			Kind:        "builtin",
-			Description: "String manipulation methods",
-			Functions:   []string{"split", "join", "slice", "substring", "indexOf", "replace"},
-			Config:      map[string]string{},
-		},
-		{
-			ID:          "object",
-			Name:        "Object",
-			Kind:        "builtin",
-			Description: "Object manipulation methods",
-			Functions:   []string{"keys", "values", "entries", "assign", "freeze"},
-			Config:      map[string]string{},
-		},
-		{
-			ID:          "promise",
-			Name:        "Promise",
-			Kind:        "builtin",
-			Description: "Asynchronous programming with promises",
-			Functions:   []string{"resolve", "reject", "all", "race"},
+			ID:          "fs",
+			Name:        "fs",
+			Kind:        "native",
+			Description: "Read/write files from JavaScript via native module APIs",
+			Functions:   []string{"readFileSync", "writeFileSync"},
 			Config:      map[string]string{},
 		},
 	}

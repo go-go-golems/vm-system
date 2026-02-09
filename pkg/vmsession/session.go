@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	"github.com/go-go-golems/vm-system/pkg/vmmodules"
 	"github.com/go-go-golems/vm-system/pkg/vmpath"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
 )
@@ -101,6 +102,10 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 		var runtimeConfig vmmodels.RuntimeConfig
 		if err := json.Unmarshal(settings.Runtime, &runtimeConfig); err != nil {
 			return nil, fmt.Errorf("failed to parse runtime config: %w", err)
+		}
+
+		if err := vmmodules.EnableConfiguredModules(runtime, vm.ExposedModules); err != nil {
+			return nil, fmt.Errorf("failed to enable configured modules: %w", err)
 		}
 
 		// Set up console if enabled

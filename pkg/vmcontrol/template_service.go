@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
+	"github.com/go-go-golems/vm-system/pkg/vmmodules"
 )
 
 // TemplateService owns template CRUD and policy metadata operations.
@@ -123,6 +124,11 @@ func (s *TemplateService) ListModules(_ context.Context, templateID string) ([]s
 }
 
 func (s *TemplateService) AddModule(_ context.Context, templateID, moduleName string) error {
+	moduleName, err := vmmodules.ValidateConfiguredModuleName(moduleName)
+	if err != nil {
+		return err
+	}
+
 	template, err := s.store.GetVM(templateID)
 	if err != nil {
 		return err

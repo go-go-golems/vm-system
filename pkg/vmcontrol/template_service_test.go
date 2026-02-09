@@ -58,6 +58,53 @@ func TestTemplateServiceCreateMarshalsDefaultConfigJSON(t *testing.T) {
 	}
 }
 
+func TestTemplateServiceAddModuleRejectsJavaScriptBuiltin(t *testing.T) {
+	store := &templateStoreStub{
+		vm: &vmmodels.VM{
+			ID:             "tpl-1",
+			ExposedModules: []string{},
+		},
+	}
+	service := NewTemplateService(store)
+
+	err := service.AddModule(context.Background(), "tpl-1", "json")
+	if !errors.Is(err, vmmodels.ErrModuleNotAllowed) {
+		t.Fatalf("expected ErrModuleNotAllowed, got %v", err)
+	}
+}
+
+func TestTemplateServiceAddModuleRejectsUnknownNativeModule(t *testing.T) {
+	store := &templateStoreStub{
+		vm: &vmmodels.VM{
+			ID:             "tpl-1",
+			ExposedModules: []string{},
+		},
+	}
+	service := NewTemplateService(store)
+
+	err := service.AddModule(context.Background(), "tpl-1", "not-a-real-module")
+	if !errors.Is(err, vmmodels.ErrModuleNotAllowed) {
+		t.Fatalf("expected ErrModuleNotAllowed, got %v", err)
+	}
+}
+
+func TestTemplateServiceAddModuleAcceptsRegisteredNativeModule(t *testing.T) {
+	store := &templateStoreStub{
+		vm: &vmmodels.VM{
+			ID:             "tpl-1",
+			ExposedModules: []string{},
+		},
+	}
+	service := NewTemplateService(store)
+
+	if err := service.AddModule(context.Background(), "tpl-1", "fs"); err != nil {
+		t.Fatalf("expected fs module to be accepted, got %v", err)
+	}
+	if len(store.vm.ExposedModules) != 1 || store.vm.ExposedModules[0] != "fs" {
+		t.Fatalf("expected modules [fs], got %#v", store.vm.ExposedModules)
+	}
+}
+
 type templateStoreStub struct {
 	vm       *vmmodels.VM
 	settings *vmmodels.VMSettings
@@ -69,7 +116,10 @@ func (s *templateStoreStub) CreateVM(vm *vmmodels.VM) error {
 }
 
 func (s *templateStoreStub) GetVM(id string) (*vmmodels.VM, error) {
-	return nil, errors.New("not implemented")
+	if s.vm == nil || s.vm.ID != id {
+		return nil, vmmodels.ErrVMNotFound
+	}
+	return s.vm, nil
 }
 
 func (s *templateStoreStub) ListVMs() ([]*vmmodels.VM, error) {

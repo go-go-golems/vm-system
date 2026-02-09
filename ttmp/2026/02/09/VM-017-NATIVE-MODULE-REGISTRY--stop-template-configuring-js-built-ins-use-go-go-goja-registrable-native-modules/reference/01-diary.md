@@ -18,7 +18,7 @@ ExternalSources: []
 Summary: >
     Implementation diary for VM-017 with task-by-task progress, commits,
     failures, and verification commands.
-LastUpdated: 2026-02-09T00:09:43-05:00
+LastUpdated: 2026-02-09T00:16:41-05:00
 WhatFor: Preserve a strict execution trail while implementing VM-017 in incremental commits.
 WhenToUse: Use while reviewing or continuing VM-017 work.
 ---
@@ -45,7 +45,7 @@ Create a new ticket for that, and add a detailed analysis guide, then create tas
 
 **Inferred user intent:** Resolve module-policy inconsistency across runtime/API/UI and ensure the implementation process is auditable and disciplined.
 
-**Commit (code):** pending (to be filled when this step is committed)
+**Commit (code):** a64aead — "docs(vm-017): create ticket, analysis guide, tasks, and diary scaffold"
 
 ### What I did
 
@@ -96,3 +96,95 @@ Create a new ticket for that, and add a detailed analysis guide, then create tas
 
 - Ticket path:
   - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/09/VM-017-NATIVE-MODULE-REGISTRY--stop-template-configuring-js-built-ins-use-go-go-goja-registrable-native-modules`
+
+## Step 2: Implement backend policy and runtime integration for native modules
+
+This step implemented the behavior change itself: template modules now represent only go-go-goja registrable native modules, while JavaScript built-ins are explicitly not configurable. Runtime session startup now installs configured native modules through go-go-goja module loaders and `require()`.
+
+I also added/updated tests to prove the new contract: `json` is rejected as template module config, `fs` is accepted, and `require(\"fs\")` works in execution when configured.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Implement backend behavior first, with tests, and commit as its own task slice.
+
+**Inferred user intent:** Make runtime/API behavior truthful and enforceable before touching UI polish.
+
+**Commit (code):** pending (filled after backend commit)
+
+### What I did
+
+- Added `pkg/vmmodules/registry.go`:
+  - module-name normalization,
+  - built-in JS module deny-list (`json`, `math`, etc.),
+  - validation against `go-go-goja/modules` registry,
+  - per-session runtime module installation using `goja_nodejs/require`.
+- Updated `pkg/vmcontrol/template_service.go`:
+  - `AddModule` now validates module names through the registry helper.
+- Updated `pkg/vmsession/session.go`:
+  - session runtime now enables configured native modules at startup.
+- Updated `pkg/vmtransport/http/server.go`:
+  - `ErrModuleNotAllowed` now maps to `MODULE_NOT_ALLOWED` (422).
+- Updated module catalog in `pkg/vmmodels/libraries.go`:
+  - only native configurable modules are listed (`database`, `exec`, `fs`).
+- Added/updated tests:
+  - `pkg/vmcontrol/template_service_test.go` (allow/deny validation tests),
+  - `pkg/vmtransport/http/server_templates_integration_test.go` (reject `json`, accept/list `fs`),
+  - `pkg/vmtransport/http/server_native_modules_integration_test.go` (runtime `require(\"fs\")` + JSON builtin semantics).
+- Added dependencies and tidy:
+  - `github.com/go-go-golems/go-go-goja`,
+  - updated `go.mod` / `go.sum`.
+
+### Why
+
+- The policy needed enforceable backend semantics before API/CLI/UI could be considered aligned.
+
+### What worked
+
+- `GOWORK=off go test ./... -count=1` passed in `vm-system/vm-system`.
+- New integration test confirmed `require(\"fs\")` behavior only when module is configured.
+
+### What didn't work
+
+- Initial test runs failed due unrelated parent `go.work` problems and missing module dependencies.
+- Exact failures:
+  - parent workspace loading errors (`go.work`),
+  - missing module requirements / go.sum entries,
+  - attempted import of `glazehelp` module not present in `go-go-goja v0.0.4`.
+- Resolution:
+  - run tests with `GOWORK=off`,
+  - add required module dependency and run `go mod tidy`,
+  - remove unsupported `glazehelp` reference and keep registry-backed set to available modules.
+
+### What I learned
+
+- In this environment, explicit `GOWORK=off` is required to isolate validation from a broken parent workspace.
+- go-go-goja module availability is version-dependent; catalog must match actually registered modules.
+
+### What was tricky to build
+
+- The hard part was integrating new registry semantics without overhauling the existing template model.
+- The chosen approach keeps `exposed_modules` as storage but changes meaning to \"native configurable modules only.\"
+
+### What warrants a second pair of eyes
+
+- Whether fail-fast on existing templates containing built-in module names should be replaced by an auto-clean migration.
+
+### What should be done in the future
+
+- Add a one-time template cleanup command/migration if production data includes legacy built-in module entries.
+
+### Code review instructions
+
+- Start with `pkg/vmmodules/registry.go`.
+- Then review call sites in `pkg/vmcontrol/template_service.go` and `pkg/vmsession/session.go`.
+- Validate error mapping in `pkg/vmtransport/http/server.go`.
+- Run and inspect:
+  - `GOWORK=off go test ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- New runtime module behavior test:
+  - `pkg/vmtransport/http/server_native_modules_integration_test.go`

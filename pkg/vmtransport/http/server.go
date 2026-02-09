@@ -696,6 +696,8 @@ func writeCoreError(w stdhttp.ResponseWriter, err error, details interface{}) {
 		writeError(w, stdhttp.StatusUnprocessableEntity, "OUTPUT_LIMIT_EXCEEDED", "Execution exceeded configured output/event limits", details)
 	case errors.Is(err, vmmodels.ErrStartupModeUnsupported):
 		writeError(w, stdhttp.StatusUnprocessableEntity, "STARTUP_MODE_UNSUPPORTED", "Only startup mode 'eval' is currently supported", details)
+	case errors.Is(err, vmmodels.ErrModuleNotAllowed):
+		writeError(w, stdhttp.StatusUnprocessableEntity, "MODULE_NOT_ALLOWED", "Module is not allowed for template configuration", details)
 	case errors.Is(err, vmmodels.ErrFileNotFound):
 		writeError(w, stdhttp.StatusNotFound, "FILE_NOT_FOUND", "File not found", details)
 	default:

@@ -70,7 +70,7 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 			name: "add module",
 			path: fmt.Sprintf("/api/v1/templates/%s/modules", template.ID),
 			body: map[string]interface{}{
-				"name": "console",
+				"name": "fs",
 			},
 		},
 		{
@@ -95,6 +95,11 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 		"mode":        "import",
 	}, http.StatusUnprocessableEntity, map[string]string{
 		"code": "STARTUP_MODE_UNSUPPORTED",
+	})
+	doRequest(t, client, http.MethodPost, fmt.Sprintf("%s/api/v1/templates/%s/modules", server.URL, template.ID), map[string]interface{}{
+		"name": "json",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "MODULE_NOT_ALLOWED",
 	})
 
 	detail := struct {
@@ -124,8 +129,8 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 	if len(detail.StartupFiles) != 1 || detail.StartupFiles[0].Path != "runtime/startup.js" {
 		t.Fatalf("expected one startup file in detail response")
 	}
-	if len(detail.Template.ExposedModules) != 1 || detail.Template.ExposedModules[0] != "console" {
-		t.Fatalf("expected one console module in detail response")
+	if len(detail.Template.ExposedModules) != 1 || detail.Template.ExposedModules[0] != "fs" {
+		t.Fatalf("expected one fs module in detail response")
 	}
 	if len(detail.Template.Libraries) != 1 || detail.Template.Libraries[0] != "lodash-4.17.21" {
 		t.Fatalf("expected one lodash library in detail response")
@@ -149,8 +154,8 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 
 	modules := []string{}
 	getJSON(t, client, fmt.Sprintf("%s/api/v1/templates/%s/modules", server.URL, template.ID), &modules)
-	if len(modules) != 1 || modules[0] != "console" {
-		t.Fatalf("expected modules list [console], got %#v", modules)
+	if len(modules) != 1 || modules[0] != "fs" {
+		t.Fatalf("expected modules list [fs], got %#v", modules)
 	}
 
 	libraries := []string{}
@@ -159,7 +164,7 @@ func TestTemplateEndpointsCRUDAndNestedResources(t *testing.T) {
 		t.Fatalf("expected libraries list [lodash-4.17.21], got %#v", libraries)
 	}
 
-	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s/modules/%s", server.URL, template.ID, "console"), nil, http.StatusOK, nil)
+	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s/modules/%s", server.URL, template.ID, "fs"), nil, http.StatusOK, nil)
 	doRequest(t, client, http.MethodDelete, fmt.Sprintf("%s/api/v1/templates/%s/libraries/%s", server.URL, template.ID, "lodash-4.17.21"), nil, http.StatusOK, nil)
 
 	modules = nil

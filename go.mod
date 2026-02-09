@@ -4,7 +4,9 @@ go 1.25.6
 
 require (
 	github.com/dop251/goja v0.0.0-20260106131823-651366fbe6e3
+	github.com/dop251/goja_nodejs v0.0.0-20251015164255-5e94316bedaf
 	github.com/go-go-golems/glazed v1.0.0
+	github.com/go-go-golems/go-go-goja v0.0.4
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/spf13/cobra v1.10.2
@@ -42,9 +44,9 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-openapi/errors v0.22.0 // indirect
 	github.com/go-openapi/strfmt v0.23.0 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
+	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
