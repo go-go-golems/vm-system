@@ -950,3 +950,65 @@ The main risk was over-replacing transport references. I constrained changes to 
 
 - Completed task IDs in this step: `T17`, `T18`.
 - Remaining tasks: `T19`, `T20`.
+
+## Step 13: Execute focused and broad Go test validation
+
+I ran the validation matrix required by the task checklist: first command-package tests, then full repository tests.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue task-by-task execution and document verification outcomes before final closure.
+
+**Inferred user intent:** Confirm the CLI migration is stable across both command wiring and broader package surfaces.
+
+**Commit (code):** pending
+
+### What I did
+
+- Ran focused command tests:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+- Ran broad repository tests:
+  - `GOWORK=off go test ./... -count=1`
+- Captured outcomes in ticket checklist and changelog.
+
+### Why
+
+The migration touched root command wiring and multiple command groups. We need both targeted and full-pass verification to catch command-level and cross-package regressions.
+
+### What worked
+
+- Focused command test pass: `ok github.com/go-go-golems/vm-system/cmd/vm-system`.
+- Broad pass succeeded across all packages with no failures.
+
+### What didn't work
+
+- No failures in this step.
+
+### What I learned
+
+- The flattened root topology and Glazed command ports are stable under the current package test matrix.
+
+### What was tricky to build
+
+- N/A in this step.
+
+### What warrants a second pair of eyes
+
+- Optional: run smoke/E2E scripts in a clean environment if we want runtime-level confirmation beyond Go tests.
+
+### What should be done in the future
+
+- Add these two go test commands to a dedicated migration verification make target for repeatability.
+
+### Code review instructions
+
+- Re-run:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T19`.
+- Remaining task: `T20`.

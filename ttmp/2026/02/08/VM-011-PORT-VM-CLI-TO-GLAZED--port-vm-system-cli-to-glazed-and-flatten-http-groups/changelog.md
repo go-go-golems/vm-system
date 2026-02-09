@@ -20,3 +20,6 @@
 - Removed legacy `http` command artifacts and added root/session topology tests enforcing flattened command tree semantics.
 - Updated `README.md` and getting-started guide CLI examples to root taxonomy (`template/session/exec/ops`) and canonicalized session lifecycle usage to `session close`.
 - Updated `smoke-test.sh` and `test-e2e.sh` to invoke flattened root command groups (removed `http` parent usage).
+- Validation pass completed with no regressions:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+  - `GOWORK=off go test ./... -count=1`
