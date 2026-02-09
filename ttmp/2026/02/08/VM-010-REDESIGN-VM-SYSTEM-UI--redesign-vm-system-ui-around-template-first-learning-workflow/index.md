@@ -1,7 +1,7 @@
 ---
 Title: Redesign vm-system-ui around template-first learning workflow
 Ticket: VM-010-REDESIGN-VM-SYSTEM-UI
-Status: active
+Status: complete
 Topics:
     - frontend
     - docs
@@ -11,10 +11,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-02-08T22:15:23.013236221-05:00
+LastUpdated: 2026-02-09T00:59:36.347950456-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 # Redesign vm-system-ui around template-first learning workflow
 

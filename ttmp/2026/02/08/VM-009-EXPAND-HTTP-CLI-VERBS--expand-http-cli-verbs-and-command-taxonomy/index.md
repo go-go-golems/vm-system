@@ -1,7 +1,7 @@
 ---
 Title: Expand HTTP CLI verbs and command taxonomy
 Ticket: VM-009-EXPAND-HTTP-CLI-VERBS
-Status: active
+Status: complete
 Topics:
     - backend
     - docs
@@ -17,10 +17,11 @@ RelatedFiles:
       Note: Implementation checklist
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-02-08T18:15:00.485214828-05:00
+LastUpdated: 2026-02-09T00:59:36.353003792-05:00
 WhatFor: Track and execute expansion/normalization of HTTP-backed CLI verb coverage and taxonomy in vm-system.
 WhenToUse: Use when implementing VM-009 tasks or reviewing CLI/API coverage consistency.
 ---
+
 
 
 # Expand HTTP CLI verbs and command taxonomy

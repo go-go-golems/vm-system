@@ -191,3 +191,8 @@ Added comprehensive VM-007 post-mortem review document (engineering retrospectiv
 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-007-REFACTOR-EXECUTOR-PIPELINE--remove-executor-internal-duplication-with-no-backwards-compatibility/design-doc/02-post-mortem-review-vm-007-executor-pipeline-refactor.md — New long-form post-mortem and implementation reference
 
+
+## 2026-02-09
+
+Closed per consolidation pass before VM-014 implementation
+

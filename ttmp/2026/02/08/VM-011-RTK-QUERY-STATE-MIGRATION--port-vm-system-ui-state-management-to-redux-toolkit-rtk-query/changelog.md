@@ -19,3 +19,8 @@ Created ticket, wrote analysis document with full state inventory (15+ API metho
 
 Completed full RTK Query migration: all pages use hooks, deleted vmService.ts and 6 dead files. Net -3622 lines.
 
+
+## 2026-02-09
+
+Closed per consolidation pass before VM-014 implementation
+

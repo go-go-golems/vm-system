@@ -19,10 +19,11 @@ RelatedFiles:
       Note: Current root CLI entrypoint and command registration baseline
 ExternalSources: []
 Summary: Tracks the plan to migrate vm-system CLI commands to glazed, remove the http parent group, and wire built-in help docs.
-LastUpdated: 2026-02-08T23:14:22.162865305-05:00
+LastUpdated: 2026-02-09T00:59:36.32968964-05:00
 WhatFor: Coordinate VM-011 implementation work to port command wiring to glazed and flatten command groups to root.
 WhenToUse: Use when implementing, reviewing, or validating VM-011 command taxonomy and help-system changes.
 ---
+
 
 
 # Port vm-system CLI to glazed and flatten HTTP groups

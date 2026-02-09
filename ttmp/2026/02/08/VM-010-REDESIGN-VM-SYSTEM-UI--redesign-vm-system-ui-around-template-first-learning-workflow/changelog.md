@@ -36,3 +36,8 @@ Implemented full UI redesign: new AppShell with top nav/breadcrumb/footer status
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/TemplateDetail.tsx — Template detail with 5 tabs and derived sessions list
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/pages/Templates.tsx — Template list page (new landing page)
 
+
+## 2026-02-09
+
+Closed per consolidation pass before VM-014 implementation
+

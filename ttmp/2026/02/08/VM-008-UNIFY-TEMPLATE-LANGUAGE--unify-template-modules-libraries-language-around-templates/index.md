@@ -1,7 +1,7 @@
 ---
 Title: Unify template/modules/libraries language around templates
 Ticket: VM-008-UNIFY-TEMPLATE-LANGUAGE
-Status: active
+Status: complete
 Topics:
     - backend
     - docs
@@ -27,10 +27,11 @@ RelatedFiles:
       Note: Detailed review and delegated implementation plan
 ExternalSources: []
 Summary: Ticket for unifying all template/module/library user-facing and internal language around templates, removing legacy VM-oriented command vocabulary without backwards compatibility.
-LastUpdated: 2026-02-08T12:12:26-05:00
+LastUpdated: 2026-02-09T00:59:36.350437759-05:00
 WhatFor: Provide an implementation-ready plan to remove mixed template/vm language and direct-DB legacy command paths across CLI/API/docs.
 WhenToUse: Use when implementing language and command-surface cleanup centered on templates.
 ---
+
 
 # Unify template/modules/libraries language around templates
 
