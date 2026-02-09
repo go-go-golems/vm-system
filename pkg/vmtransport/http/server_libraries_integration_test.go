@@ -117,6 +117,31 @@ func TestSessionCreateConfiguredLibraryMissingCacheFails(t *testing.T) {
 	if !strings.Contains(env.Error.Message, "failed to load libraries") {
 		t.Fatalf("expected missing cache message to mention failed library loading, got %q", env.Error.Message)
 	}
+
+	sessions := []struct {
+		WorkspaceID string `json:"workspace_id"`
+		Status      string `json:"status"`
+		LastError   string `json:"last_error"`
+	}{}
+	getJSON(t, client, server.URL+"/api/v1/sessions", &sessions)
+
+	found := false
+	for _, s := range sessions {
+		if s.WorkspaceID != "ws-lodash-missing-cache" {
+			continue
+		}
+		found = true
+		if s.Status != "crashed" {
+			t.Fatalf("expected failed create session to be marked crashed, got status=%q", s.Status)
+		}
+		if !strings.Contains(s.LastError, "failed to load libraries") {
+			t.Fatalf("expected last_error to include library load failure, got %q", s.LastError)
+		}
+		break
+	}
+	if !found {
+		t.Fatalf("expected failed session record to exist in session list")
+	}
 }
 
 func chdirForTest(t *testing.T, dir string) {

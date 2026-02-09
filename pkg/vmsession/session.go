@@ -97,6 +97,22 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 		return nil, fmt.Errorf("failed to create session in database: %w", err)
 	}
 
+	markSessionCreationFailed := func(message string) error {
+		session.Status = vmmodels.SessionCrashed
+		session.LastError = message
+		dbSession.Status = string(session.Status)
+		dbSession.LastError = session.LastError
+		return sm.store.UpdateSession(dbSession)
+	}
+
+	failSessionCreation := func(prefix string, cause error) (*Session, error) {
+		lastError := fmt.Sprintf("%s: %v", prefix, cause)
+		if updateErr := markSessionCreationFailed(lastError); updateErr != nil {
+			return nil, fmt.Errorf("%s: %w (also failed to persist crashed status: %v)", prefix, cause, updateErr)
+		}
+		return nil, fmt.Errorf("%s: %w", prefix, cause)
+	}
+
 	// Initialize goja runtime
 	if vm.Engine == "goja" {
 		runtime := goja.New()
@@ -105,11 +121,11 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 		// Parse runtime settings
 		var runtimeConfig vmmodels.RuntimeConfig
 		if err := json.Unmarshal(settings.Runtime, &runtimeConfig); err != nil {
-			return nil, fmt.Errorf("failed to parse runtime config: %w", err)
+			return failSessionCreation("failed to parse runtime config", err)
 		}
 
 		if err := vmmodules.EnableConfiguredModules(runtime, vm.ExposedModules); err != nil {
-			return nil, fmt.Errorf("failed to enable configured modules: %w", err)
+			return failSessionCreation("failed to enable configured modules", err)
 		}
 
 		// Set up console if enabled
@@ -127,7 +143,7 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 
 		// Load configured libraries into runtime
 		if err := sm.loadLibraries(runtime, vm, session.ID); err != nil {
-			return nil, fmt.Errorf("failed to load libraries: %w", err)
+			return failSessionCreation("failed to load libraries", err)
 		}
 	}
 
@@ -138,14 +154,7 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 
 	// Run startup files
 	if err := sm.runStartupFiles(session); err != nil {
-		session.Status = vmmodels.SessionCrashed
-		session.LastError = fmt.Sprintf("startup failed: %v", err)
-
-		dbSession.Status = string(session.Status)
-		dbSession.LastError = session.LastError
-		sm.store.UpdateSession(dbSession)
-
-		return nil, fmt.Errorf("startup failed: %w", err)
+		return failSessionCreation("startup failed", err)
 	}
 
 	// Mark session as ready
