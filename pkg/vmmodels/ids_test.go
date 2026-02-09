@@ -55,19 +55,3 @@ func TestParseExecutionID(t *testing.T) {
 		t.Fatalf("expected ErrInvalidExecutionID, got %v", err)
 	}
 }
-
-func TestMustIDHelpersPanicOnInvalid(t *testing.T) {
-	assertPanics(t, func() { _ = MustTemplateID("invalid") })
-	assertPanics(t, func() { _ = MustSessionID("invalid") })
-	assertPanics(t, func() { _ = MustExecutionID("invalid") })
-}
-
-func assertPanics(t *testing.T, fn func()) {
-	t.Helper()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	fn()
-}

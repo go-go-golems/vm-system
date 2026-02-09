@@ -44,30 +44,6 @@ func ParseExecutionID(raw string) (ExecutionID, error) {
 	return ExecutionID(normalized), nil
 }
 
-func MustTemplateID(raw string) TemplateID {
-	id, err := ParseTemplateID(raw)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
-func MustSessionID(raw string) SessionID {
-	id, err := ParseSessionID(raw)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
-func MustExecutionID(raw string) ExecutionID {
-	id, err := ParseExecutionID(raw)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 func (id TemplateID) String() string {
 	return string(id)
 }

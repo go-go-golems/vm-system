@@ -42,7 +42,7 @@ The change focused on three concrete surfaces identified in the VM-015 implement
 
 **Inferred user intent:** Finish VM-015 systematically rather than leaving analysis-only artifacts.
 
-**Commit (code):** pending
+**Commit (code):** `6e41ff3` — `feat(vm-015): move runtime logging to structured zerolog`
 
 ### What I did
 
@@ -99,3 +99,73 @@ The change focused on three concrete surfaces identified in the VM-015 implement
   - `library_cache`
   - `session_manager`
   - `daemon`
+
+## Step 3: Constrain panic usage to non-runtime invariant paths
+
+This step removed the remaining production `panic` usage by replacing `glazed_support` panic points with error-returning helpers and explicit fallback handling. It also finalized the previously staged `Must*` ID helper removal so ID validation now consistently returns typed parse errors.
+
+The resulting state is that production code paths use returned errors and structured logging; there are no `panic(...)` call sites left in repo Go sources.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 2)
+
+**Assistant interpretation:** Finish VM-015 by eliminating remaining panic-based behavior and enforcing error-returning control flow.
+
+**Inferred user intent:** Prevent crash-on-error behavior in normal runtime/CLI operation and make failures explicit and handleable.
+
+**Commit (code):** pending
+
+### What I did
+
+- Reworked `cmd/vm-system/glazed_support.go`:
+  - introduced `buildCobraCommandE(...)` and `commandDescriptionE(...)` that return errors,
+  - removed all `panic(err)` usage,
+  - added explicit fallback handling with structured error logs and non-panicking error-returning command execution behavior.
+- Finalized panic-helper cleanup in:
+  - `pkg/vmmodels/ids.go` (removed `MustTemplateID`, `MustSessionID`, `MustExecutionID`),
+  - `pkg/vmmodels/ids_test.go` (panic assertions replaced with parse-error assertions).
+- Re-ran full suite validation and panic scan.
+
+### Why
+
+- Panics in production command/runtime wiring violate VM-015 policy and make failures non-recoverable.
+
+### What worked
+
+- `rg -n "\\bpanic\\(" --glob '*.go'` returned no matches.
+- `GOWORK=off go test ./... -count=1` passed across all packages.
+
+### What didn't work
+
+- N/A for this step.
+
+### What I learned
+
+- Fallback command construction gives operational resilience: command build failures become explicit runtime errors instead of process crashes.
+
+### What was tricky to build
+
+- Avoiding a full command-constructor signature rewrite required introducing error-returning helper variants while preserving existing command factory call-sites.
+
+### What warrants a second pair of eyes
+
+- Confirm fallback command behavior in `buildCobraCommand` aligns with desired UX when a command fails to initialize.
+
+### What should be done in the future
+
+- If desired, move from fallback wrappers to fully propagated constructor errors as a dedicated CLI wiring simplification ticket.
+
+### Code review instructions
+
+- Review panic-removal changes in:
+  - `cmd/vm-system/glazed_support.go`
+  - `pkg/vmmodels/ids.go`
+  - `pkg/vmmodels/ids_test.go`
+- Validate with:
+  - `rg -n "\\bpanic\\(" --glob '*.go'`
+  - `GOWORK=off go test ./... -count=1`
+
+### Technical details
+
+- `buildCobraCommand` now logs build errors and returns a command that surfaces initialization failure through `RunE`, rather than panicking.

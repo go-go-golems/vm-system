@@ -59,51 +59,23 @@ Root logging bootstrap remains correct:
 - `cmd/vm-system/main.go:24` uses `logging.InitLoggerFromCobra(cmd)`
 - glazed logging flags are registered at root and configure global zerolog
 
-## Systematic Inventory (After wrapper removal)
+## Systematic Inventory (Current Status)
 
-## A. Remaining panic call sites (production code)
+## A. Panic call sites (production code)
 
-1. `cmd/vm-system/glazed_support.go:24`
-- `panic(err)` in `buildCobraCommand`
+Current status:
+- none (`rg -n "\bpanic\(" --glob '*.go'` returns no matches)
 
-2. `cmd/vm-system/glazed_support.go:34`
-- `panic(err)` in `commandDescription` (glazed output schema init)
+Completed actions:
+- replaced `cmd/vm-system/glazed_support.go` panic paths with error-returning helpers + fallback error handling
+- deleted `Must*` ID helpers in `pkg/vmmodels/ids.go` and updated `pkg/vmmodels/ids_test.go`
 
-3. `cmd/vm-system/glazed_support.go:41`
-- `panic(err)` in `commandDescription` (command settings section init)
+## B. Runtime/daemon unstructured logging
 
-4. `pkg/vmmodels/ids.go:50`
-- `panic(err)` in `MustTemplateID`
-
-5. `pkg/vmmodels/ids.go:58`
-- `panic(err)` in `MustSessionID`
-
-6. `pkg/vmmodels/ids.go:66`
-- `panic(err)` in `MustExecutionID`
-
-Required action:
-- replace `glazed_support` panic paths with error-returning command construction
-- delete `Must*` ID helpers and update tests
-
-## B. Remaining runtime/daemon unstructured logging (must become zerolog)
-
-1. `pkg/libloader/loader.go:39`
-- `fmt.Printf("Downloading %d libraries...\n", ...)`
-
-2. `pkg/libloader/loader.go:52`
-- `fmt.Printf("✓ Downloaded %s v%s\n", ...)`
-
-3. `pkg/libloader/loader.go:70`
-- `fmt.Printf("All libraries downloaded successfully!\n")`
-
-4. `pkg/vmsession/session.go:116`
-- startup console hook uses `fmt.Println(args...)`
-
-5. `pkg/vmsession/session.go:294`
-- `fmt.Printf("[Session] Loaded library: %s\n", libName)`
-
-6. `cmd/vm-system/cmd_serve.go:38`
-- daemon startup message uses `fmt.Printf`
+Current status in target files:
+- `pkg/libloader/loader.go`: operational lifecycle logging migrated to structured zerolog
+- `pkg/vmsession/session.go`: startup/runtime operational logging migrated to structured zerolog
+- `cmd/vm-system/cmd_serve.go`: daemon startup banner migrated to structured zerolog
 
 ## C. Print sites that should remain output rendering
 
