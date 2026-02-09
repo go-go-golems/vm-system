@@ -449,8 +449,8 @@ func newTemplateListAvailableModulesCommand() *cobra.Command {
 	command := &writerCommand{
 		CommandDescription: mustCommandDescription(
 			"list-available-modules",
-			"List built-in module catalog",
-			"List built-in module catalog.",
+			"List configurable native module catalog",
+			"List configurable native module catalog (JavaScript built-ins are always available and not template-configurable).",
 			nil,
 			nil,
 			false,

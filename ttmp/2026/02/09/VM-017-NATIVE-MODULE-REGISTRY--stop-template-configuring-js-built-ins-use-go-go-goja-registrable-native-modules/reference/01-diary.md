@@ -18,7 +18,7 @@ ExternalSources: []
 Summary: >
     Implementation diary for VM-017 with task-by-task progress, commits,
     failures, and verification commands.
-LastUpdated: 2026-02-09T00:16:41-05:00
+LastUpdated: 2026-02-09T00:18:56-05:00
 WhatFor: Preserve a strict execution trail while implementing VM-017 in incremental commits.
 WhenToUse: Use while reviewing or continuing VM-017 work.
 ---
@@ -111,7 +111,7 @@ I also added/updated tests to prove the new contract: `json` is rejected as temp
 
 **Inferred user intent:** Make runtime/API behavior truthful and enforceable before touching UI polish.
 
-**Commit (code):** pending (filled after backend commit)
+**Commit (code):** 5fc8d65 — "feat(vm-017): enforce native module policy with go-go-goja registry"
 
 ### What I did
 
@@ -188,3 +188,68 @@ I also added/updated tests to prove the new contract: `json` is rejected as temp
 
 - New runtime module behavior test:
   - `pkg/vmtransport/http/server_native_modules_integration_test.go`
+
+## Step 3: Align API/CLI contracts and module catalog messaging
+
+After enforcing backend behavior, I aligned API/CLI-facing contracts so user-visible language and contract tests match the new policy. This removes ambiguity around what template modules mean.
+
+This step focused on consistency, not new runtime capability: it updated CLI wording and hardened API contract coverage for built-in module rejection.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Complete API/CLI alignment as its own task and commit.
+
+**Inferred user intent:** Ensure consumers do not see contradictory language or contract behavior after backend changes.
+
+**Commit (code):** pending (filled after Task 3 commit)
+
+### What I did
+
+- Updated CLI command descriptions in:
+  - `cmd/vm-system/cmd_template.go`
+  - `list-available-modules` now explicitly describes configurable native modules and clarifies built-ins are always available.
+- Extended API error contract integration coverage in:
+  - `pkg/vmtransport/http/server_error_contracts_integration_test.go`
+  - adds assertion that posting module `json` returns `MODULE_NOT_ALLOWED`.
+- Re-ran verification:
+  - `GOWORK=off go test ./cmd/vm-system ./pkg/vmtransport/http -count=1`
+  - `GOWORK=off go test ./... -count=1`
+
+### Why
+
+- Behavior and language needed to converge, otherwise operators/clients would still infer that built-ins are configurable.
+
+### What worked
+
+- Contract tests and full test suite passed after updates.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Tightening contract tests early prevents drift from reappearing through copy changes alone.
+
+### What was tricky to build
+
+- The main nuance was keeping this step focused on contract/alignment and not mixing in UI changes.
+
+### What warrants a second pair of eyes
+
+- Confirm CLI wording is clear enough for users migrating from prior built-in module assumptions.
+
+### What should be done in the future
+
+- Keep module policy wording centralized to avoid divergence across docs/UI/CLI.
+
+### Code review instructions
+
+- Review command description updates in `cmd/vm-system/cmd_template.go`.
+- Confirm new error contract assertion in `pkg/vmtransport/http/server_error_contracts_integration_test.go`.
+
+### Technical details
+
+- New contract assertion: `POST /api/v1/templates/:id/modules` with `{ \"name\": \"json\" }` -> `422 MODULE_NOT_ALLOWED`.

@@ -143,6 +143,12 @@ func TestAPIErrorContractsValidationNotFoundConflictAndUnprocessable(t *testing.
 	}, http.StatusUnprocessableEntity, map[string]string{
 		"code": "INVALID_PATH",
 	})
+
+	doRequest(t, client, http.MethodPost, server.URL+"/api/v1/templates/"+templateID+"/modules", map[string]interface{}{
+		"name": "json",
+	}, http.StatusUnprocessableEntity, map[string]string{
+		"code": "MODULE_NOT_ALLOWED",
+	})
 }
 
 func newIntegrationServerWithSessionManager(t *testing.T) (*httptest.Server, *http.Client, *vmsession.SessionManager) {

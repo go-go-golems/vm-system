@@ -27,3 +27,13 @@ Implemented backend native-module policy: built-in JS modules now rejected for t
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server.go — ErrModuleNotAllowed mapped to MODULE_NOT_ALLOWED API contract
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_native_modules_integration_test.go — Covers require(fs) runtime behavior and JSON built-in semantics
 
+
+## 2026-02-09
+
+Aligned API/CLI contracts and catalog language with native-module-only configurability: module catalog help text updated and error-contract integration test now asserts MODULE_NOT_ALLOWED for built-in module attempts.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_template.go — CLI module catalog wording now reflects native module policy
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/pkg/vmtransport/http/server_error_contracts_integration_test.go — API error contract coverage for MODULE_NOT_ALLOWED
+
