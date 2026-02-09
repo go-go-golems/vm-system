@@ -18,7 +18,7 @@
 - [x] T14: Remove obsolete legacy command files and references tied to `http` parent wiring.
 - [x] T15: Replace `cmd_http_test.go` with root topology tests asserting `http` is absent and `template/session/exec/ops/libs/serve` are present.
 - [x] T16: Add tests for `session close` registration and keep template subgroup coverage tests green.
-- [ ] T17: Update `README.md` command examples to root taxonomy (`template/session/exec/ops`).
-- [ ] T18: Update `docs/getting-started-from-first-vm-to-contributor-guide.md` from `vm-system http ...` to root forms.
+- [x] T17: Update `README.md` command examples to root taxonomy (`template/session/exec/ops`).
+- [x] T18: Update `docs/getting-started-from-first-vm-to-contributor-guide.md` from `vm-system http ...` to root forms.
 - [ ] T19: Run focused test pass (`go test ./cmd/vm-system -count=1`), then broader test pass (`go test ./... -count=1`) and capture any breakage.
 - [ ] T20: Update ticket diary/changelog with implementation sequence and commit evidence.

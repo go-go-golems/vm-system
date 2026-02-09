@@ -14,7 +14,7 @@ The guide is intentionally practical. Every major concept is tied back to concre
 
 At a high level, `vm-system` is a daemon-first JavaScript runtime service built on goja with:
 
-- template/session/execution API clients under `http` command group (`http template`, `http session`, `http exec`)
+- root command groups for daemon-backed clients (`template`, `session`, `exec`, `ops`)
 - SQLite-backed persistence (`pkg/vmstore`)
 - a transport-agnostic core (`pkg/vmcontrol`) shared by daemon and API transports
 
@@ -54,7 +54,7 @@ The shortest path to success is to understand ownership boundaries first.
 
 - `vm-system serve` starts one long-lived process.
 - That process owns active session runtimes in memory.
-- CLI commands like `http template create`, `http session create`, `http exec repl` are client calls to that daemon.
+- CLI commands like `template create`, `session create`, `exec repl` are client calls to that daemon.
 - SQLite stores durable records for templates, sessions, executions, and events.
 
 Minimal request path:
@@ -82,10 +82,13 @@ Verify help output:
 You should see command groups:
 
 - `serve`
-- `http`
+- `template`
+- `session`
+- `exec`
+- `ops`
 - `libs`
 
-For daily backend work, `serve`, `http template`, `http session`, and `http exec` are the main path.
+For daily backend work, `serve`, `template`, `session`, and `exec` are the main path.
 
 ## Step 2: Create a clean scratch workspace
 
@@ -140,7 +143,7 @@ Expected response:
 Use CLI in client mode (default `--server-url` already targets `127.0.0.1:3210`):
 
 ```bash
-./vm-system http template create --name guide-template --engine goja
+./vm-system template create --name guide-template --engine goja
 ```
 
 Typical output:
@@ -167,19 +170,19 @@ The default limits are created in `pkg/vmcontrol/template_service.go`.
 Add startup file:
 
 ```bash
-./vm-system http template add-startup <template-id> --path runtime/init.js --order 10 --mode eval
+./vm-system template add-startup <template-id> --path runtime/init.js --order 10 --mode eval
 ```
 
 Add capability metadata:
 
 ```bash
-./vm-system http template add-capability <template-id> --kind module --name console --enabled
+./vm-system template add-capability <template-id> --kind module --name console --enabled
 ```
 
 Inspect template:
 
 ```bash
-./vm-system http template get <template-id>
+./vm-system template get <template-id>
 ```
 
 You should see:
@@ -197,7 +200,7 @@ Important reality check:
 ## Step 6: Create first session
 
 ```bash
-./vm-system http session create \
+./vm-system session create \
   --template-id <template-id> \
   --workspace-id ws-guide \
   --base-commit deadbeef \
@@ -227,7 +230,7 @@ If startup fails, status is set to `crashed` and `last_error` is persisted.
 ## Step 7: Execute a REPL snippet
 
 ```bash
-./vm-system http exec repl <session-id> 'answerSeed + 2'
+./vm-system exec repl <session-id> 'answerSeed + 2'
 ```
 
 Typical output:
@@ -248,7 +251,7 @@ Internally (`pkg/vmexec/executor.go`):
 ## Step 8: Execute a file
 
 ```bash
-./vm-system http exec run-file <session-id> app.js
+./vm-system exec run-file <session-id> app.js
 ```
 
 Notes:
@@ -276,21 +279,21 @@ Expected error envelope:
 List sessions:
 
 ```bash
-./vm-system http session list
-./vm-system http session list --status ready
+./vm-system session list
+./vm-system session list --status ready
 ```
 
 List executions:
 
 ```bash
-./vm-system http exec list <session-id> --limit 50
+./vm-system exec list <session-id> --limit 50
 ```
 
 Inspect one execution:
 
 ```bash
-./vm-system http exec get <execution-id>
-./vm-system http exec events <execution-id> --after-seq 0
+./vm-system exec get <execution-id>
+./vm-system exec events <execution-id> --after-seq 0
 ```
 
 Runtime summary for operations view:
@@ -308,7 +311,7 @@ Response shape:
 ## Step 10: Close session and stop daemon
 
 ```bash
-./vm-system http session delete <session-id>
+./vm-system session close <session-id>
 ```
 
 Or raw close endpoint:
@@ -333,18 +336,17 @@ This section explains how the implementation is structured so you can change cod
   - root command
   - global flags `--db` and `--server-url`
   - registers command groups
-- `cmd_http.go`
-  - daemon-backed API client command namespace
-  - groups `http template`, `http session`, and `http exec`
 - `cmd_serve.go`
   - daemon bootstrap command
   - wires `vmdaemon` + HTTP handler
 - `cmd_template.go`
-  - `http template` subcommands for template CRUD + startup/capability/module/library operations
+  - `template` subcommands for template CRUD + startup/capability/module/library operations
 - `cmd_session.go`
-  - `http session` subcommands for create/list/get/close semantics
+  - `session` subcommands for create/list/get/close semantics
 - `cmd_exec.go`
-  - `http exec` subcommands for repl/run-file/get/list/events
+  - `exec` subcommands for repl/run-file/get/list/events
+- `cmd_ops.go`
+  - `ops` subcommands for health and runtime summary
 - `cmd_libs.go`
   - cache utility operations for downloadable libraries
 
@@ -521,11 +523,11 @@ Practical consequence:
 
 ## 7) CLI/API cutover status
 
-Current CLI runtime commands are daemon-oriented under `http` (`http template`, `http session`, `http exec`), which is good.
+Current CLI runtime commands are daemon-oriented under root groups (`template`, `session`, `exec`, `ops`), which is good.
 
-Template module/library operations are exposed through `http template` subcommands and corresponding template API routes.
+Template module/library operations are exposed through `template` subcommands and corresponding template API routes.
 
-As a contributor, keep template resource changes on the `http template` command/API path and avoid introducing duplicate command surfaces.
+As a contributor, keep template resource changes on the `template` command/API path and avoid introducing duplicate command surfaces.
 
 ## Implementation walkthrough: concrete files to read in order
 
@@ -886,40 +888,40 @@ GOWORK=off go build -o vm-system ./cmd/vm-system
 ### Template workflow
 
 ```bash
-./vm-system http template create --name demo --engine goja
-./vm-system http template list
-./vm-system http template add-capability <template-id> --kind module --name console --enabled
-./vm-system http template add-startup <template-id> --path runtime/init.js --order 10 --mode eval
-./vm-system http template add-module <template-id> --name console
-./vm-system http template add-library <template-id> --name lodash-4.17.21
-./vm-system http template list-modules <template-id>
-./vm-system http template list-libraries <template-id>
-./vm-system http template list-available-modules
-./vm-system http template list-available-libraries
-./vm-system http template get <template-id>
-./vm-system http template list-capabilities <template-id>
-./vm-system http template list-startup <template-id>
-./vm-system http template delete <template-id>
+./vm-system template create --name demo --engine goja
+./vm-system template list
+./vm-system template add-capability <template-id> --kind module --name console --enabled
+./vm-system template add-startup <template-id> --path runtime/init.js --order 10 --mode eval
+./vm-system template add-module <template-id> --name console
+./vm-system template add-library <template-id> --name lodash-4.17.21
+./vm-system template list-modules <template-id>
+./vm-system template list-libraries <template-id>
+./vm-system template list-available-modules
+./vm-system template list-available-libraries
+./vm-system template get <template-id>
+./vm-system template list-capabilities <template-id>
+./vm-system template list-startup <template-id>
+./vm-system template delete <template-id>
 ```
 
 ### Session workflow
 
 ```bash
-./vm-system http session create --template-id <template-id> --workspace-id ws-1 --base-commit deadbeef --worktree-path /abs/path
-./vm-system http session list
-./vm-system http session list --status ready
-./vm-system http session get <session-id>
-./vm-system http session delete <session-id>
+./vm-system session create --template-id <template-id> --workspace-id ws-1 --base-commit deadbeef --worktree-path /abs/path
+./vm-system session list
+./vm-system session list --status ready
+./vm-system session get <session-id>
+./vm-system session close <session-id>
 ```
 
 ### Execution workflow
 
 ```bash
-./vm-system http exec repl <session-id> '1+2'
-./vm-system http exec run-file <session-id> app.js
-./vm-system http exec list <session-id>
-./vm-system http exec get <execution-id>
-./vm-system http exec events <execution-id> --after-seq 0
+./vm-system exec repl <session-id> '1+2'
+./vm-system exec run-file <session-id> app.js
+./vm-system exec list <session-id>
+./vm-system exec get <execution-id>
+./vm-system exec events <execution-id> --after-seq 0
 ```
 
 ### Direct API checks
@@ -936,8 +938,8 @@ curl -sS "http://127.0.0.1:3210/api/v1/executions?session_id=<session-id>&limit=
 ```text
                           +----------------------------+
                           |        vm-system CLI       |
-                          |  http {template,session,   |
-                          |        exec} command set   |
+                          |  root {template,session,   |
+                          |        exec,ops,libs} set  |
                           +-------------+--------------+
                                         |
                                         | REST (vmclient)
@@ -1556,10 +1558,10 @@ mkdir -p /tmp/vm-demo/runtime
 printf 'globalThis.seed=41\n' >/tmp/vm-demo/runtime/init.js
 printf 'seed+1\n' >/tmp/vm-demo/app.js
 
-TEMPLATE_ID=$(./vm-system http template create --name quick-demo | sed -n 's/.*(ID: \(.*\)).*/\1/p')
-./vm-system http template add-startup "$TEMPLATE_ID" --path runtime/init.js --order 10 --mode eval
-SESSION_ID=$(./vm-system http session create --template-id "$TEMPLATE_ID" --workspace-id ws --base-commit deadbeef --worktree-path /tmp/vm-demo | awk '/Created session:/ {print $3}')
-./vm-system http exec run-file "$SESSION_ID" app.js
+TEMPLATE_ID=$(./vm-system template create --name quick-demo | sed -n 's/.*(ID: \(.*\)).*/\1/p')
+./vm-system template add-startup "$TEMPLATE_ID" --path runtime/init.js --order 10 --mode eval
+SESSION_ID=$(./vm-system session create --template-id "$TEMPLATE_ID" --workspace-id ws --base-commit deadbeef --worktree-path /tmp/vm-demo | awk '/Created session:/ {print $3}')
+./vm-system exec run-file "$SESSION_ID" app.js
 ```
 
 If this fails, debug in this order:

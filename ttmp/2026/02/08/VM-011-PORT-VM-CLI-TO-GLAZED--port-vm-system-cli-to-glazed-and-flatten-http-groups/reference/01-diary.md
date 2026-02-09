@@ -879,3 +879,74 @@ The key challenge was adding tests without introducing divergent construction lo
 
 - Completed task IDs in this step: `T14`, `T15`, `T16`.
 - Remaining tasks: `T17`, `T18`, `T19`, `T20`.
+
+## Step 12: Complete command-taxonomy docs and script alignment
+
+I finished the command-surface documentation cutover and removed stale `http` command usage from local smoke/E2E scripts so operational examples match the flattened root CLI.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Continue task-by-task completion with frequent diary updates and commit as each slice stabilizes.
+
+**Inferred user intent:** Ensure the migration is complete in docs and day-to-day scripts, not only in command source files.
+
+**Commit (code):** pending
+
+### What I did
+
+- Updated `README.md` quick-start examples to explicitly include `ops runtime-summary` and canonical `session close`.
+- Updated `docs/getting-started-from-first-vm-to-contributor-guide.md`:
+  - replaced remaining `vm-system http ...` command examples with root forms.
+  - replaced stale `session delete` examples with `session close`.
+  - updated CLI diagram from `http {...}` to root command groups.
+- Updated execution scripts:
+  - `smoke-test.sh`: switched all `$CLI http ...` invocations to root `template/session/exec` commands.
+  - `test-e2e.sh`: switched all `$CLI http ...` invocations to root `template/session/exec` commands.
+- Updated ticket checklist:
+  - marked `T17` and `T18` complete in `tasks.md`.
+
+### Why
+
+This migration removed the `http` parent command. Leaving stale command strings in docs/scripts would create immediate developer confusion and false negatives in manual validation runs.
+
+### What worked
+
+- Remaining stale command references were localized and quick to replace.
+- Command examples now consistently match current root topology.
+
+### What didn't work
+
+- N/A in this step.
+
+### What I learned
+
+- Script-level drift is easy to miss when command-tree tests focus only on Go package assertions; operational scripts must be scanned explicitly after taxonomy changes.
+
+### What was tricky to build
+
+The main risk was over-replacing transport references. I constrained changes to CLI command usage while preserving valid architectural mentions of HTTP transport and API endpoints.
+
+### What warrants a second pair of eyes
+
+- Confirm there are no additional external runbooks outside this repo still using `vm-system http ...`.
+
+### What should be done in the future
+
+- Add a lightweight CI grep guard that fails if `vm-system http ` appears in docs/scripts after this migration.
+
+### Code review instructions
+
+- Review:
+  - `README.md`
+  - `docs/getting-started-from-first-vm-to-contributor-guide.md`
+  - `smoke-test.sh`
+  - `test-e2e.sh`
+- Validate:
+  - `rg -n "vm-system http|http template|http session|http exec|session delete" README.md docs/getting-started-from-first-vm-to-contributor-guide.md smoke-test.sh test-e2e.sh -S`
+
+### Technical details
+
+- Completed task IDs in this step: `T17`, `T18`.
+- Remaining tasks: `T19`, `T20`.

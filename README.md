@@ -40,6 +40,10 @@ GOWORK=off go build -o vm-system ./cmd/vm-system
 
 # 4) Execute code
 ./vm-system --server-url http://127.0.0.1:3210 exec repl <session-id> '1+2'
+
+# 5) Inspect daemon state and close the session
+./vm-system --server-url http://127.0.0.1:3210 ops runtime-summary
+./vm-system --server-url http://127.0.0.1:3210 session close <session-id>
 ```
 
 ## Developer Guide

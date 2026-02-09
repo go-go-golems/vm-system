@@ -18,3 +18,5 @@
 - Ported the full `exec` command group to Glazed command implementations while preserving JSON flag parsing and output formatting behavior.
 - Ported the full `template` command group to Glazed command implementations (all existing template verbs).
 - Removed legacy `http` command artifacts and added root/session topology tests enforcing flattened command tree semantics.
+- Updated `README.md` and getting-started guide CLI examples to root taxonomy (`template/session/exec/ops`) and canonicalized session lifecycle usage to `session close`.
+- Updated `smoke-test.sh` and `test-e2e.sh` to invoke flattened root command groups (removed `http` parent usage).
