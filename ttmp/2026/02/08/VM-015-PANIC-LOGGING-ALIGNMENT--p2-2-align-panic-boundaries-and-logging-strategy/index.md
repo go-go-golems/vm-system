@@ -27,5 +27,6 @@ Define and execute panic/logging policy changes for safer runtime behavior and c
 ## Key Links
 
 - Plan: [design/01-panic-boundary-and-logging-alignment-plan.md](./design/01-panic-boundary-and-logging-alignment-plan.md)
+- Implementation guide: [design/02-implementation-guide.md](./design/02-implementation-guide.md)
 - Tasks: [tasks.md](./tasks.md)
 - Changelog: [changelog.md](./changelog.md)

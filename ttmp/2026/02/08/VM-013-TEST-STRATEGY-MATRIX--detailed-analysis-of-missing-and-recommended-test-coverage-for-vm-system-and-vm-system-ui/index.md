@@ -29,6 +29,7 @@ This ticket documents what tests should exist across backend and frontend, group
 
 ## Key Links
 
+- Implementation guide: [design/02-implementation-guide.md](./design/02-implementation-guide.md)
 - Test strategy matrix: [design/01-test-coverage-strategy-matrix-and-priority-plan.md](./design/01-test-coverage-strategy-matrix-and-priority-plan.md)
 - Tasks: [tasks.md](./tasks.md)
 - Changelog: [changelog.md](./changelog.md)

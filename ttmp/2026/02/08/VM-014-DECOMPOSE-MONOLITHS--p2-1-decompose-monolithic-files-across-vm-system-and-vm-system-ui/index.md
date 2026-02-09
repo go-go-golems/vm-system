@@ -28,5 +28,6 @@ Plan and execute targeted decomposition of large files while preserving behavior
 ## Key Links
 
 - Plan: [design/01-monolithic-file-decomposition-plan.md](./design/01-monolithic-file-decomposition-plan.md)
+- Implementation guide: [design/02-implementation-guide.md](./design/02-implementation-guide.md)
 - Tasks: [tasks.md](./tasks.md)
 - Changelog: [changelog.md](./changelog.md)

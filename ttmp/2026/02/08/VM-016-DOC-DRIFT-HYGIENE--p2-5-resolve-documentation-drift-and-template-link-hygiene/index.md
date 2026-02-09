@@ -28,5 +28,6 @@ Plan and execute documentation refresh/archive and template-link hygiene improve
 ## Key Links
 
 - Plan: [design/01-documentation-drift-and-template-hygiene-plan.md](./design/01-documentation-drift-and-template-hygiene-plan.md)
+- Implementation guide: [design/02-implementation-guide.md](./design/02-implementation-guide.md)
 - Tasks: [tasks.md](./tasks.md)
 - Changelog: [changelog.md](./changelog.md)
