@@ -44,7 +44,7 @@ The analysis documents where the current overlap is harmful and defines a cohere
 
 **Inferred user intent:** Improve test maintainability and trust by replacing overlapping scripts with a coherent, architecture-aligned test system and full implementation traceability.
 
-**Commit (code):** pending
+**Commit (code):** `b49c1ce` — `docs(vm-018): scaffold ticket analysis tasks and diary`
 
 ### What I did
 
@@ -109,7 +109,7 @@ I also corrected smoke semantics so it no longer depends on a legacy module assu
 
 **Inferred user intent:** Make the tests maintainable and trustworthy by removing duplicated script logic and stale assertions.
 
-**Commit (code):** pending
+**Commit (code):** `e4415e1` — `test(vm-018): add shared harness and migrate smoke e2e`
 
 ### What I did
 
@@ -178,7 +178,7 @@ To avoid abrupt command breakage while removing duplicated logic, legacy script 
 
 **Inferred user intent:** Get useful, architecture-aligned capability tests with less script drift and clearer ownership.
 
-**Commit (code):** pending
+**Commit (code):** `8cc7c3c` — `test(vm-018): consolidate library scripts into matrix`
 
 ### What I did
 
@@ -250,7 +250,7 @@ I also updated the long-form guide so script roles are explicit: smoke for fast 
 
 **Inferred user intent:** Reduce confusion around which tests to run and when, while preserving useful scenario coverage.
 
-**Commit (code):** pending
+**Commit (code):** `05c5ed6` — `docs(vm-018): add test suite runner and align docs`
 
 ### What I did
 
@@ -304,3 +304,73 @@ I also updated the long-form guide so script roles are explicit: smoke for fast 
 ### Technical details
 
 - `test-all.sh` intentionally aggregates failures and exits non-zero only after running all scripts.
+
+## Step 5: Final validation, ticket closure, and completion bookkeeping
+
+This step verified the reorganized test architecture as a whole and closed the ticket. Validation now includes both Go unit/integration tests and the full shell integration suite through a single command path.
+
+The key completion criterion was met: task list fully checked, validation evidence captured, and ticket transitioned to complete.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+**Assistant interpretation:** Finish VM-018 by running full validation, recording evidence, and closing the ticket.
+
+**Inferred user intent:** Ensure the reorganization is not only designed and implemented, but also proven and auditable as complete work.
+
+**Commit (code):** pending
+
+### What I did
+
+- Ran validation:
+  - `GOWORK=off go test ./... -count=1`
+  - `./test-all.sh`
+- Confirmed:
+  - Go test suite passed,
+  - smoke/e2e/library-matrix all passed under top-level orchestration.
+- Updated VM-018 task/changelog state and closed the ticket.
+
+### Why
+
+- Completion without end-to-end evidence would leave the reorganization unproven.
+
+### What worked
+
+- Both validation commands passed in a clean run.
+- Task list reached fully checked state.
+- Ticket was successfully closed as complete.
+
+### What didn't work
+
+- Pre-existing CLI command-map debug noise remains visible in script logs; this does not currently affect correctness.
+
+### What I learned
+
+- The new script architecture provides faster operator clarity: one full-suite command and three clearly scoped scenario scripts.
+
+### What was tricky to build
+
+- Ensuring completion bookkeeping stayed synchronized across tasks, changelog, and closure actions while preserving commit granularity.
+
+### What warrants a second pair of eyes
+
+- Whether wrapper scripts should be removed in a future cleanup once consumers migrate to `test-library-matrix.sh`.
+
+### What should be done in the future
+
+- Add a follow-up ticket for suppressing CLI command-map debug noise in script-mode output.
+
+### Code review instructions
+
+- Inspect final task/changelog/ticket status in VM-018 docs.
+- Re-run:
+  - `GOWORK=off go test ./... -count=1`
+  - `./test-all.sh`
+
+### Technical details
+
+- Full shell integration summary now reports three canonical scripts:
+  - `smoke-test.sh`
+  - `test-e2e.sh`
+  - `test-library-matrix.sh`

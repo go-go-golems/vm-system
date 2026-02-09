@@ -6,4 +6,4 @@
 - [x] Extract a shared shell harness for daemon-first tests and migrate smoke/e2e scripts to use it (including stale module assertion fix)
 - [x] Consolidate overlapping library-focused scripts into a single capability matrix test with clear pass/fail expectations
 - [x] Add a coherent top-level test runner + update README/getting-started docs to reflect the new test architecture
-- [ ] Run validation (go test + script suite), update diary/changelog with evidence, and close VM-018
+- [x] Run validation (go test + script suite), update diary/changelog with evidence, and close VM-018
