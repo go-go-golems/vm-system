@@ -16,6 +16,8 @@ import (
 	"github.com/go-go-golems/vm-system/pkg/vmmodules"
 	"github.com/go-go-golems/vm-system/pkg/vmpath"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // SessionManager manages VM sessions
@@ -23,6 +25,7 @@ type SessionManager struct {
 	store      *vmstore.VMStore
 	sessions   map[string]*Session
 	sessionsMu sync.RWMutex
+	logger     zerolog.Logger
 }
 
 // Session represents an active VM session
@@ -44,6 +47,7 @@ func NewSessionManager(store *vmstore.VMStore) *SessionManager {
 	return &SessionManager{
 		store:    store,
 		sessions: make(map[string]*Session),
+		logger:   log.With().Str("component", "session_manager").Logger(),
 	}
 }
 
@@ -112,15 +116,17 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 		if runtimeConfig.Console {
 			console := map[string]interface{}{
 				"log": func(args ...interface{}) {
-					// Console output will be captured during execution
-					fmt.Println(args...)
+					sm.logger.Info().
+						Str("session_id", session.ID).
+						Interface("args", args).
+						Msg("startup console.log")
 				},
 			}
 			runtime.Set("console", console)
 		}
 
 		// Load configured libraries into runtime
-		if err := sm.loadLibraries(runtime, vm); err != nil {
+		if err := sm.loadLibraries(runtime, vm, session.ID); err != nil {
 			return nil, fmt.Errorf("failed to load libraries: %w", err)
 		}
 	}
@@ -263,7 +269,7 @@ func (sm *SessionManager) ListSessions() []*Session {
 }
 
 // loadLibraries loads configured JavaScript libraries into the goja runtime
-func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM) error {
+func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM, sessionID string) error {
 	if len(vm.Libraries) == 0 {
 		return nil // No libraries to load
 	}
@@ -291,7 +297,11 @@ func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM) 
 			return fmt.Errorf("failed to load library %s: %w", libName, err)
 		}
 
-		fmt.Printf("[Session] Loaded library: %s\n", libName)
+		sm.logger.Info().
+			Str("session_id", sessionID).
+			Str("template_id", vm.ID).
+			Str("library", libName).
+			Msg("loaded library into runtime session")
 	}
 
 	return nil

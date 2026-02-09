@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
@@ -43,7 +43,10 @@ func (c *serveCommand) Run(_ context.Context, vals *values.Values) error {
 	defer app.Close()
 
 	app.SetHandler(vmhttp.NewHandler(app.Core()))
-	fmt.Printf("vm-system daemon listening on %s\n", cfg.ListenAddr)
+	log.Info().
+		Str("component", "daemon").
+		Str("listen_addr", cfg.ListenAddr).
+		Msg("vm-system daemon listening")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
