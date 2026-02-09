@@ -15,59 +15,68 @@ ShowPerDefault: true
 SectionType: GeneralTopic
 ---
 
-All endpoints live under `/api/v1`. Request bodies must be JSON with
-`Content-Type: application/json`. Every response includes an `X-Request-Id`
-header for log correlation. Unknown JSON fields are rejected.
+The vm-system daemon exposes a REST API under `/api/v1`. All request bodies
+must be JSON with `Content-Type: application/json`, and all responses are
+JSON. Every response includes an `X-Request-Id` header that you can use for
+log correlation when debugging.
 
-## Error envelope
+One important behavior: the server enforces strict JSON decoding with
+`DisallowUnknownFields`. If you send a field the server doesn't expect, you
+get `400 INVALID_REQUEST`. This catches typos early but can be surprising if
+you're used to lenient APIs.
 
-All error responses use this shape:
+## Errors
+
+Every error response uses the same envelope, regardless of the endpoint:
 
 ```json
 {
   "error": {
     "code": "ERROR_CODE",
-    "message": "Human-readable message",
+    "message": "Human-readable explanation",
     "details": { "optional": "context" }
   }
 }
 ```
 
-## Error code mapping
+The `code` field is the stable identifier you should match on in client code.
+The `message` is for humans and may change between versions. Here's the
+complete mapping:
 
-| Domain error | HTTP status | Code |
-|-------------|-------------|------|
+| Situation | Status | Code |
+|-----------|--------|------|
+| Missing or invalid field in request | 400 | `VALIDATION_ERROR` |
+| Malformed JSON or unknown fields | 400 | `INVALID_REQUEST` |
 | Template not found | 404 | `TEMPLATE_NOT_FOUND` |
 | Session not found | 404 | `SESSION_NOT_FOUND` |
 | Execution not found | 404 | `EXECUTION_NOT_FOUND` |
-| File not found | 404 | `FILE_NOT_FOUND` |
-| Session not ready | 409 | `SESSION_NOT_READY` |
-| Session busy | 409 | `SESSION_BUSY` |
-| Path traversal | 422 | `INVALID_PATH` |
-| Output limit exceeded | 422 | `OUTPUT_LIMIT_EXCEEDED` |
-| Startup mode unsupported | 422 | `STARTUP_MODE_UNSUPPORTED` |
-| Module not allowed | 422 | `MODULE_NOT_ALLOWED` |
-| Validation failure | 400 | `VALIDATION_ERROR` |
-| Decode failure | 400 | `INVALID_REQUEST` |
-| Unhandled | 500 | `INTERNAL` |
+| File not found in worktree | 404 | `FILE_NOT_FOUND` |
+| Session not in `ready` state | 409 | `SESSION_NOT_READY` |
+| Another execution already running | 409 | `SESSION_BUSY` |
+| Path traversal or absolute path | 422 | `INVALID_PATH` |
+| Output/event limit exceeded | 422 | `OUTPUT_LIMIT_EXCEEDED` |
+| Unsupported startup mode | 422 | `STARTUP_MODE_UNSUPPORTED` |
+| Adding a built-in as a module | 422 | `MODULE_NOT_ALLOWED` |
+| Unhandled internal error | 500 | `INTERNAL` |
+
+If you see `500 INTERNAL` for something that should have a specific error
+code, that's a bug worth reporting.
 
 ## Health and operations
 
-### GET /api/v1/health
+These endpoints let you check if the daemon is up and what it's doing.
 
-Lightweight process readiness check.
-
-**Response (200):**
+**GET /api/v1/health** returns a simple readiness check. If you get a
+response at all, the daemon is running:
 
 ```json
-{ "status": "ok" }
+{"status":"ok"}
 ```
 
-### GET /api/v1/runtime/summary
-
-Reports in-memory active sessions (not just persisted rows).
-
-**Response (200):**
+**GET /api/v1/runtime/summary** tells you what's actually alive in daemon
+memory. This is different from querying sessions in the database — after a
+daemon restart, the database still has session rows, but this endpoint
+correctly shows zero active sessions:
 
 ```json
 {
@@ -78,145 +87,98 @@ Reports in-memory active sessions (not just persisted rows).
 
 ## Templates
 
-### POST /api/v1/templates
+Templates are persistent runtime profiles. They define what a JavaScript
+runtime looks like: engine, limits, startup files, modules, and libraries.
+Creating a template also initializes default settings, so you can start
+creating sessions from it immediately.
 
-Create a new template (runtime profile).
-
-**Request:**
+**POST /api/v1/templates** creates a template:
 
 ```json
-{
-  "name": "my-template",
-  "engine": "goja"
-}
+{ "name": "my-template", "engine": "goja" }
 ```
 
-`name` is required. `engine` defaults to `goja`.
+`name` is required. `engine` defaults to `goja` if omitted. Returns **201**
+with the template object including its generated UUID.
 
-**Response (201):** Template object with generated ID, default settings, empty
-capabilities and startup files.
+**GET /api/v1/templates** lists all templates.
 
-**Errors:** `400 VALIDATION_ERROR` (missing name), `400 INVALID_REQUEST`
-(malformed JSON).
+**GET /api/v1/templates/{template_id}** returns the template along with its
+settings, capabilities, and startup files — everything you need to understand
+what sessions created from it will look like.
 
-### GET /api/v1/templates
-
-List all templates.
-
-**Response (200):** Array of template objects.
-
-### GET /api/v1/templates/{template_id}
-
-Get template with settings, capabilities, and startup files.
-
-**Response (200):** Envelope with `template`, `settings`, `capabilities`,
-`startup_files` fields.
-
-**Errors:** `404 TEMPLATE_NOT_FOUND`.
-
-### DELETE /api/v1/templates/{template_id}
-
-Delete a template. Cascades to settings, capabilities, and startup files via
+**DELETE /api/v1/templates/{template_id}** deletes a template and all its
+associated data (settings, capabilities, startup files) through cascading
 foreign keys.
 
-**Response (200):**
+### Template sub-resources
 
-```json
-{ "status": "ok", "template_id": "..." }
-```
+Templates have four kinds of sub-resources. Each can be added, listed, and
+in some cases removed independently.
 
-**Errors:** `404 TEMPLATE_NOT_FOUND`.
+**Capabilities** are metadata that describe what features the template
+enables. They're descriptive — the runtime reads them during session setup:
 
-### POST /api/v1/templates/{template_id}/capabilities
+- **POST /api/v1/templates/{id}/capabilities** — requires `kind` and `name`.
+  Kinds are `module`, `global`, `fs`, `net`, `env`. Optional `enabled` flag
+  and `config` JSON object.
+- **GET /api/v1/templates/{id}/capabilities** — lists all capabilities.
 
-Add a capability to a template.
+**Startup files** are scripts that run during session creation. The
+`order_index` determines the sequence — lower numbers run first:
 
-**Request:**
+- **POST /api/v1/templates/{id}/startup-files** — requires `path` (relative
+  to the future session's worktree). Optional `order_index` (default 0) and
+  `mode` (default `eval`, currently the only supported mode).
+- **GET /api/v1/templates/{id}/startup-files** — lists startup files sorted
+  by `order_index`.
+
+**Modules** are host-provided native capabilities (like database access or
+filesystem operations). Only modules from the configurable catalog can be
+added — JavaScript built-ins like JSON and Math are always available and
+attempting to add them returns `422 MODULE_NOT_ALLOWED`:
+
+- **POST /api/v1/templates/{id}/modules** — body: `{"name":"database"}`.
+- **GET /api/v1/templates/{id}/modules** — lists configured modules.
+- **DELETE /api/v1/templates/{id}/modules/{name}** — removes a module.
+
+**Libraries** are third-party JavaScript files that get loaded into the
+runtime's global scope at session startup:
+
+- **POST /api/v1/templates/{id}/libraries** — body:
+  `{"name":"lodash-4.17.21"}`.
+- **GET /api/v1/templates/{id}/libraries** — lists configured libraries.
+- **DELETE /api/v1/templates/{id}/libraries/{name}** — removes a library.
+
+### Default settings
+
+When you create a template, it gets these defaults. You can see them in the
+template detail response:
 
 ```json
 {
-  "kind": "module",
-  "name": "console",
-  "enabled": true,
-  "config": {}
+  "limits": {
+    "cpu_ms": 5000, "wall_ms": 30000, "mem_mb": 128,
+    "max_events": 1000, "max_output_kb": 512
+  },
+  "resolver": {
+    "roots": [], "extensions": [".js", ".mjs"],
+    "allow_absolute_repo_imports": false
+  },
+  "runtime": {
+    "esm": false, "strict": false, "console": true
+  }
 }
 ```
-
-`kind` and `name` are required. Capability kinds: `module`, `global`, `fs`,
-`net`, `env`.
-
-### GET /api/v1/templates/{template_id}/capabilities
-
-List capabilities for a template.
-
-### POST /api/v1/templates/{template_id}/startup-files
-
-Add a startup file to a template.
-
-**Request:**
-
-```json
-{
-  "path": "runtime/init.js",
-  "order_index": 10,
-  "mode": "eval"
-}
-```
-
-`path` is required. `mode` defaults to `eval`. Files execute in ascending
-`order_index` during session creation.
-
-### GET /api/v1/templates/{template_id}/startup-files
-
-List startup files sorted by `order_index`.
-
-### POST /api/v1/templates/{template_id}/modules
-
-Add a native module to a template. Only modules from the configurable catalog
-are allowed; built-in JavaScript globals (JSON, Math, Date) are always available
-and cannot be configured.
-
-**Request:**
-
-```json
-{ "name": "console" }
-```
-
-**Errors:** `422 MODULE_NOT_ALLOWED` if the module is a non-configurable built-in.
-
-### GET /api/v1/templates/{template_id}/modules
-
-List configured modules.
-
-### DELETE /api/v1/templates/{template_id}/modules/{module_name}
-
-Remove a module.
-
-### POST /api/v1/templates/{template_id}/libraries
-
-Add a third-party library to a template.
-
-**Request:**
-
-```json
-{ "name": "lodash-4.17.21" }
-```
-
-### GET /api/v1/templates/{template_id}/libraries
-
-List configured libraries.
-
-### DELETE /api/v1/templates/{template_id}/libraries/{library_name}
-
-Remove a library.
 
 ## Sessions
 
-### POST /api/v1/sessions
+Sessions are live goja runtime instances. They exist in daemon memory and are
+backed by persistent database rows. Creating a session triggers the full
+startup sequence: runtime allocation, library loading, and startup file
+execution.
 
-Create a new session from a template.
-
-**Request:**
+**POST /api/v1/sessions** creates a session:
 
 ```json
 {
@@ -227,133 +189,83 @@ Create a new session from a template.
 }
 ```
 
-All four fields are required. The worktree directory must exist on disk.
+All four fields are required. The worktree directory must exist on disk and
+the path must be absolute. Returns **201** with the session object — the
+`status` field will be `ready` if startup succeeded, or the creation will
+fail if something went wrong.
 
-**Response (201):** Session object. Status is usually `ready`; may fail if
-startup or library loading fails.
+**GET /api/v1/sessions** lists sessions. You can filter by status with
+`?status=ready` (also accepts `starting`, `crashed`, `closed`). Without the
+filter, all sessions are returned.
 
-**Errors:** `404 TEMPLATE_NOT_FOUND`, `400 VALIDATION_ERROR`.
+**GET /api/v1/sessions/{session_id}** returns full session detail including
+`closed_at` and `last_error` when relevant. This is where you look when a
+session crashed during creation.
 
-### GET /api/v1/sessions
+**POST /api/v1/sessions/{session_id}/close** closes a session. The in-memory
+runtime is discarded and the database row is updated with `closed_at`.
 
-List sessions. Optional query parameter: `status` (`starting`, `ready`,
-`crashed`, `closed`).
-
-### GET /api/v1/sessions/{session_id}
-
-Get a single session including `closed_at` and `last_error` when set.
-
-**Errors:** `404 SESSION_NOT_FOUND`.
-
-### POST /api/v1/sessions/{session_id}/close
-
-Close a session. Removes the in-memory runtime and updates the DB row.
-
-**Errors:** `404 SESSION_NOT_FOUND`.
-
-### DELETE /api/v1/sessions/{session_id}
-
-Alias for close.
+**DELETE /api/v1/sessions/{session_id}** is an alias for close.
 
 ## Executions
 
-### POST /api/v1/executions/repl
+Executions are individual code runs inside a session. Each one produces a
+persisted record and a stream of typed events.
 
-Execute a REPL snippet in a session.
-
-**Request:**
+**POST /api/v1/executions/repl** runs an inline JavaScript snippet:
 
 ```json
-{
-  "session_id": "...",
-  "input": "1 + 2"
-}
+{ "session_id": "...", "input": "1 + 2" }
 ```
 
-**Response (201):** Execution object with events array.
+Returns **201** with the execution object and its events array. The events
+capture everything: the input echo, any console output, the return value or
+exception.
 
-**Errors:** `404 SESSION_NOT_FOUND`, `409 SESSION_NOT_READY`,
-`409 SESSION_BUSY`, `422 OUTPUT_LIMIT_EXCEEDED`.
-
-### POST /api/v1/executions/run-file
-
-Execute a file from the session worktree.
-
-**Request:**
+**POST /api/v1/executions/run-file** runs a file from the session worktree:
 
 ```json
 {
   "session_id": "...",
-  "path": "app.js",
+  "path": "scripts/app.js",
   "args": {},
   "env": {}
 }
 ```
 
-`path` must be relative to the worktree. Absolute paths and `../` traversal are
-rejected.
+The `path` must be relative to the worktree. Absolute paths and `../`
+traversal are rejected with `422 INVALID_PATH` before any JavaScript runs.
 
-**Errors:** `422 INVALID_PATH`, `404 FILE_NOT_FOUND`, `409 SESSION_BUSY`.
+**GET /api/v1/executions** lists executions. Requires `session_id` as a query
+parameter. Optional `limit` (default 50, must be a positive integer).
 
-### GET /api/v1/executions
+**GET /api/v1/executions/{execution_id}** returns a single execution.
 
-List executions for a session.
+**GET /api/v1/executions/{execution_id}/events** returns the event stream for
+an execution. The optional `after_seq` query parameter enables cursor-based
+pagination — pass the `seq` of the last event you've seen, and you get only
+newer events. This is how you poll for output in automation.
 
-**Query parameters:**
+### Event types
 
-- `session_id` (required)
-- `limit` (optional, positive integer, default 50)
+Events are the atomic output of an execution. Each has a sequential `seq`
+number starting from 1:
 
-**Errors:** `400 VALIDATION_ERROR` (missing session_id or invalid limit).
-
-### GET /api/v1/executions/{execution_id}
-
-Get a single execution.
-
-### GET /api/v1/executions/{execution_id}/events
-
-Get events for an execution. Optional query: `after_seq` (non-negative integer)
-for cursor-based pagination.
-
-**Errors:** `400 VALIDATION_ERROR` (invalid after_seq).
-
-## Event types
-
-Events are emitted during execution and stored with sequential `seq` numbers:
-
-| Type | When emitted | Payload shape |
-|------|-------------|---------------|
-| `input_echo` | Start of every execution | `{ "text": "..." }` |
-| `console` | `console.log/warn/error/info/debug` | `{ "level": "log", "text": "..." }` |
-| `value` | Successful expression result | `{ "type": "number", "preview": "42", "json": 42 }` |
-| `exception` | Runtime error | `{ "message": "...", "stack": "..." }` |
-| `system` | Internal lifecycle events | `{ "message": "...", "level": "info" }` |
-| `stdout` | Standard output capture | Raw text |
-| `stderr` | Standard error capture | Raw text |
-
-## Template default settings
-
-When a template is created, default settings are initialized:
-
-```json
-{
-  "limits": { "cpu_ms": 5000, "wall_ms": 30000, "mem_mb": 128, "max_events": 1000, "max_output_kb": 512 },
-  "resolver": { "roots": [], "extensions": [".js", ".mjs"], "allow_absolute_repo_imports": false },
-  "runtime": { "esm": false, "strict": false, "console": true }
-}
-```
-
-## Troubleshooting
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| 400 on POST with valid-looking JSON | Unknown field in body | Remove extra fields; `DisallowUnknownFields` is enforced |
-| 409 SESSION_BUSY | Concurrent execution attempt | Wait for current execution to finish |
-| 422 INVALID_PATH | Absolute path or traversal in run-file | Use relative path without `../` |
-| 500 INTERNAL on unknown resource | Missing specific error mapping | File a bug; this should be a 404 |
+- **input_echo** — what was submitted (the code string or file path)
+- **console** — captured from `console.log`, `console.warn`, `console.error`,
+  `console.info`, and `console.debug`. Payload:
+  `{"level":"log","text":"..."}`
+- **value** — the return value of the expression. Payload includes a type
+  name, a human-readable preview, and optional JSON:
+  `{"type":"number","preview":"42","json":42}`
+- **exception** — a thrown JavaScript error. Payload:
+  `{"message":"ReferenceError: x is not defined","stack":"..."}`
+- **system** — internal lifecycle messages from the runtime. Payload:
+  `{"message":"...","level":"info"}`
+- **stdout / stderr** — raw output capture (less common than console events)
 
 ## See Also
 
-- `vm-system help getting-started`
-- `vm-system help architecture`
-- `vm-system help cli-command-reference`
+- `vm-system help getting-started` — hands-on walkthrough
+- `vm-system help architecture` — how the server is structured internally
+- `vm-system help cli-command-reference` — CLI equivalents for every endpoint

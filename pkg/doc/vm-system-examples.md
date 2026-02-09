@@ -1,7 +1,7 @@
 ---
 Title: "vm-system Examples"
 Slug: examples
-Short: "Practical recipes: REPL sessions, file execution, library usage, database access, and automation patterns."
+Short: "Runnable recipes: REPL sessions, startup files, libraries, file execution, events, and API automation."
 Topics:
 - vm-system
 - examples
@@ -16,151 +16,66 @@ ShowPerDefault: true
 SectionType: Example
 ---
 
-This page contains self-contained, runnable examples for common vm-system
-use cases. Each example assumes a running daemon and starts from scratch.
+Each example below is self-contained and assumes a running daemon. If you
+don't have one yet, start with `vm-system serve --db /tmp/examples.db`.
 
-## Example 1 — Minimal REPL session
+The examples are ordered from simple to complex. If you've completed the
+getting-started tutorial, you can jump to whichever pattern interests you.
 
-The simplest possible workflow: create a template, create a session, run code.
+## Minimal REPL session
+
+The absolute simplest workflow — create a template, create a session, execute
+code, clean up. No startup files, no modules, no libraries — just the raw
+goja runtime with default settings:
 
 ```bash
-# Create template
 vm-system template create --name minimal --engine goja
-# Output: Created template: minimal (ID: <TEMPLATE_ID>)
-
-# Create worktree
 mkdir -p /tmp/vm-minimal
 
-# Create session
 vm-system session create \
-  --template-id <TEMPLATE_ID> \
-  --workspace-id ws \
-  --base-commit HEAD \
-  --worktree-path /tmp/vm-minimal
+  --template-id <TEMPLATE_ID> --workspace-id ws \
+  --base-commit HEAD --worktree-path /tmp/vm-minimal
 
-# Execute
-vm-system exec repl <SESSION_ID> '2 + 2'
-# Result: value event with preview "4"
+vm-system exec repl <SESSION_ID> '2 + 2'                          # → 4
+vm-system exec repl <SESSION_ID> 'JSON.stringify({hello:"world"})' # → '{"hello":"world"}'
 
-vm-system exec repl <SESSION_ID> 'JSON.stringify({hello: "world"})'
-# Result: value event with preview '{"hello":"world"}'
-
-# Cleanup
 vm-system session close <SESSION_ID>
 ```
 
-## Example 2 — Startup files with persistent state
+Even with no configuration, you get the full JavaScript language including
+JSON, Math, Date, and all built-in globals.
 
-Startup files run during session creation and set up global state:
+## Startup files that set up global state
+
+Startup files are the primary way to initialize a runtime before user code
+runs. Anything a startup file puts on `globalThis` is available to every
+later execution. This is useful for configuration, helper functions, database
+setup, or anything that should be "just there" when you start working:
 
 ```bash
-# Create worktree with startup script
 mkdir -p /tmp/vm-startup/runtime
 cat > /tmp/vm-startup/runtime/init.js <<'JS'
-globalThis.config = {
-  appName: "my-app",
-  version: "1.0.0",
-  debug: true
-}
+globalThis.config = { appName: "my-app", version: "1.0.0", debug: true }
 console.log("Config initialized:", JSON.stringify(config))
 JS
 
-# Create and configure template
 vm-system template create --name with-startup --engine goja
-vm-system template add-startup <TEMPLATE_ID> \
-  --path runtime/init.js --order 10 --mode eval
+vm-system template add-startup <TEMPLATE_ID> --path runtime/init.js --order 10 --mode eval
 
-# Create session (init.js runs automatically)
 vm-system session create \
-  --template-id <TEMPLATE_ID> \
-  --workspace-id ws \
-  --base-commit HEAD \
-  --worktree-path /tmp/vm-startup
+  --template-id <TEMPLATE_ID> --workspace-id ws \
+  --base-commit HEAD --worktree-path /tmp/vm-startup
 
-# Startup state is available in subsequent executions
-vm-system exec repl <SESSION_ID> 'config.appName'
-# Result: "my-app"
-
-vm-system exec repl <SESSION_ID> 'config.version'
-# Result: "1.0.0"
+vm-system exec repl <SESSION_ID> 'config.appName'   # → "my-app"
+vm-system exec repl <SESSION_ID> 'config.version'    # → "1.0.0"
 ```
 
-## Example 3 — Running files from a worktree
+## Multiple startup files with ordering
 
-Execute scripts from a project directory:
-
-```bash
-mkdir -p /tmp/vm-project/scripts
-
-cat > /tmp/vm-project/scripts/fibonacci.js <<'JS'
-function fib(n) {
-  if (n <= 1) return n
-  return fib(n - 1) + fib(n - 2)
-}
-var result = []
-for (var i = 0; i < 10; i++) {
-  result.push(fib(i))
-}
-console.log("Fibonacci:", JSON.stringify(result))
-result
-JS
-
-# Create template and session
-vm-system template create --name project --engine goja
-vm-system session create \
-  --template-id <TEMPLATE_ID> \
-  --workspace-id ws \
-  --base-commit HEAD \
-  --worktree-path /tmp/vm-project
-
-# Run the file
-vm-system exec run-file <SESSION_ID> scripts/fibonacci.js
-# Console event: "Fibonacci: [0,1,1,2,3,5,8,13,21,34]"
-# Value event: [0,1,1,2,3,5,8,13,21,34]
-```
-
-## Example 4 — Stateful REPL workflow
-
-Variables persist across REPL calls within the same session:
-
-```bash
-vm-system exec repl <SESSION_ID> 'var users = []'
-vm-system exec repl <SESSION_ID> 'users.push({name: "Alice", age: 30}); users.length'
-# Result: 1
-
-vm-system exec repl <SESSION_ID> 'users.push({name: "Bob", age: 25}); users.length'
-# Result: 2
-
-vm-system exec repl <SESSION_ID> 'users.filter(u => u.age > 28)'
-# Result: [{name: "Alice", age: 30}]
-```
-
-## Example 5 — Inspecting execution events
-
-Every execution produces a sequence of typed events:
-
-```bash
-# Run code that produces multiple event types
-vm-system exec repl <SESSION_ID> 'console.log("hello"); console.warn("careful"); 42'
-
-# Fetch all events
-vm-system exec events <EXECUTION_ID> --after-seq 0
-```
-
-Expected event sequence:
-
-| seq | type | content |
-|-----|------|---------|
-| 1 | `input_echo` | The input code |
-| 2 | `console` | `{"level":"log","text":"hello"}` |
-| 3 | `console` | `{"level":"warn","text":"careful"}` |
-| 4 | `value` | `{"type":"number","preview":"42","json":42}` |
-
-Use `--after-seq 3` to get only events after seq 3 (cursor-based pagination).
-
-## Example 6 — Multiple startup files with ordering
-
-Control initialization order with `order_index`:
+When your initialization is complex, split it across multiple files and use
+`--order` to control the sequence. Lower numbers run first, so you can build
+up layers — a base layer that defines data structures, then an extensions
+layer that adds functions:
 
 ```bash
 mkdir -p /tmp/vm-ordered/runtime
@@ -182,112 +97,167 @@ vm-system template add-startup <ID> --path runtime/02-extensions.js --order 20 -
 vm-system session create --template-id <ID> --workspace-id ws \
   --base-commit HEAD --worktree-path /tmp/vm-ordered
 
-vm-system exec repl <SESSION_ID> 'log'
-# Result: ["base loaded", "extensions loaded"]
-
-vm-system exec repl <SESSION_ID> 'greet("World")'
-# Result: "Hello, World"
+vm-system exec repl <SESSION_ID> 'log'               # → ["base loaded", "extensions loaded"]
+vm-system exec repl <SESSION_ID> 'greet("World")'    # → "Hello, World"
 ```
 
-## Example 7 — Template with lodash library
+## Running files from a worktree
 
-Use third-party libraries for richer JavaScript capabilities:
+For anything more than a one-liner, put the code in a file and use
+`exec run-file`. This is how you'd run pipeline steps, data transformations,
+or test scripts. The file executes in the same runtime as previous REPL calls
+and startup files, so it has access to all existing state:
 
 ```bash
-# Download libraries to cache first
-vm-system libs download
+mkdir -p /tmp/vm-project/scripts
 
-# Create template with lodash
+cat > /tmp/vm-project/scripts/fibonacci.js <<'JS'
+function fib(n) { return n <= 1 ? n : fib(n-1) + fib(n-2) }
+var result = []
+for (var i = 0; i < 10; i++) result.push(fib(i))
+console.log("Fibonacci:", JSON.stringify(result))
+result
+JS
+
+vm-system template create --name project --engine goja
+vm-system session create \
+  --template-id <TEMPLATE_ID> --workspace-id ws \
+  --base-commit HEAD --worktree-path /tmp/vm-project
+
+vm-system exec run-file <SESSION_ID> scripts/fibonacci.js
+# console: "Fibonacci: [0,1,1,2,3,5,8,13,21,34]"
+# value:   [0,1,1,2,3,5,8,13,21,34]
+```
+
+## Stateful REPL — building up data across calls
+
+One of the most useful features of vm-system is that REPL calls are stateful.
+Variables, functions, and objects you create in one call persist into the next.
+This makes the REPL great for exploratory data work — build up a dataset
+step by step and query it interactively:
+
+```bash
+vm-system exec repl <SESSION_ID> 'var users = []'
+vm-system exec repl <SESSION_ID> 'users.push({name: "Alice", age: 30}); users.length'  # → 1
+vm-system exec repl <SESSION_ID> 'users.push({name: "Bob", age: 25}); users.length'    # → 2
+vm-system exec repl <SESSION_ID> 'users.filter(u => u.age > 28)'  # → [{name:"Alice",age:30}]
+```
+
+## Inspecting the event stream
+
+Every execution produces typed events with sequential `seq` numbers. Events
+are how you see exactly what happened — not just the return value, but every
+console call, in order. This is especially useful for debugging or for
+building automation that reacts to specific output:
+
+```bash
+vm-system exec repl <SESSION_ID> 'console.log("hello"); console.warn("careful"); 42'
+vm-system exec events <EXECUTION_ID> --after-seq 0
+```
+
+You'll see something like:
+
+```
+seq 1  input_echo   console.log("hello"); console.warn("careful"); 42
+seq 2  console      {"level":"log","text":"hello"}
+seq 3  console      {"level":"warn","text":"careful"}
+seq 4  value        {"type":"number","preview":"42","json":42}
+```
+
+The `--after-seq` parameter is the key to polling. If you pass `--after-seq 3`,
+you get only events after seq 3. This means you can poll periodically without
+re-fetching the entire history — just remember the last `seq` you saw.
+
+## Using lodash
+
+Third-party libraries are downloaded to a local cache and then loaded into
+the runtime at session startup. This example shows lodash, but the same
+pattern works for moment, axios, ramda, dayjs, and zustand:
+
+```bash
+vm-system libs download
 vm-system template create --name with-lodash --engine goja
 vm-system template add-library <TEMPLATE_ID> --name lodash-4.17.21
 
-# Create session (lodash loaded during startup)
+mkdir -p /tmp/vm-lodash
 vm-system session create --template-id <TEMPLATE_ID> \
-  --workspace-id ws --base-commit HEAD \
-  --worktree-path /tmp/vm-lodash
+  --workspace-id ws --base-commit HEAD --worktree-path /tmp/vm-lodash
 
-# Use lodash
 vm-system exec repl <SESSION_ID> '_.chunk([1,2,3,4,5,6], 2)'
-# Result: [[1,2],[3,4],[5,6]]
+# → [[1,2],[3,4],[5,6]]
 
 vm-system exec repl <SESSION_ID> '_.groupBy(["one","two","three"], "length")'
+# → {"3":["one","two"],"5":["three"]}
 ```
 
-## Example 8 — Error handling and debugging
+## Error handling and debugging
 
-See what happens when things go wrong:
+It's worth knowing what different failure modes look like so you can debug
+them quickly. Here are the most common ones:
 
 ```bash
-# Syntax error
+# Syntax error — you get an exception event with the parse error
 vm-system exec repl <SESSION_ID> 'function('
-# Execution status: error, exception event with message
+# → exception: "SyntaxError: Unexpected token )"
 
-# Reference error
-vm-system exec repl <SESSION_ID> 'undefinedVariable.method()'
-# Exception event: "ReferenceError: undefinedVariable is not defined"
+# Reference error — the variable doesn't exist in this session
+vm-system exec repl <SESSION_ID> 'undefinedVar.method()'
+# → exception: "ReferenceError: undefinedVar is not defined"
 
-# Path traversal attempt
+# Path traversal — blocked before any JavaScript runs
 vm-system exec run-file <SESSION_ID> '../etc/passwd'
-# Error: 422 INVALID_PATH "Path escapes allowed worktree"
+# → 422 INVALID_PATH: "Path escapes allowed worktree"
 ```
 
-## Example 9 — API-level automation with curl
+For all of these, the event stream has the details. Run
+`vm-system exec events <execution-id> --after-seq 0` to see the exception
+message and stack trace.
 
-For scripting and CI pipelines, use the REST API directly:
+## API automation with curl
+
+When you need to integrate vm-system into CI pipelines, monitoring scripts,
+or other tools, the REST API is the way to go. This example shows the
+complete template → session → execute → cleanup flow using only curl and jq:
 
 ```bash
-# Create template
 TEMPLATE=$(curl -sS -X POST http://127.0.0.1:3210/api/v1/templates \
   -H 'Content-Type: application/json' \
   -d '{"name":"ci-runner","engine":"goja"}' | jq -r '.id')
 
-# Create session
+mkdir -p /tmp/ci-ws
 SESSION=$(curl -sS -X POST http://127.0.0.1:3210/api/v1/sessions \
   -H 'Content-Type: application/json' \
-  -d "{\"template_id\":\"$TEMPLATE\",\"workspace_id\":\"ci\",\"base_commit_oid\":\"HEAD\",\"worktree_path\":\"/tmp/ci-ws\"}" \
+  -d "{\"template_id\":\"$TEMPLATE\",\"workspace_id\":\"ci\",
+       \"base_commit_oid\":\"HEAD\",\"worktree_path\":\"/tmp/ci-ws\"}" \
   | jq -r '.id')
 
-# Execute and extract result
 RESULT=$(curl -sS -X POST http://127.0.0.1:3210/api/v1/executions/repl \
   -H 'Content-Type: application/json' \
   -d "{\"session_id\":\"$SESSION\",\"input\":\"1+1\"}" \
   | jq -r '.events[] | select(.type=="value") | .payload.preview')
 
-echo "Result: $RESULT"
+echo "Result: $RESULT"   # → Result: 2
 
-# Cleanup
-curl -sS -X POST http://127.0.0.1:3210/api/v1/sessions/$SESSION/close -d '{}'
+curl -sS -X POST "http://127.0.0.1:3210/api/v1/sessions/$SESSION/close" -d '{}'
 ```
 
-## Example 10 — Runtime summary monitoring
+## Monitoring with runtime-summary
 
-Monitor daemon state in a loop:
+The runtime summary endpoint tells you exactly what's alive in the daemon's
+memory. This is useful for monitoring dashboards, health checks, and for
+verifying that sessions were properly created or cleaned up:
 
 ```bash
-# Watch active sessions
-watch -n 2 'curl -sS http://127.0.0.1:3210/api/v1/runtime/summary | jq .'
-
-# Check session count before and after operations
-curl -sS http://127.0.0.1:3210/api/v1/runtime/summary
+# One-shot check
+curl -sS http://127.0.0.1:3210/api/v1/runtime/summary | jq .
 # {"active_sessions":0,"active_session_ids":[]}
 
-# ... create sessions ...
-
-curl -sS http://127.0.0.1:3210/api/v1/runtime/summary
-# {"active_sessions":2,"active_session_ids":["session-1","session-2"]}
+# Continuous monitoring (updates every 2 seconds)
+watch -n 2 'curl -sS http://127.0.0.1:3210/api/v1/runtime/summary | jq .'
 ```
-
-## Troubleshooting
-
-| Problem | Cause | Solution |
-|---------|-------|----------|
-| Examples fail to run | Daemon not started | Start `vm-system serve` first |
-| `libs download` fails | Network issue or URL unreachable | Check connectivity; libraries are downloaded from CDN |
-| Startup file not found | Wrong path relative to worktree | Verify the file exists at `<worktree-path>/<startup-path>` |
-| Variable not defined in REPL | Typo or wrong session | Variables are per-session; check session ID |
 
 ## See Also
 
-- `vm-system help getting-started`
-- `vm-system help cli-command-reference`
-- `vm-system help templates-and-sessions`
+- `vm-system help getting-started` — full walkthrough from build to close
+- `vm-system help cli-command-reference` — every flag and argument
+- `vm-system help templates-and-sessions` — deeper on the core concepts
