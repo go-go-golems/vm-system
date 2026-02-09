@@ -1,0 +1,14 @@
+# Changelog
+
+## 2026-02-08
+
+- Initial workspace created.
+
+## 2026-02-09
+
+- Added exhaustive design doc for glazed migration with command-by-command inventory and root flattening plan.
+- Rewrote design doc to be strictly new-API-first (`schema/fields/values/sources`) and removed legacy vocabulary/mapping content.
+- Added detailed diary with command traces, failure logs, decisions, and review instructions.
+- Replaced placeholder tasks with phased implementation checklist covering root wiring, porting, tests, docs, and upload.
+- Replaced broad ticket tasks with implementation-ordered checklist (`T01`-`T20`) for commit-by-commit execution.
+- Uploaded bundled plan + diary PDFs to reMarkable at `/ai/2026/02/09/VM-011-PORT-VM-CLI-TO-GLAZED` (`VM-011 Glazed Migration Plan` and `VM-011 Glazed Migration Plan Final`).
