@@ -12,3 +12,4 @@
 - Replaced placeholder tasks with phased implementation checklist covering root wiring, porting, tests, docs, and upload.
 - Replaced broad ticket tasks with implementation-ordered checklist (`T01`-`T20`) for commit-by-commit execution.
 - Uploaded bundled plan + diary PDFs to reMarkable at `/ai/2026/02/09/VM-011-PORT-VM-CLI-TO-GLAZED` (`VM-011 Glazed Migration Plan` and `VM-011 Glazed Migration Plan Final`).
+- Implemented root flattening slice: added Glazed dependency, wired help/logging in root, removed `http` from root registration, and added new `ops` command + vmclient ops methods.

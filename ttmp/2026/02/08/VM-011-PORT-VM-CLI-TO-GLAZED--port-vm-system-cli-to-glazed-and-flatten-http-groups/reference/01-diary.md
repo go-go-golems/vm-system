@@ -428,3 +428,93 @@ The tricky part was making sure the migration uses the actually available API na
   - `ttmp/2026/02/08/VM-011-PORT-VM-CLI-TO-GLAZED--port-vm-system-cli-to-glazed-and-flatten-http-groups/tasks.md`
 - Baseline command test:
   - `go test ./cmd/vm-system -count=1`
+
+## Step 6: Implement root flattening, help wiring, and ops endpoints
+
+I implemented the first executable code slice: root command now exposes `template`, `session`, `exec`, `ops`, `libs`, and `serve` directly; `http` is no longer registered at root. I also wired Glazed help/logging and added embedded help docs.
+
+This step completed the foundational tasks needed before command-by-command Glazed rewrites.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 5)
+
+**Assistant interpretation:** Start implementing ticket tasks incrementally with frequent documentation and commits.
+
+**Inferred user intent:** Make measurable migration progress while preserving auditability and rollback granularity.
+
+**Commit (code):** pending
+
+### What I did
+
+- Added Glazed dependency:
+  - `go get github.com/go-go-golems/glazed@latest`
+- Updated root CLI wiring in `cmd/vm-system/main.go`:
+  - loaded embedded docs help system
+  - wired `help_cmd.SetupCobraRootCommand`
+  - wired logging flags and `PersistentPreRunE` logger init
+  - replaced root `http` registration with direct `template/session/exec/ops`
+- Added embedded help docs package:
+  - `pkg/doc/doc.go`
+  - `pkg/doc/vm-system-how-to-use.md`
+  - `pkg/doc/vm-system-command-map.md`
+- Added ops CLI and vmclient support:
+  - `cmd/vm-system/cmd_ops.go`
+  - `pkg/vmclient/operations_client.go`
+- Ran formatting and tests for command package.
+
+### Why
+
+Root/help/logging/ops wiring are prerequisites for the deeper command migration and test updates. Landing this slice first keeps follow-on refactors smaller and easier to validate.
+
+### What worked
+
+- Root command builds with new topology and help wiring.
+- `ops health` / `ops runtime-summary` command surfaces were added.
+- `go test ./cmd/vm-system -count=1` passes after dependency and module cleanup.
+
+### What didn't work
+
+- Initial test run failed due missing `go.sum` entries after adding Glazed.
+  - Command: `GOWORK=off go test ./cmd/vm-system -count=1`
+  - Symptom: many `missing go.sum entry for module` errors for transitive dependencies.
+- Resolution:
+  - Command: `go mod tidy`
+  - Re-ran tests successfully.
+
+### What I learned
+
+- Pulling in Glazed v1.0.0 on this module required `go mod tidy` immediately to materialize transitive checksums before tests could run.
+- Root flattening can be landed independently from full command internals migration.
+
+### What was tricky to build
+
+The tricky part was dependency stabilization. Adding Glazed introduced many transitive packages; test execution failed before code-level issues were visible. I handled this by treating module hygiene (`go mod tidy`) as part of the implementation step rather than a post-step cleanup.
+
+### What warrants a second pair of eyes
+
+- Confirm whether root-level logging flag defaults and `PersistentPreRunE` behavior are acceptable for existing scripts.
+- Confirm help doc titles/slugs meet project conventions.
+
+### What should be done in the future
+
+- Next slice should introduce shared Glazed command helpers and then port command groups one-by-one.
+
+### Code review instructions
+
+- Review root bootstrap first:
+  - `cmd/vm-system/main.go`
+- Review new docs/help package:
+  - `pkg/doc/doc.go`
+  - `pkg/doc/vm-system-how-to-use.md`
+  - `pkg/doc/vm-system-command-map.md`
+- Review ops additions:
+  - `cmd/vm-system/cmd_ops.go`
+  - `pkg/vmclient/operations_client.go`
+- Validate with:
+  - `GOWORK=off go test ./cmd/vm-system -count=1`
+
+### Technical details
+
+- Completed task IDs in this step: `T01`, `T03`, `T04`, `T05`, `T12`, `T13`.
+- Remaining high-priority coding tasks: `T02`, `T06`-`T11`, `T14`-`T19`.
