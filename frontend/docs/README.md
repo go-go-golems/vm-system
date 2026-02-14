@@ -42,6 +42,20 @@ Before diving into the docs, here's a quick map of the key ideas:
 - **Shared Domain** — A named piece of shared state that multiple plugins can read from and write to
 - **Capability Grant** — Permission assigned to a plugin instance to read or write a shared domain
 
+## API Truth Source (Read This First)
+
+When docs and code disagree, treat these files as authoritative:
+
+- `packages/plugin-runtime/src/runtimeService.ts` (`BOOTSTRAP_SOURCE`) for the plugin-side UI DSL surface (`ui.*`)
+- `packages/plugin-runtime/src/hostAdapter.ts` for the abstract host adapter contract
+- `packages/plugin-runtime/src/redux-adapter/store.ts` for capability checks, shared-domain reducers, and `globalState` projections
+
+Current DSL signatures of note:
+
+- `ui.input(value, props?)`
+- `ui.table(rows, props?)`
+- `ui.column(children?)`
+
 ## Documentation Map
 
 ### Getting Started

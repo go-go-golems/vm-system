@@ -53,6 +53,28 @@ Hosts can read it through `selectDispatchTimeline`.
 
 `runtime-metrics` now includes `lastTimestamp`, useful for timeline-aligned diagnostics.
 
+### 4) UI DSL signatures are runtime-bootstrap defined
+
+The plugin UI DSL comes from `packages/plugin-runtime/src/runtimeService.ts` (`BOOTSTRAP_SOURCE`).
+Use these signatures:
+
+- `ui.input(value, props?)`
+- `ui.table(rows, props?)`
+- `ui.column(children?)`
+
+If docs/examples show object-only forms like `ui.input({ value, ... })` or `ui.table({ headers, rows })`, update them to match runtime bootstrap signatures.
+
+### 5) Adapter abstraction needs wrapper normalization
+
+`RuntimeHostAdapter` uses object-shaped async methods, while `QuickJSRuntimeService` and `QuickJSSandboxClient` use positional APIs.
+When migrating to adapter-based host code, add thin wrappers that map:
+
+- `loadPlugin({ packageId, instanceId, code })` -> service/client positional call
+- `render({ instanceId, widgetId, pluginState, globalState })` -> service/client positional call
+- `event({ instanceId, widgetId, handler, args, pluginState, globalState })` -> service/client positional call
+
+See `docs/runtime/embedding.md` Mode C for wrapper examples.
+
 ## Host migration checklist
 
 1. Replace old imports with `@runtime/*` exports.
@@ -71,3 +93,9 @@ Hosts can read it through `selectDispatchTimeline`.
 ## Compatibility statement
 
 This migration is intentionally breaking for old app-local runtime import paths. The supported API surface is now the `@runtime/*` exports from `packages/plugin-runtime`.
+
+For contract accuracy during migration, prefer source-of-truth references:
+
+- `packages/plugin-runtime/src/runtimeService.ts` (plugin DSL bootstrap)
+- `packages/plugin-runtime/src/hostAdapter.ts` (adapter contract)
+- `packages/plugin-runtime/src/redux-adapter/store.ts` (runtime state/policy/projection behavior)
