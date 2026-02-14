@@ -29,6 +29,14 @@ To try it out:
 3. Click **Run** to load it into the sandbox
 4. See "Hello from my first plugin!" in the Live Preview pane
 
+### Column-focused presets in the catalog
+
+The sidebar catalog includes presets that intentionally use `ui.column(...)` as the top-level layout:
+
+- `Column Starter` (`column-starter`) — minimal `ui.column` + button handler example
+- `Checklist` (`checklist`) — mixed `ui.column`, `ui.row`, `ui.table`, and input handlers
+- `Runtime Snapshot` (`runtime-snapshot`) — read-only runtime telemetry with column layout
+
 ## Plugin Definition Reference
 
 The object you return from `definePlugin()` has this shape:

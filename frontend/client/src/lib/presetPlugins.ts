@@ -321,11 +321,190 @@ definePlugin(({ ui }) => {
   `,
 };
 
+// Column Starter Plugin
+export const columnStarterPlugin: PluginDefinition = {
+  id: "column-starter",
+  title: "Column Starter",
+  description: "Minimal plugin demonstrating ui.column vertical layout",
+  capabilities: {
+    readShared: [],
+    writeShared: [],
+  },
+  code: `
+definePlugin(({ ui }) => {
+  return {
+    id: "column-starter",
+    title: "Column Starter",
+    description: "ui.column starter demo",
+    initialState: { clicks: 0 },
+    widgets: {
+      main: {
+        render({ pluginState }) {
+          const clicks = Number(pluginState?.clicks ?? 0);
+          return ui.column([
+            ui.text("Column layout demo"),
+            ui.badge("Clicks: " + clicks),
+            ui.button("Click", { onClick: { handler: "inc" } }),
+          ]);
+        },
+        handlers: {
+          inc({ dispatchPluginAction, pluginState }) {
+            const next = Number(pluginState?.clicks ?? 0) + 1;
+            dispatchPluginAction("state/merge", { clicks: next });
+          },
+        },
+      },
+    },
+  };
+});
+  `,
+};
+
+// Task Checklist Plugin
+export const checklistPlugin: PluginDefinition = {
+  id: "checklist",
+  title: "Checklist",
+  description: "Small checklist UI built with ui.column + ui.row",
+  capabilities: {
+    readShared: [],
+    writeShared: [],
+  },
+  code: `
+definePlugin(({ ui }) => {
+  return {
+    id: "checklist",
+    title: "Checklist",
+    description: "Simple local checklist demo",
+    initialState: {
+      draft: "",
+      items: [
+        { id: "1", text: "Write plugin", done: true },
+        { id: "2", text: "Use ui.column", done: false },
+      ],
+    },
+    widgets: {
+      main: {
+        render({ pluginState }) {
+          const items = Array.isArray(pluginState?.items) ? pluginState.items : [];
+          const draft = String(pluginState?.draft ?? "");
+          const doneCount = items.filter((i) => i?.done).length;
+
+          return ui.column([
+            ui.text("Checklist"),
+            ui.badge("Done: " + doneCount + "/" + items.length),
+            ui.row([
+              ui.input(draft, {
+                placeholder: "New task...",
+                onChange: { handler: "setDraft" },
+              }),
+              ui.button("Add", { onClick: { handler: "add" } }),
+            ]),
+            items.length === 0
+              ? ui.text("No items yet")
+              : ui.table(
+                  items.map((item) => [
+                    item.done ? "DONE" : "TODO",
+                    String(item.text ?? ""),
+                    String(item.id ?? ""),
+                  ]),
+                  { headers: ["Status", "Task", "ID"] }
+                ),
+            ui.row([
+              ui.button("Toggle First", { onClick: { handler: "toggleFirst" } }),
+              ui.button("Clear", { onClick: { handler: "clear" }, variant: "destructive" }),
+            ]),
+          ]);
+        },
+        handlers: {
+          setDraft({ dispatchPluginAction }, args) {
+            dispatchPluginAction("state/merge", { draft: String(args?.value ?? "") });
+          },
+          add({ dispatchPluginAction, pluginState }) {
+            const draft = String(pluginState?.draft ?? "").trim();
+            if (!draft) return;
+            const current = Array.isArray(pluginState?.items) ? pluginState.items : [];
+            const next = current.concat([{ id: String(Date.now()), text: draft, done: false }]);
+            dispatchPluginAction("state/replace", { draft: "", items: next });
+          },
+          toggleFirst({ dispatchPluginAction, pluginState }) {
+            const current = Array.isArray(pluginState?.items) ? pluginState.items : [];
+            if (current.length === 0) return;
+            const next = current.slice();
+            next[0] = {
+              ...next[0],
+              done: !Boolean(next[0]?.done),
+            };
+            dispatchPluginAction("state/merge", { items: next });
+          },
+          clear({ dispatchPluginAction }) {
+            dispatchPluginAction("state/replace", { draft: "", items: [] });
+          },
+        },
+      },
+    },
+  };
+});
+  `,
+};
+
+// Runtime Snapshot Plugin
+export const runtimeSnapshotPlugin: PluginDefinition = {
+  id: "runtime-snapshot",
+  title: "Runtime Snapshot",
+  description: "Read-only runtime telemetry laid out with ui.column",
+  capabilities: {
+    readShared: ["runtime-metrics", "runtime-registry"],
+    writeShared: [],
+  },
+  code: `
+definePlugin(({ ui }) => {
+  return {
+    id: "runtime-snapshot",
+    title: "Runtime Snapshot",
+    description: "Read-only runtime telemetry",
+    widgets: {
+      snapshot: {
+        render({ globalState }) {
+          const metrics = globalState?.shared?.["runtime-metrics"] ?? {};
+          const registry = Array.isArray(globalState?.shared?.["runtime-registry"])
+            ? globalState.shared["runtime-registry"]
+            : [];
+
+          return ui.column([
+            ui.text("Runtime Snapshot"),
+            ui.row([
+              ui.badge("Plugins: " + Number(metrics?.pluginCount ?? 0)),
+              ui.badge("Dispatches: " + Number(metrics?.dispatchCount ?? 0)),
+            ]),
+            ui.text("Recent Plugin Entries"),
+            registry.length === 0
+              ? ui.text("No plugins loaded")
+              : ui.table(
+                  registry.slice(0, 5).map((p) => [
+                    String(p.instanceId ?? p.id ?? ""),
+                    String(p.packageId ?? ""),
+                    String(p.status ?? ""),
+                  ]),
+                  { headers: ["Instance", "Package", "Status"] }
+                ),
+          ]);
+        },
+        handlers: {},
+      },
+    },
+  };
+});
+  `,
+};
+
 export const presetPlugins = [
   counterPlugin,
   calculatorPlugin,
+  columnStarterPlugin,
+  checklistPlugin,
   statusDashboardPlugin,
   greeterPlugin,
   sharedGreeterStatePlugin,
   runtimeMonitorPlugin,
+  runtimeSnapshotPlugin,
 ];
