@@ -100,13 +100,81 @@ The sandbox client uses a request/response protocol over `postMessage`. Each cal
 
 ### Mode C: Host Adapter (Abstract Interface)
 
-Use `RuntimeHostAdapter` when you want to write code that works with either mode:
+Use `RuntimeHostAdapter` when you want to write host code that is runtime-backend agnostic.
+
+Important caveat: `QuickJSRuntimeService` and `QuickJSSandboxClient` are not drop-in `RuntimeHostAdapter` implementations. Their method signatures are positional, while `RuntimeHostAdapter` uses object-shaped inputs (`loadPlugin({ ... })`, `render({ ... })`, `event({ ... })`), and `QuickJSRuntimeService` has sync `render/event` methods.
+
+Use thin wrappers:
+
+```ts
+import type {
+  RuntimeHostAdapter,
+  RuntimeEventInput,
+  RuntimeLoadInput,
+  RuntimeRenderInput,
+} from "@runtime/hostAdapter";
+import { QuickJSRuntimeService } from "@runtime/runtimeService";
+import { QuickJSSandboxClient } from "@runtime/worker/sandboxClient";
+
+// Direct service wrapper (main thread)
+export function createDirectAdapter(service = new QuickJSRuntimeService()): RuntimeHostAdapter {
+  return {
+    async loadPlugin(input: RuntimeLoadInput) {
+      return service.loadPlugin(input.packageId, input.instanceId, input.code);
+    },
+    async render(input: RuntimeRenderInput) {
+      return service.render(input.instanceId, input.widgetId, input.pluginState, input.globalState);
+    },
+    async event(input: RuntimeEventInput) {
+      return service.event(
+        input.instanceId,
+        input.widgetId,
+        input.handler,
+        input.args,
+        input.pluginState,
+        input.globalState
+      );
+    },
+    async disposePlugin(instanceId) {
+      return service.disposePlugin(instanceId);
+    },
+    async health() {
+      return service.health();
+    },
+    // Optional in RuntimeHostAdapter; direct mode usually has no worker to terminate.
+    terminate() {},
+  };
+}
+
+// Worker client wrapper (browser)
+export function createWorkerAdapter(client = new QuickJSSandboxClient()): RuntimeHostAdapter {
+  return {
+    loadPlugin: (input: RuntimeLoadInput) =>
+      client.loadPlugin(input.packageId, input.instanceId, input.code),
+    render: (input: RuntimeRenderInput) =>
+      client.render(input.instanceId, input.widgetId, input.pluginState, input.globalState),
+    event: (input: RuntimeEventInput) =>
+      client.event(
+        input.instanceId,
+        input.widgetId,
+        input.handler,
+        input.args,
+        input.pluginState,
+        input.globalState
+      ),
+    disposePlugin: (instanceId) => client.disposePlugin(instanceId),
+    health: () => client.health(),
+    terminate: () => client.terminate(),
+  };
+}
+```
+
+Now host logic can stay adapter-based:
 
 ```ts
 import type { RuntimeHostAdapter } from "@runtime/hostAdapter";
 
-function createMyApp(adapter: RuntimeHostAdapter) {
-  // Works with both QuickJSRuntimeService and QuickJSSandboxClient
+async function createMyApp(adapter: RuntimeHostAdapter) {
   const plugin = await adapter.loadPlugin({
     packageId: "my-plugin",
     instanceId: createInstanceId("my-plugin"),
