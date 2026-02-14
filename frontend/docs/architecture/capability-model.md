@@ -54,6 +54,8 @@ globalState.shared = {
 
 Read grants are checked every time the host builds the projected `globalState` for a plugin instance. Domains without a read grant are simply omitted from the projection.
 
+`readShared`/`writeShared` apply to `globalState.shared`. The `globalState.system` block is host-provided runtime telemetry and is not filtered by shared-domain grants.
+
 ### Write Grants
 
 A write grant for a domain means the plugin can dispatch shared actions targeting that domain:
@@ -94,6 +96,20 @@ These outcomes are visible in the DevTools Timeline tab. Filtering by `denied` i
 ## Shared Domains
 
 A **shared domain** is a named piece of state that lives outside any individual plugin. Multiple plugins can read from and write to the same domain, enabling cross-plugin communication.
+
+## Internal vs Projected Shared State
+
+Domain reducers store an internal runtime model, but plugin handlers and render functions only see the projected model exposed through `selectGlobalStateForInstance(...).shared`.
+
+Example (`counter-summary`):
+
+- Internal runtime state includes `valuesByInstance` (used for aggregation bookkeeping).
+- Projected plugin-visible state includes only:
+  - `totalValue`
+  - `instanceCount`
+  - `lastUpdatedInstanceId`
+
+Plugins should treat `globalState.shared` as the source of truth for what is actually exposed.
 
 ### `counter-summary`
 
@@ -140,6 +156,7 @@ A **read-only** domain automatically maintained by the runtime. It provides a li
 **State shape:**
 ```ts
 Array<{
+  id: string,               // alias of instanceId for UI convenience
   instanceId: string,
   packageId: string,
   title: string,
@@ -170,6 +187,7 @@ A **read-only** domain providing runtime telemetry.
 ```
 
 No write actions are supported.
+Even if an instance is granted `writeShared` for this domain, the runtime has no reducer for it, so writes remain `ignored`.
 
 ## Capability Patterns
 
@@ -222,6 +240,8 @@ capabilities: {
 ```
 
 This is intentionally permissive because the playground is a sandbox for experimentation. In a production embedding, you would assign grants based on the plugin's declared needs.
+
+Note: `writeShared` grants for `runtime-registry` and `runtime-metrics` do not make those domains writable; they are still read-only at reducer level.
 
 ## Debugging Capability Issues
 

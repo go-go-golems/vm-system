@@ -51,8 +51,8 @@ When a user clicks a button in a plugin's UI, the following sequence unfolds:
           │
           ▼
  ┌─────────────────┐
- │  Re-render      │  The host calls render() on all affected
- │  Widgets        │  plugin instances with their new state.
+ │  Re-render      │  The current host loop re-renders all loaded
+ │  Widgets        │  plugin widgets after runtime state changes.
  └─────────────────┘
 ```
 
@@ -92,7 +92,7 @@ The handler receives a **context object** with:
 | Property | Description |
 |----------|-------------|
 | `pluginState` | This plugin instance's current local state |
-| `globalState` | The projected shared/system state visible to this instance |
+| `globalState` | This instance's projected state (`shared` filtered by read grants, plus `system`) |
 | `dispatchPluginAction(actionType, payload?)` | Emit a plugin-scoped dispatch intent |
 | `dispatchSharedAction(domain, actionType, payload?)` | Emit a shared-scoped dispatch intent |
 
@@ -179,7 +179,9 @@ The timeline is capped at 200 entries (oldest entries are evicted). You can insp
 
 ### 7. Re-render
 
-After all intents are processed, the host calls `render()` on every loaded plugin with its updated state. The render function runs in the sandbox, produces a new UI tree, and the `WidgetRenderer` diffs and updates the DOM.
+After intents are processed, the current `WorkbenchPage` host loop re-renders every loaded plugin widget (not only the directly affected instance). The render function runs in the sandbox and produces a new UI tree.
+
+`WidgetRenderer` output trees and render errors are tracked in React local state on the host page (`widgetTrees`, `widgetErrors`), while runtime/plugin/shared state remains in the Redux runtime slice.
 
 ## Putting It Together: A Counter Click
 
@@ -192,7 +194,7 @@ Here's what happens when you click "Increment" on the Counter plugin:
 3. Host processes intent #1: `reduceCounterPlugin` increments `value` to 6 → `outcome: "applied"`
 4. Host processes intent #2: checks write grant for `counter-summary` → granted → `applyCounterSummarySetInstance` updates shared state → `outcome: "applied"`
 5. Both dispatches are appended to the timeline
-6. Host re-renders all plugins — Counter shows "6", Status Dashboard (if loaded) shows updated `totalValue`
+6. Host re-renders all loaded plugins — Counter shows "6", Status Dashboard (if loaded) shows updated `totalValue`
 
 ## Key Design Decisions
 
