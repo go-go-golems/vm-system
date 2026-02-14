@@ -83,6 +83,20 @@ render({ pluginState, globalState }) {
 
 The `render` function is called every time state changes. It must be **pure** — no side effects, no async calls, just build and return a UI tree.
 
+### `ui.column` quick example
+
+`ui.column([...])` is a vertical layout helper implemented by the runtime bootstrap API:
+
+```js
+render() {
+  return ui.column([
+    ui.text("Line 1"),
+    ui.text("Line 2"),
+    ui.button("Continue", { onClick: { handler: "next" } }),
+  ]);
+}
+```
+
 **Context properties:**
 
 | Property | Description |
@@ -255,8 +269,7 @@ widgets: {
         ]);
       }
       return ui.column([
-        ui.input({
-          value: pluginState.name,
+        ui.input(pluginState.name, {
           placeholder: "Your name",
           onChange: { handler: "nameChanged" },
         }),

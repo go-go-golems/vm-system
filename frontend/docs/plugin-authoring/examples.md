@@ -2,6 +2,45 @@
 
 This document contains complete, ready-to-paste plugin examples, ordered from simple to advanced. Each example demonstrates specific concepts and patterns.
 
+## Example 0: Column Layout Starter
+
+**Concepts:** `ui.column`, basic composition, minimal handler wiring
+
+A focused example showing the `ui.column([...])` helper in isolation.
+
+```js
+definePlugin(({ ui }) => ({
+  id: "column-starter",
+  title: "Column Starter",
+  initialState: { clicks: 0 },
+  widgets: {
+    main: {
+      render({ pluginState }) {
+        const clicks = Number(pluginState?.clicks ?? 0);
+        return ui.column([
+          ui.text("Column layout demo"),
+          ui.badge("Clicks: " + clicks),
+          ui.button("Click", { onClick: { handler: "inc" } }),
+        ]);
+      },
+      handlers: {
+        inc({ dispatchPluginAction, pluginState }) {
+          dispatchPluginAction("state/merge", {
+            clicks: Number(pluginState?.clicks ?? 0) + 1,
+          });
+        },
+      },
+    },
+  },
+}));
+```
+
+**Key points:**
+- `ui.column` vertically stacks child nodes.
+- It is ideal for top-level widget layout and nested sections.
+
+---
+
 ## Example 1: Minimal Counter
 
 **Concepts:** Local state, `state/merge`, button handlers
@@ -78,8 +117,7 @@ definePlugin(({ ui }) => ({
 
         return ui.panel([
           ui.text("What's your name?"),
-          ui.input({
-            value: name,
+          ui.input(name, {
             placeholder: "Type your name...",
             onChange: { handler: "nameChanged" },
           }),
@@ -140,15 +178,14 @@ definePlugin(({ ui }) => ({
         return ui.column([
           ui.text("Todo List (" + done + "/" + items.length + " done)"),
           ui.row([
-            ui.input({
-              value: draft,
+            ui.input(draft, {
               placeholder: "New todo...",
               onChange: { handler: "updateDraft" },
             }),
             ui.button("Add", { onClick: { handler: "addItem" } }),
           ]),
           items.length > 0
-            ? ui.table({ headers: ["Status", "Task", "ID"], rows })
+            ? ui.table(rows, { headers: ["Status", "Task", "ID"] })
             : ui.text("No todos yet — add one above!"),
           ui.row([
             ui.button("Toggle First", { onClick: { handler: "toggleFirst" } }),
@@ -405,15 +442,15 @@ definePlugin(({ ui }) => ({
           ui.panel([
             ui.text("🔌 Plugin Registry (" + plugins.length + ")"),
             plugins.length > 0
-              ? ui.table({
-                  headers: ["Instance", "Package", "Status", "Widgets"],
-                  rows: plugins.map((p) => [
+              ? ui.table(
+                  plugins.map((p) => [
                     String(p.instanceId ?? ""),
                     String(p.packageId ?? ""),
                     String(p.status ?? ""),
                     String(p.widgets ?? 0),
                   ]),
-                })
+                  { headers: ["Instance", "Package", "Status", "Widgets"] }
+                )
               : ui.text("No plugins loaded"),
           ]),
         ]);
