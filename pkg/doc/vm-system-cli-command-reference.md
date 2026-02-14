@@ -74,6 +74,11 @@ The `--listen` flag sets the HTTP address and port. The daemon uses the `--db`
 global flag for its SQLite database. You'll typically run this in one terminal
 and use the other commands in another.
 
+In merged-repo setups, `serve` can also host the web UI from `/` when frontend
+assets are available under `internal/web/embed/public` (typically produced by
+`go generate ./internal/web`). If assets are not available, the daemon runs in
+API-only mode and still serves `/api/v1/*`.
+
 ## template
 
 The `template` group manages runtime profiles. Templates are the blueprint

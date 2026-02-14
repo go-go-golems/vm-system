@@ -31,9 +31,11 @@ code:
   ┌─────────────────────────────────────────────────────┐
   │  cmd/vm-system          CLI (Cobra + Glazed)        │
   │  pkg/vmclient           REST client used by CLI     │
+  │  ui/                    React + Vite frontend       │
   ├─────────────────────────────────────────────────────┤
   │  pkg/vmtransport/http   REST routes + validation    │
   │  pkg/vmdaemon           Process host + shutdown     │
+  │  internal/web           SPA/static serving + embed  │
   ├─────────────────────────────────────────────────────┤
   │  pkg/vmcontrol          Core orchestration          │
   │    TemplateService · SessionService                 │
@@ -56,6 +58,10 @@ DTOs and core types. The CLI layer does the same through vmclient. This
 separation is what makes the core testable without spinning up an HTTP server,
 and it's what would let you add a gRPC or WebSocket transport without touching
 any business logic.
+
+In merged-repo mode, `internal/web` composes the API handler with SPA/static
+serving. `/api/*` routes always go to vmtransport, while non-API GET/HEAD
+requests can serve frontend files with `index.html` fallback.
 
 ## What each package does
 
@@ -119,6 +125,23 @@ Three behaviors are worth knowing about:
   register it.
 - **Request IDs:** Every response gets an `X-Request-Id` header from
   middleware. This is useful for correlating logs when debugging.
+
+### Web static layer (internal/web + ui)
+
+`internal/web` is the bridge between the Go daemon and the frontend assets:
+
+- **spa.go** composes API handling and SPA/static fallback without shadowing
+  `/api/*`.
+- **publicfs_disk.go** loads generated files from disk in normal (non-embed)
+  builds.
+- **publicfs_embed.go** serves the same assets through `go:embed` in `-tags embed`
+  builds.
+- **generate.go + tools/main.go** implement `go generate ./internal/web` to build
+  the frontend (`pnpm -C ui run build`) and copy `ui/dist/public` into
+  `internal/web/embed/public`.
+
+This design keeps fast two-process local development (`make dev-backend`,
+`make dev-frontend`) while allowing single-binary deployment via embed builds.
 
 ### Runtime layer (pkg/vmsession, pkg/vmexec)
 
@@ -280,6 +303,8 @@ system's behavior:
 9. **pkg/vmsession/session.go** — runtime allocation and locking.
 10. **pkg/vmexec/executor.go** — where JavaScript actually runs.
 11. **pkg/vmstore/vmstore.go** — schema and persistence.
+12. **internal/web/spa.go** — API + SPA routing composition.
+13. **internal/web/tools/main.go** — frontend build/copy generator bridge.
 
 ## See Also
 
