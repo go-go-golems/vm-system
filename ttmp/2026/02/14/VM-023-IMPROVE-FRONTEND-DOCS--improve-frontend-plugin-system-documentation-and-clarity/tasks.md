@@ -14,4 +14,4 @@
 - [x] Fix runtime embedding docs Mode C with adapter-wrapper examples and contract caveat
 - [x] Update quickstart/examples docs to use correct ui.input/ui.table signatures and include explicit ui.column example
 - [x] Update README and migration notes with API truth source + DSL signature clarifications
-- [ ] Run frontend validation (pnpm check, test:unit, test:integration, build) after P0/P1 edits
+- [x] Run frontend validation (pnpm check, test:unit, test:integration, build) after P0/P1 edits

@@ -436,3 +436,60 @@ This reduces recurring confusion by giving contributors one canonical place to v
 
 ### Technical details
 - This step documents contract authority and migration caveats only; no behavior changes.
+
+## Step 8: Run Full Frontend Validation Suite (Task 12)
+
+I executed the full requested validation sequence after finishing all P0/P1 edits and confirmed green results.
+
+This closes VM-023 implementation tasks while preserving known pre-existing non-blocking build warnings.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** complete remaining P0/P1 tasks and finish with full verification.
+
+**Inferred user intent:** end with a clean, verified P0/P1 implementation state.
+
+### What I did
+- Ran:
+  - `pnpm -C frontend check`
+  - `pnpm -C frontend test:unit`
+  - `pnpm -C frontend test:integration`
+  - `pnpm -C frontend build`
+- Marked Task 12 done in VM-023 `tasks.md`.
+
+### Why
+- Final validation ensures documentation and runtime updates did not regress compile/test/build workflows.
+
+### What worked
+- `check`: passed (`tsc --noEmit`)
+- `test:unit`: passed (7/7 tests)
+- `test:integration`: passed (6/6 tests)
+- `build`: passed
+
+### What didn't work
+- N/A for failures.
+- Build still emits existing warnings:
+  - CSS `@import` order warning
+  - large chunk-size advisory
+  - browser externalization notices for QuickJS deps
+
+### What I learned
+- The P0/P1 docs/runtime corrections are compatible with existing test/build workflows.
+
+### What was tricky to build
+- `docmgr task list` intermittently showed stale checkbox output immediately after `task check`; direct `tasks.md` inspection remained accurate.
+
+### What warrants a second pair of eyes
+- Optional follow-up on pre-existing frontend build warnings if bundle hygiene work is prioritized.
+
+### What should be done in the future
+- If desired, close ticket with `docmgr ticket close --ticket VM-023-IMPROVE-FRONTEND-DOCS`.
+
+### Code review instructions
+- Re-run the same four commands above in `vm-system` root.
+- Confirm `ttmp/.../VM-023.../tasks.md` shows all checks complete.
+
+### Technical details
+- No source-code behavior changes in this step; validation and ticket bookkeeping only.
