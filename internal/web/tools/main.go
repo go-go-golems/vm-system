@@ -9,6 +9,13 @@ import (
 	"path/filepath"
 )
 
+const (
+	controlGitIgnoreName  = ".gitignore"
+	controlPlaceholder    = "README_DO_NOT_DELETE.txt"
+	controlGitIgnoreBody  = "*\n!.gitignore\n!README_DO_NOT_DELETE.txt\n"
+	controlPlaceholderTxt = "Placeholder file to keep this directory embeddable before generated UI assets exist.\nGenerated assets are intentionally git-ignored.\n"
+)
+
 func main() {
 	repoRoot, err := findRepoRoot()
 	if err != nil {
@@ -36,6 +43,10 @@ func main() {
 	fmt.Printf("[webgen] copying %s -> %s\n", frontendOut, targetDir)
 	if err := copyDir(frontendOut, targetDir); err != nil {
 		fatalf("copy frontend output: %v", err)
+	}
+
+	if err := writeControlFiles(targetDir); err != nil {
+		fatalf("write control files: %v", err)
 	}
 
 	fmt.Println("[webgen] done")
@@ -120,6 +131,20 @@ func copyFile(srcPath, dstPath string, mode fs.FileMode) error {
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeControlFiles(targetDir string) error {
+	gitIgnorePath := filepath.Join(targetDir, controlGitIgnoreName)
+	if err := os.WriteFile(gitIgnorePath, []byte(controlGitIgnoreBody), 0o644); err != nil {
+		return err
+	}
+
+	placeholderPath := filepath.Join(targetDir, controlPlaceholder)
+	if err := os.WriteFile(placeholderPath, []byte(controlPlaceholderTxt), 0o644); err != nil {
 		return err
 	}
 

@@ -28,7 +28,12 @@ func PublicFS() (fs.FS, error) {
 		if err != nil || !stat.IsDir() {
 			continue
 		}
-		return os.DirFS(candidate), nil
+
+		public := os.DirFS(candidate)
+		if err := requireIndexFile(public); err != nil {
+			continue
+		}
+		return public, nil
 	}
 
 	return nil, fmt.Errorf("public assets directory not found; looked in %v", candidates)

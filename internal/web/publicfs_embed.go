@@ -18,6 +18,9 @@ func PublicFS() (fs.FS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load embedded public fs: %w", err)
 	}
+	if err := requireIndexFile(public); err != nil {
+		return nil, err
+	}
 
 	return public, nil
 }
