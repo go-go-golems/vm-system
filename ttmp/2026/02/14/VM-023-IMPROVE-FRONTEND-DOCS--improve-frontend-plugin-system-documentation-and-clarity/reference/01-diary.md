@@ -315,3 +315,61 @@ This closes the core P1 architecture drift called out in the assessment and make
 
 ### Technical details
 - Step focuses on doc/runtime parity only; no runtime behavior change.
+
+## Step 6: Correct Embedding Mode C Adapter Contract (Task 9)
+
+I rewrote the embedding guide's Mode C section to reflect the real `RuntimeHostAdapter` contract and added concrete wrapper patterns for both direct-service and worker-client modes.
+
+This removes a high-risk integration trap where embedders might assume `QuickJSRuntimeService`/`QuickJSSandboxClient` can be passed directly as adapters.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** Continue remaining P0/P1 task execution only.
+
+**Inferred user intent:** Resolve contract-level doc hazards that could break external embedding work.
+
+**Commit (code):** `f3bc287` — "docs(runtime): fix host adapter mode with explicit wrapper patterns"
+
+### What I did
+- Updated `frontend/docs/runtime/embedding.md` Mode C:
+  - documented signature mismatch caveat explicitly:
+    - adapter uses object inputs and async methods
+    - runtime service/client APIs use positional arguments
+  - added `createDirectAdapter(...)` wrapper example for `QuickJSRuntimeService`
+  - added `createWorkerAdapter(...)` wrapper example for `QuickJSSandboxClient`
+  - corrected usage example to `async function createMyApp(...)` with adapter-based calls
+- Ran validation:
+  - `pnpm -C frontend build`
+
+### Why
+- The prior wording implied direct substitutability and would produce avoidable type and integration churn in real embeddings.
+
+### What worked
+- Build succeeded after embedding doc updates.
+- `tasks.md` marks task 9 as complete.
+
+### What didn't work
+- `docmgr task list` briefly showed stale state right after `task check`; direct file inspection confirmed task 9 was checked.
+
+### What I learned
+- Adapter abstraction docs must be explicit about call-shape normalization, not just conceptual portability.
+
+### What was tricky to build
+- The direct-service wrapper needs to normalize sync runtime methods into async adapter methods while keeping examples concise.
+
+### What warrants a second pair of eyes
+- Validate wrapper examples against internal embedding conventions if a shared adapter utility is introduced later.
+
+### What should be done in the future
+- Consider publishing these wrappers as actual runtime helpers to reduce copy/paste divergence.
+
+### Code review instructions
+- Review:
+  - `frontend/docs/runtime/embedding.md`
+- Validate with:
+  - `pnpm -C frontend build`
+
+### Technical details
+- No runtime code changed; this is a documentation contract-correction step.

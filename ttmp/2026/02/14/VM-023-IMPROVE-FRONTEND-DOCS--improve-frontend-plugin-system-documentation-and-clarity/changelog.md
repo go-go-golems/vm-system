@@ -78,3 +78,13 @@ Step 5 (commit 1f3aca1): aligned dispatch lifecycle and capability model docs wi
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/dispatch-lifecycle.md — Updated rerender and local widget state model details
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/capability-model.md — Added internal-vs-projected shared-state clarifications
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 5 execution log
+
+
+## 2026-02-14
+
+Step 6 (commit f3bc287): corrected embedding Mode C docs with explicit adapter-wrapper patterns and contract caveat; frontend build passed.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/runtime/embedding.md — Added direct/worker RuntimeHostAdapter wrapper examples and caveats
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 6 execution log
