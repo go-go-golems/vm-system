@@ -26,6 +26,26 @@ definePlugin(({ ui }) => {
 });
 `;
 
+const COLUMN_PLUGIN = `
+definePlugin(({ ui }) => {
+  return {
+    id: "column-demo",
+    title: "Column Demo",
+    widgets: {
+      main: {
+        render() {
+          return ui.column([
+            ui.text("top"),
+            ui.text("bottom"),
+          ]);
+        },
+        handlers: {},
+      },
+    },
+  };
+});
+`;
+
 describe("QuickJSRuntimeService", () => {
   const services: QuickJSRuntimeService[] = [];
 
@@ -89,6 +109,16 @@ describe("QuickJSRuntimeService", () => {
     expect(firstTree.kind).toBe("panel");
     expect(secondTree.kind).toBe("panel");
     expect(service.health().plugins).toEqual(expect.arrayContaining(["counter@one", "counter@two"]));
+  });
+
+  it("supports ui.column in plugin render output", async () => {
+    const service = new QuickJSRuntimeService();
+    services.push(service);
+
+    await service.loadPlugin("column-demo", "column-demo", COLUMN_PLUGIN);
+    const tree = service.render("column-demo", "main", {}, {});
+
+    expect(tree.kind).toBe("column");
   });
 
   it("interrupts infinite render loops with timeout", async () => {

@@ -24,6 +24,9 @@ const __ui = {
   row(children = []) {
     return { kind: "row", children: Array.isArray(children) ? children : [] };
   },
+  column(children = []) {
+    return { kind: "column", children: Array.isArray(children) ? children : [] };
+  },
   panel(children = []) {
     return { kind: "panel", children: Array.isArray(children) ? children : [] };
   },
