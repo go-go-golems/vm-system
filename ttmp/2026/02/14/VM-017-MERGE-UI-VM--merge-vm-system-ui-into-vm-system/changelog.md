@@ -60,3 +60,14 @@ Implemented internal/web static serving layer (disk + embed) and wired cmd serve
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/spa.go — SPA/static handler with index fallback and /api bypass
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Tasks 10 and 11 checked
 
+
+## 2026-02-14
+
+Added go-generate frontend bridge under internal/web/tools to build ui and copy dist/public into internal/web/embed/public; checked task 12 and validated package compilation.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/generate.go — go:generate entrypoint
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/tools/main.go — Frontend build-and-copy implementation
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 12 checked
+

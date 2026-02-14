@@ -680,3 +680,69 @@ This step closes tasks 10 and 11 from the implementation checklist and establish
 ```bash
 GOWORK=off go test ./cmd/vm-system ./internal/web
 ```
+
+## Step 10: Add `go generate` Bridge for Frontend Build and Asset Copy
+
+I implemented the build bridge that connects the imported `ui/` project to Go embed assets. The new generator runs `pnpm -C ui run build`, then copies `ui/dist/public` into `internal/web/embed/public`, which is the canonical static directory consumed by `PublicFS()` and `go:embed` mode.
+
+This closes task 12 and turns the frontend-to-backend packaging path into an explicit, reproducible command (`go generate ./internal/web`).
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue implementation with commit-sized checkpoints.
+
+**Inferred user intent:** Ensure merged repo has a practical production build path, not just route wiring.
+
+**Commit (code):** pending — this step is part of the generator-bridge checkpoint commit.
+
+### What I did
+- Added `internal/web/generate.go` with:
+  - `//go:generate go run ./tools`
+- Added generator executable:
+  - `internal/web/tools/main.go`
+- Generator behavior:
+  - find repo root via `go.mod` scan,
+  - run `pnpm -C ui run build`,
+  - clean `internal/web/embed/public`,
+  - copy built assets from `ui/dist/public`.
+- Ran formatting and compile checks:
+  - `gofmt -w internal/web/generate.go internal/web/tools/main.go`
+  - `GOWORK=off go test ./internal/web/...`
+- Checked off task 12.
+
+### Why
+- Without a generator bridge, Go embed mode depends on manual copy steps and is error-prone in CI/local builds.
+
+### What worked
+- New generator package compiles.
+- Task state now reflects completed bridge implementation.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Keeping the generator in `internal/web/tools` avoids mixed-package issues inside the `internal/web` package itself.
+
+### What was tricky to build
+- The copy routine must preserve directory structure and file modes while reliably cleaning stale outputs first; otherwise outdated asset files can survive rebuilds and create confusing runtime behavior.
+
+### What warrants a second pair of eyes
+- Review whether `pnpm install` should be explicitly invoked by generator or remain a CI/developer precondition (current approach keeps generator deterministic and fast when deps are already installed).
+
+### What should be done in the future
+- Add Makefile targets and run full validation (`go test`, `pnpm check`, `pnpm build`, and `go generate`).
+
+### Code review instructions
+- Start with:
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/generate.go`
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/tools/main.go`
+- Validate compilation:
+  - `GOWORK=off go test ./internal/web/...`
+
+### Technical details
+
+```bash
+GOWORK=off go test ./internal/web/...
+```
