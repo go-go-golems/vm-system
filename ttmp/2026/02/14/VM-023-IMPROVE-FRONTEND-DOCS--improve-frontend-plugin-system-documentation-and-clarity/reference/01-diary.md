@@ -373,3 +373,66 @@ This removes a high-risk integration trap where embedders might assume `QuickJSR
 
 ### Technical details
 - No runtime code changed; this is a documentation contract-correction step.
+
+## Step 7: Add API Truth-Source and Migration Clarifications (Task 11)
+
+I updated top-level frontend docs and migration notes to make contract authority explicit and to call out DSL signature-sensitive migration details.
+
+This reduces recurring confusion by giving contributors one canonical place to verify runtime truth before copying snippets.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** Finish remaining P0/P1 ticket tasks only.
+
+**Inferred user intent:** Close the high-value doc reliability gaps without adding new P2 documents.
+
+**Commit (code):** `13bdaa7` — "docs: add API truth-source callouts and DSL migration notes"
+
+### What I did
+- Updated `frontend/docs/README.md`:
+  - added "API Truth Source (Read This First)" section
+  - linked canonical implementation files:
+    - runtime DSL bootstrap (`runtimeService.ts`)
+    - adapter contract (`hostAdapter.ts`)
+    - runtime policy/projection behavior (`redux-adapter/store.ts`)
+  - documented current high-signal DSL signatures (`input`, `table`, `column`)
+- Updated `frontend/docs/migration/changelog-vm-api.md`:
+  - added DSL signature migration notes and anti-pattern warning
+  - added adapter-wrapper normalization note for `RuntimeHostAdapter`
+  - added source-of-truth references section
+- Ran validation:
+  - `pnpm -C frontend build`
+
+### Why
+- README and migration notes are entry points for contributors and embedders; they need explicit direction on where runtime truth lives.
+
+### What worked
+- Build succeeded after these doc updates.
+- Task 11 is checked in VM-023 tasks.
+
+### What didn't work
+- N/A
+
+### What I learned
+- A short "truth source" section in the entry doc prevents downstream drift across multiple pages.
+
+### What was tricky to build
+- Balancing concise migration notes with enough specificity to prevent signature mistakes required explicit call-shapes.
+
+### What warrants a second pair of eyes
+- Confirm wording around adapter wrappers aligns with desired public API posture if wrappers later become first-class exports.
+
+### What should be done in the future
+- Add a lightweight docs consistency check that validates signature text in docs against a small canonical list.
+
+### Code review instructions
+- Review:
+  - `frontend/docs/README.md`
+  - `frontend/docs/migration/changelog-vm-api.md`
+- Validate with:
+  - `pnpm -C frontend build`
+
+### Technical details
+- This step documents contract authority and migration caveats only; no behavior changes.
