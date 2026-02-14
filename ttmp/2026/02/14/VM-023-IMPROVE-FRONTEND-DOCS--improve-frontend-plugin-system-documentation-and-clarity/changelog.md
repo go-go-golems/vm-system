@@ -47,3 +47,13 @@ Step 2 (commit 7697125): added ui.column to runtime bootstrap and covered it wit
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/packages/plugin-runtime/src/runtimeService.ts — Added ui.column helper to QuickJS bootstrap API
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 2 execution log
 
+
+## 2026-02-14
+
+Step 3 (commit bbffd47): corrected UI DSL reference signatures for ui.input/ui.table and clarified ui.column support; frontend build passed.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/ui-dsl.md — Corrected runtime contract signatures
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 3 execution log
+

@@ -140,3 +140,57 @@ This closes the highest-priority runtime-side mismatch and lets docs safely incl
 ### Technical details
 - Added helper near existing `row` and `panel` builders.
 - New test fixture id/title: `column-demo` / "Column Demo".
+
+## Step 3: Fix UI DSL Reference Contract Signatures (Task 7)
+
+I corrected the UI DSL reference so signature examples match the runtime bootstrap API. The highest-risk mismatch points (`ui.input`, `ui.table`) are now documented with the real call shapes used by QuickJS runtime helpers.
+
+I also added an explicit note in the `ui.column` section that this helper is implemented in the runtime bootstrap.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 1)
+
+**Assistant interpretation:** Implement each remediation task with tests and commits, including contract-level doc fixes.
+
+**Inferred user intent:** Ensure docs are trustworthy enough that copy/paste examples reflect the actual runtime API.
+
+**Commit (code):** `bbffd47` — "docs(ui-dsl): align input/table signatures with runtime contract"
+
+### What I did
+- Updated `frontend/docs/architecture/ui-dsl.md`:
+  - `ui.input(options)` -> `ui.input(value, options)`
+  - `ui.table(options)` -> `ui.table(rows, options)`
+  - corrected examples and reference tables accordingly
+  - added `ui.column` availability clarification.
+- Ran build validation:
+  - `pnpm -C frontend build`
+
+### Why
+- This doc is the contract reference; if it is wrong, all downstream authoring docs become wrong.
+
+### What worked
+- Build succeeded after doc edits.
+- DSL reference now matches runtime helper shapes for input/table.
+
+### What didn't work
+- N/A (build emitted known non-blocking warnings only).
+
+### What I learned
+- Most downstream doc mismatches originate from this one reference file; fixing it first reduces cascading confusion.
+
+### What was tricky to build
+- The subtlety was preserving intent while changing signatures. For `table`, docs previously implied a single object argument, but runtime helper splits rows and props; example rewrites needed to show the two-argument pattern clearly.
+
+### What warrants a second pair of eyes
+- Verify no remaining stale `ui.input({...})` / `ui.table({...})` calls remain in other docs after upcoming task 10.
+
+### What should be done in the future
+- Consider adding an automated contract snippet generation step from runtime helper definitions.
+
+### Code review instructions
+- Review `frontend/docs/architecture/ui-dsl.md` signature sections and examples.
+- Validate with `pnpm -C frontend build`.
+
+### Technical details
+- Build warnings observed were the pre-existing CSS import order and chunk-size advisories.
