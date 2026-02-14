@@ -12,6 +12,6 @@
 - [x] Correct UI DSL docs signatures (ui.input/ui.table) and clarify column support
 - [ ] Align dispatch lifecycle and capability model docs with actual host rerender and projected shared state behavior
 - [ ] Fix runtime embedding docs Mode C with adapter-wrapper examples and contract caveat
-- [ ] Update quickstart/examples docs to use correct ui.input/ui.table signatures and include explicit ui.column example
+- [x] Update quickstart/examples docs to use correct ui.input/ui.table signatures and include explicit ui.column example
 - [ ] Update README and migration notes with API truth source + DSL signature clarifications
 - [ ] Run frontend validation (pnpm check, test:unit, test:integration, build) after P0/P1 edits

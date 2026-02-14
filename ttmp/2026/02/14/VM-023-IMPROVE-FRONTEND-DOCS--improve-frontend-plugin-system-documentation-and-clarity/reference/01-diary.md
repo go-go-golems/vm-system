@@ -194,3 +194,63 @@ I also added an explicit note in the `ui.column` section that this helper is imp
 
 ### Technical details
 - Build warnings observed were the pre-existing CSS import order and chunk-size advisories.
+
+## Step 4: Update Quickstart and Examples with Real DSL Calls (Task 10)
+
+I updated plugin authoring docs so copy/paste snippets use runtime-accurate DSL signatures and include a dedicated `ui.column` starter example.
+
+This addresses the highest-friction authoring confusion path: a user following examples should no longer hit signature mismatches for `ui.input` and `ui.table`.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** Continue implementation for P0/P1 tasks only, with per-task testing and commits.
+
+**Inferred user intent:** Improve practical onboarding docs first, without widening scope into deferred P2 sections.
+
+**Commit (code):** `94aabec` — "docs(authoring): add ui.column starter and fix ui.input/ui.table examples"
+
+### What I did
+- Updated `frontend/docs/plugin-authoring/quickstart.md`:
+  - added an explicit `ui.column` quick example section
+  - fixed form example to `ui.input(pluginState.name, { ... })`
+- Updated `frontend/docs/plugin-authoring/examples.md`:
+  - added "Example 0: Column Layout Starter"
+  - changed stale `ui.input({ value: ... })` usages to `ui.input(value, { ... })`
+  - changed stale `ui.table({ headers, rows })` usages to `ui.table(rows, { headers })`
+- Ran validation:
+  - stale-pattern scan on both docs with `rg`
+  - `pnpm -C frontend build`
+
+### Why
+- The quickstart and examples are the highest-leverage docs for new plugin authors. If they drift from runtime signatures, users fail immediately.
+
+### What worked
+- Build succeeded after doc changes.
+- Pattern scan found no remaining stale `ui.input({` / `ui.table({` calls in these two authoring docs.
+
+### What didn't work
+- N/A (only known existing non-blocking build warnings remained).
+
+### What I learned
+- A compact "Example 0" helps establish `ui.column` as the baseline layout primitive before readers hit larger examples.
+
+### What was tricky to build
+- Keeping examples readable while adjusting signatures required small expression rewrites, especially where rows were built inline for `ui.table`.
+
+### What warrants a second pair of eyes
+- Confirm the new example ordering (with a new Example 0) still matches any external references into this page.
+
+### What should be done in the future
+- Add a doc-lint pass that checks common DSL signature anti-patterns directly in markdown code fences.
+
+### Code review instructions
+- Review:
+  - `frontend/docs/plugin-authoring/quickstart.md`
+  - `frontend/docs/plugin-authoring/examples.md`
+- Validate with:
+  - `pnpm -C frontend build`
+
+### Technical details
+- Task 10 is now marked complete in VM-023 tasks.

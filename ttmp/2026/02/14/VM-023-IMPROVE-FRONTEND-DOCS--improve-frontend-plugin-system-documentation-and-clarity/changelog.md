@@ -57,3 +57,13 @@ Step 3 (commit bbffd47): corrected UI DSL reference signatures for ui.input/ui.t
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/ui-dsl.md — Corrected runtime contract signatures
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 3 execution log
 
+
+## 2026-02-14
+
+Step 4 (commit 94aabec): updated quickstart/examples to runtime-accurate ui.input/ui.table signatures and added explicit ui.column starter example; frontend build passed.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/plugin-authoring/quickstart.md — Added ui.column quick example and fixed input signature usage
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/plugin-authoring/examples.md — Added Example 0 and corrected input/table signatures
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 4 execution log
