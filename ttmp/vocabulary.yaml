@@ -13,6 +13,10 @@ topics:
       description: Plugin runtime, APIs, and integration
     - slug: state-management
       description: State model, reducers, scoping, and synchronization
+    - slug: integration
+      description: Cross-system integration and boundary design
+    - slug: monorepo
+      description: Repository consolidation and monorepo workflows
 docTypes:
     - slug: design-doc
       description: Structured rationale and architecture notes
