@@ -13,7 +13,7 @@
 ## Implementation Checklist
 
 - [x] Create implementation branch and pre-merge safeguards
-- [ ] Import vm-system-ui into vm-system as `ui/` with preserved git history
+- [x] Import vm-system-ui into vm-system as `ui/` with preserved git history
 - [ ] Add Go web static serving package (`internal/web`) with disk + embed modes
 - [ ] Wire SPA/static handler into daemon serve path without shadowing `/api/v1`
 - [ ] Add generator bridge to build/copy frontend assets into Go embed path

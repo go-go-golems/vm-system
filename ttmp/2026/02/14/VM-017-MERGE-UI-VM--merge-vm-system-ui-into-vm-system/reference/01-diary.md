@@ -548,3 +548,66 @@ This step begins the user-requested commit-by-commit workflow: each implementati
 remarquee cloud ls "/ai/2026/02/14/VM-017-MERGE-UI-VM" --long --non-interactive
 git checkout -b vm-017-merge-ui-implementation
 ```
+
+## Step 8: Import vm-system-ui Into vm-system as `ui/` (History Preserved)
+
+I completed the repository merge operation using `git subtree add` so the UI now lives under `ui/` in the backend repository while preserving commit history from `wesen/vm-system-ui`. This was the first invasive implementation task and establishes the monorepo substrate required by all follow-up runtime/build integration tasks.
+
+The only operational blocker was an unrelated modified `README.md` already present in the worktree; `git subtree` requires cleanliness. I handled that safely with a temporary stash for only that file and restored it immediately after the import.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Execute the merge checkpoints one-by-one with commits and diary traceability.
+
+**Inferred user intent:** Make the repository consolidation real, not just planned.
+
+**Commit (code):** pending — this step is part of the subtree-import checkpoint commit.
+
+### What I did
+- Attempted subtree import and received clean-tree requirement failure.
+- Temporarily stashed only `README.md` (unrelated pre-existing change).
+- Ran import command:
+  - `git subtree add --prefix ui git@github.com:wesen/vm-system-ui.git main`
+- Restored stash and confirmed `README.md` returned unchanged.
+- Checked off task 9 in ticket tasks.
+
+### Why
+- `git subtree` preserves useful UI history while avoiding submodule complexity.
+
+### What worked
+- Subtree import fetched remote main and added `ui/` successfully.
+- Target branch now contains backend + UI in one repository tree.
+
+### What didn't work
+- First import attempt failed because the worktree was not clean:
+  - `fatal: working tree has modifications. Cannot add.`
+
+### What I learned
+- Path-scoped temporary stashing (`-- README.md`) is a safe way to satisfy subtree cleanliness without disturbing other work.
+
+### What was tricky to build
+- Preserving local unrelated edits while performing a repository-structural operation required explicit containment. A broad stash or reset would have been risky; scoping stash to one file kept this deterministic.
+
+### What warrants a second pair of eyes
+- Quick review of imported `ui/` root for any repository-specific assumptions that should be normalized in follow-up commits.
+
+### What should be done in the future
+- Continue with Go static-serving integration (`internal/web`) now that the directory is present.
+
+### Code review instructions
+- Confirm subtree merge commit intent via git history once committed.
+- Spot-check imported directory:
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/package.json`
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/vite.config.ts`
+
+### Technical details
+- Commands used:
+
+```bash
+git stash push -m "temp-vm017-readme" -- README.md
+git subtree add --prefix ui git@github.com:wesen/vm-system-ui.git main
+git stash pop
+docmgr task check --ticket VM-017-MERGE-UI-VM --id 9
+```
