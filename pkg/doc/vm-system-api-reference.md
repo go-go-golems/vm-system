@@ -20,6 +20,10 @@ must be JSON with `Content-Type: application/json`, and all responses are
 JSON. Every response includes an `X-Request-Id` header that you can use for
 log correlation when debugging.
 
+When frontend assets are present, the daemon may also serve the web UI from
+`/` and `/assets/*`. Those routes are outside the REST API contract; API
+behavior is scoped to `/api/v1/*`.
+
 One important behavior: the server enforces strict JSON decoding with
 `DisallowUnknownFields`. If you send a field the server doesn't expect, you
 get `400 INVALID_REQUEST`. This catches typos early but can be surprising if

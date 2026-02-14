@@ -43,6 +43,11 @@ which layer owns the behavior you're changing:
   text.
 - **REST client** →
   `pkg/vmclient` (`*_client.go`). The typed HTTP client used by CLI commands.
+- **Web serving bridge** →
+  `internal/web` (`spa.go`, `publicfs_*.go`, `generate.go`). API/static
+  composition, embed loading, and frontend asset generation.
+- **Frontend app** →
+  `ui/` (Vite + React + RTK Query). Browser UI and API client behavior.
 
 The most common mistake is leaking HTTP-specific logic into vmcontrol, or
 putting domain policy in a handler. When in doubt, ask yourself: "Does this
@@ -58,13 +63,17 @@ For most changes, this is all you need:
 ```bash
 GOWORK=off go test ./pkg/vmtransport/http -count=1    # integration tests
 GOWORK=off go test ./... -count=1                      # all Go tests
-bash ./smoke-test.sh                                   # daemon sanity (~10s)
+bash ./test/scripts/smoke-test.sh                      # daemon sanity (~10s)
+pnpm -C ui check                                       # frontend type-check
 ```
 
 Before opening a PR, run the full suite:
 
 ```bash
-bash ./test-all.sh
+bash ./test/scripts/test-all.sh
+pnpm -C ui run build
+go generate ./internal/web
+GOWORK=off go build -tags embed -o vm-system ./cmd/vm-system
 ```
 
 Always prefix Go test commands with `GOWORK=off` — without it, workspace mode
@@ -112,15 +121,15 @@ failure handling).
 
 The shell scripts test the system from the outside, the way a real user would:
 
-- **smoke-test.sh** (~10 seconds) — builds the binary, starts a daemon,
+- **test/scripts/smoke-test.sh** (~10 seconds) — builds the binary, starts a daemon,
   creates a template and session, runs REPL and file execution, and checks
   the runtime summary. This is your fastest feedback loop.
-- **test-e2e.sh** — a thorough CLI loop from build through close, covering
+- **test/scripts/test-e2e.sh** — a thorough CLI loop from build through close, covering
   every major command.
-- **test-library-matrix.sh** — specifically tests module and library semantics:
+- **test/scripts/test-library-matrix.sh** — specifically tests module and library semantics:
   that JSON works without configuration, that JSON can't be added as a module,
   that lodash fails without configuration, and that lodash succeeds with it.
-- **test-all.sh** — runs everything in sequence.
+- **test/scripts/test-all.sh** — runs everything in sequence.
 
 All scripts use temporary databases, temporary worktrees, and dynamically
 allocated ports. They're safe to run in parallel with other work.
@@ -137,6 +146,9 @@ sessions that are "ready" in the DB but have no runtime), load and concurrency
 testing beyond the basic `SESSION_BUSY` contract, library cache filename
 consistency between the downloader and the loader, and process crash durability
 testing.
+
+Frontend validation is currently lightweight (`pnpm -C ui check` and
+`pnpm -C ui run build`). There is no broad UI integration/e2e suite yet.
 
 ## Common change patterns
 

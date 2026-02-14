@@ -35,7 +35,7 @@ This tutorial takes you from first build to confident daily use.
 
 ## What you need
 
-- **Go** compatible with `go 1.25.5` (check `go.mod`)
+- **Go** compatible with `go 1.25.6` (check `go.mod`)
 - **bash** or **zsh**
 - **curl** if you want to poke the API directly
 
@@ -92,6 +92,15 @@ Quick health check to make sure the daemon is up:
 curl -sS http://127.0.0.1:3210/api/v1/health
 # {"status":"ok"}
 ```
+
+Optional in merged-repo setups: run the web UI against the same daemon:
+
+```bash
+# in another terminal
+make dev-frontend
+```
+
+Then open `http://127.0.0.1:3000`. Vite proxies `/api/v1` to the daemon.
 
 ### 4. Create a template
 
@@ -388,6 +397,7 @@ For a full error code reference, see `vm-system help api-reference`.
 - `vm-system help architecture` — how the code is organized and why
 - `vm-system help templates-and-sessions` — deep dive on the three core concepts
 - `vm-system help api-reference` — every endpoint, request shape, and error code
+- `vm-system help contributing` — testing, review, and merged repo workflow
 - `vm-system help cli-command-reference` — every command and flag
 - `vm-system help examples` — more runnable recipes
 - `vm-system help contributing` — how to change the code
