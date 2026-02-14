@@ -66,6 +66,7 @@ ui.row([
 #### `ui.column(children)`
 
 A vertical flex container. Children are stacked top to bottom. This is the most common top-level container.
+This helper is implemented in the runtime bootstrap API (same status as `ui.row` and `ui.panel`).
 
 ```js
 ui.column([
@@ -139,13 +140,12 @@ ui.button("Delete", {
 | `props.onClick` | `UIEventRef?` | Handler reference (see below) |
 | `props.variant` | `string?` | `"destructive"` for danger-styled buttons |
 
-#### `ui.input(options)`
+#### `ui.input(value, options)`
 
 A text input field. The `onChange` handler fires on every keystroke.
 
 ```js
-ui.input({
-  value: state.name,
+ui.input(state.name, {
   placeholder: "Enter your name",
   onChange: { handler: "nameChanged" }
 })
@@ -156,7 +156,7 @@ When the user types, the handler receives `{ value: "current text" }` as its arg
 | Property | Type | Description |
 |----------|------|-------------|
 | `kind` | `"input"` | Always `"input"` |
-| `props.value` | `string` | Current input value |
+| `props.value` | `string` | Current input value (from first argument) |
 | `props.placeholder` | `string?` | Placeholder text |
 | `props.onChange` | `UIEventRef?` | Handler for value changes |
 
@@ -181,18 +181,18 @@ ui.counter({
 
 ### Data Nodes
 
-#### `ui.table(options)`
+#### `ui.table(rows, options)`
 
 A data table with headers and rows.
 
 ```js
-ui.table({
+const rows = [
+  ["Counter", "loaded", 2],
+  ["Greeter", "loaded", 1],
+];
+ui.table(rows, {
   headers: ["Name", "Status", "Plugins"],
-  rows: [
-    ["Counter", "loaded", 2],
-    ["Greeter", "loaded", 1],
-  ]
-})
+});
 ```
 
 | Property | Type | Description |
@@ -239,7 +239,7 @@ render(state) {
   const rows = state.items.map(item => [item.name, item.status]);
   return ui.column([
     ui.text("Items: " + state.items.length),
-    ui.table({ headers: ["Name", "Status"], rows }),
+    ui.table(rows, { headers: ["Name", "Status"] }),
   ]);
 }
 ```
