@@ -254,3 +254,64 @@ This addresses the highest-friction authoring confusion path: a user following e
 
 ### Technical details
 - Task 10 is now marked complete in VM-023 tasks.
+
+## Step 5: Align Lifecycle and Capability Architecture Docs (Task 8)
+
+I aligned architectural docs with the implementation details in `WorkbenchPage` and the Redux runtime adapter, focusing on re-render behavior and shared-state projection semantics.
+
+This closes the core P1 architecture drift called out in the assessment and makes the docs safer for debugging and performance reasoning.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** Continue only P0/P1 fixes; execute task-by-task with tests and commits.
+
+**Inferred user intent:** Fix correctness and mental-model drift without expanding into extra doc surface.
+
+**Commit (code):** `1f3aca1` — "docs(architecture): align lifecycle and capability docs with host behavior"
+
+### What I did
+- Updated `frontend/docs/architecture/dispatch-lifecycle.md`:
+  - clarified current host behavior re-renders all loaded widgets after runtime changes
+  - clarified `globalState` as projected (`shared` by read grants + `system`)
+  - documented that widget trees/errors are React local state in `WorkbenchPage`, not runtime slice state
+- Updated `frontend/docs/architecture/capability-model.md`:
+  - added "Internal vs Projected Shared State" section
+  - clarified projection for `counter-summary` visible fields
+  - clarified `globalState.system` is host-provided and not gated by `readShared`
+  - documented `runtime-registry` `id` alias and write-ignored caveat for read-only domains
+- Ran validation:
+  - `pnpm -C frontend build`
+
+### Why
+- These files define how users reason about state flow and policy behavior. Drift here leads to debugging mistakes and wrong embedding assumptions.
+
+### What worked
+- Build succeeded after architecture doc updates.
+- Task 8 is now checked in VM-023 `tasks.md`.
+
+### What didn't work
+- N/A (known non-blocking frontend build warnings remained unchanged).
+
+### What I learned
+- The most important distinction for readers is not just "what domain exists" but "what projection is visible to a plugin instance".
+
+### What was tricky to build
+- The re-render wording needed to be precise: current host implementation re-renders all loaded widgets, while future optimized hosts may narrow this.
+
+### What warrants a second pair of eyes
+- Confirm that the `globalState.system` clarification matches intended long-term capability policy (currently host-provided, ungated).
+
+### What should be done in the future
+- Add a small architecture note linking directly to `WorkbenchPage` render loop as the current reference implementation.
+
+### Code review instructions
+- Review:
+  - `frontend/docs/architecture/dispatch-lifecycle.md`
+  - `frontend/docs/architecture/capability-model.md`
+- Validate with:
+  - `pnpm -C frontend build`
+
+### Technical details
+- Step focuses on doc/runtime parity only; no runtime behavior change.

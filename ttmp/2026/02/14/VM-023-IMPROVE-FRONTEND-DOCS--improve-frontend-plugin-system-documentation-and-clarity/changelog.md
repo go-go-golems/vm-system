@@ -67,3 +67,14 @@ Step 4 (commit 94aabec): updated quickstart/examples to runtime-accurate ui.inpu
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/plugin-authoring/quickstart.md — Added ui.column quick example and fixed input signature usage
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/plugin-authoring/examples.md — Added Example 0 and corrected input/table signatures
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 4 execution log
+
+
+## 2026-02-14
+
+Step 5 (commit 1f3aca1): aligned dispatch lifecycle and capability model docs with actual host rerender behavior and projected shared-state semantics; frontend build passed.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/dispatch-lifecycle.md — Updated rerender and local widget state model details
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/docs/architecture/capability-model.md — Added internal-vs-projected shared-state clarifications
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 5 execution log
