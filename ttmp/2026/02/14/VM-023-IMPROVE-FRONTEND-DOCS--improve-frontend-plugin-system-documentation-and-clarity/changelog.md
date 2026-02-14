@@ -36,3 +36,14 @@ Uploaded both VM-023 reports to reMarkable and verified remote listing under /ai
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/analysis/01-pre-doc-architecture-analysis-of-frontend-plugin-system.md — Uploaded report 1
 - /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/analysis/02-documentation-assessment-and-improvement-proposal-for-frontend-plugin-system.md — Uploaded report 2
 
+
+## 2026-02-14
+
+Step 2 (commit 7697125): added ui.column to runtime bootstrap and covered it with integration test; frontend unit/integration tests passed.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/packages/plugin-runtime/src/runtimeService.integration.test.ts — Added column render integration test
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/frontend/packages/plugin-runtime/src/runtimeService.ts — Added ui.column helper to QuickJS bootstrap API
+- /home/manuel/workspaces/2026-02-08/plugin-playground/vm-system/ttmp/2026/02/14/VM-023-IMPROVE-FRONTEND-DOCS--improve-frontend-plugin-system-documentation-and-clarity/reference/01-diary.md — Step 2 execution log
+

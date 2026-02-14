@@ -83,3 +83,60 @@ Then implement the tasks one by one, testing as you go, committing, and then upd
   - 7/10: docs contract + examples
   - 8/9/11: lifecycle/capability/embedding/README/changelog accuracy
   - 12: validation commands
+
+## Step 2: Implement `ui.column` in Runtime Bootstrap
+
+I implemented `ui.column` in the QuickJS bootstrap API and added integration coverage to ensure plugin render output using `ui.column(...)` is accepted and returned as `kind: "column"`.
+
+This closes the highest-priority runtime-side mismatch and lets docs safely include a canonical column-based layout example in the next step.
+
+### Prompt Context
+
+**User prompt (verbatim):** "don't do P2 for now, btw"
+
+**Assistant interpretation:** Continue implementation but restrict scope to P0/P1 only.
+
+**Inferred user intent:** Prioritize correctness-critical fixes without broadening into additional documentation expansion.
+
+**Commit (code):** `7697125` — "feat(runtime): add ui.column helper to QuickJS bootstrap"
+
+### What I did
+- Updated runtime bootstrap in:
+  - `frontend/packages/plugin-runtime/src/runtimeService.ts`
+  - Added `column(children = [])` helper returning `{ kind: "column", children: ... }`.
+- Added integration test:
+  - `frontend/packages/plugin-runtime/src/runtimeService.integration.test.ts`
+  - New `COLUMN_PLUGIN` fixture and assertion that `render(...).kind === "column"`.
+- Ran tests:
+  - `pnpm -C frontend test:integration`
+  - `pnpm -C frontend test:unit`
+
+### Why
+- Docs and examples should not claim `ui.column` exists unless runtime actually supports it.
+
+### What worked
+- Integration suite passed with the new test (`6 tests` in integration file).
+- Unit tests stayed green (`7 tests`).
+
+### What didn't work
+- N/A
+
+### What I learned
+- `uiSchema` and `WidgetRenderer` were already column-compatible; the missing piece was runtime DSL bootstrap exposure.
+
+### What was tricky to build
+- The core subtlety was ensuring this change is contract-level (bootstrap API) rather than only renderer-level. The symptom before fix would be runtime `ui.column is not a function` even though UI types allowed it.
+
+### What warrants a second pair of eyes
+- Confirm whether additional DSL helpers should be standardized similarly (for example ensuring docs only include helpers defined in bootstrap).
+
+### What should be done in the future
+- Add a small DSL contract snapshot test so future docs/API drift is caught automatically.
+
+### Code review instructions
+- Start at `frontend/packages/plugin-runtime/src/runtimeService.ts` bootstrap block.
+- Validate via `pnpm -C frontend test:integration`.
+
+### Technical details
+- Added helper near existing `row` and `panel` builders.
+- New test fixture id/title: `column-demo` / "Column Demo".

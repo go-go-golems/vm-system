@@ -8,7 +8,7 @@
 - [x] Create VM-023 ticket workspace
 - [x] Assess vm-system/frontend/docs against implementation and propose improvements
 - [x] Upload VM-023 analysis and assessment docs to reMarkable
-- [ ] Implement ui.column in runtime bootstrap and validate through runtime tests
+- [x] Implement ui.column in runtime bootstrap and validate through runtime tests
 - [ ] Correct UI DSL docs signatures (ui.input/ui.table) and clarify column support
 - [ ] Align dispatch lifecycle and capability model docs with actual host rerender and projected shared state behavior
 - [ ] Fix runtime embedding docs Mode C with adapter-wrapper examples and contract caveat
