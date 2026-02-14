@@ -18,6 +18,7 @@
 - [x] Wire SPA/static handler into daemon serve path without shadowing `/api/v1`
 - [x] Add generator bridge to build/copy frontend assets into Go embed path
 - [x] Add developer commands (`Makefile`) for backend/frontend dev and embed build
-- [ ] Validate backend tests and frontend checks/build in merged repository
+- [x] Validate backend tests and frontend checks/build in merged repository
 - [ ] Update VM-017 design/index/changelog/diary with implementation outcomes
 - [ ] Upload implementation update bundle to reMarkable
+- [x] Remove __manus__ and other imported Manus/debug junk from ui

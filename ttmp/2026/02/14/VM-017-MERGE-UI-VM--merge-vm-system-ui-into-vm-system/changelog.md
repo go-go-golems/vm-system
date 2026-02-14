@@ -81,3 +81,15 @@ Added root Makefile targets for merged backend/frontend workflow (dev, install/c
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/Makefile — Developer and CI command entrypoints
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 13 checked
 
+
+## 2026-02-14
+
+Removed __manus__ and related imported debug/runtime junk from ui (Vite Manus plugin/middleware/script/hosts), updated package lock, and revalidated frontend check/build; added task 17 and checked it.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 17 added and checked
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/client/public/__manus__/debug-collector.js — Deleted Manus debug collector asset
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/package.json — Removed vite-plugin-manus-runtime dependency
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/vite.config.ts — Removed Manus-specific plugin and debug collector logic
+
