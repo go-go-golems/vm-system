@@ -746,3 +746,68 @@ This closes task 12 and turns the frontend-to-backend packaging path into an exp
 ```bash
 GOWORK=off go test ./internal/web/...
 ```
+
+## Step 11: Add Root Makefile Commands for Merged Dev/Build Workflow
+
+I added a repository-root `Makefile` to encode the new multi-stack workflow into stable commands. This closes task 13 and gives developers one obvious entrypoint for backend dev, frontend dev, frontend checks, frontend build, web asset generation, and embed-tagged Go build.
+
+I validated target wiring with a dry-run of `make -n build`.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Keep shipping implementation checkpoints with explicit commits.
+
+**Inferred user intent:** Make the merged repo ergonomic for daily use and CI.
+
+**Commit (code):** pending — this step is part of the Makefile checkpoint commit.
+
+### What I did
+- Created `Makefile` with targets:
+  - `dev-backend`
+  - `dev-frontend`
+  - `frontend-install`
+  - `frontend-check`
+  - `frontend-build`
+  - `web-generate`
+  - `build`
+- Ran `make -n build` to verify target wiring and command expansion.
+- Checked off task 13.
+
+### Why
+- A merged repository needs explicit command affordances; otherwise onboarding and CI scripts drift quickly.
+
+### What worked
+- Dry-run showed expected two-step build flow:
+  - `go generate ./internal/web`
+  - `GOWORK=off go build -tags embed ...`
+
+### What didn't work
+- Initial command invocation typo attempted nested `cd vm-system` twice, producing:
+  - `zsh:cd:27: not a directory: vm-system`
+- Re-running with correct path succeeded.
+
+### What I learned
+- Keeping frontend install as an explicit target (`frontend-install`) makes CI scripts clearer and avoids hidden behavior inside `go generate`.
+
+### What was tricky to build
+- Nothing conceptually hard; the key was choosing a minimal target set that matches the implemented architecture without overfitting to speculative future tooling.
+
+### What warrants a second pair of eyes
+- Confirm naming conventions for targets (`web-generate` vs `ui-generate`) align with team preferences.
+
+### What should be done in the future
+- Use these targets in CI once validation task 14 is complete.
+
+### Code review instructions
+- Inspect:
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/Makefile`
+- Verify dry-run:
+  - `make -n build`
+
+### Technical details
+
+```bash
+make -n build
+```

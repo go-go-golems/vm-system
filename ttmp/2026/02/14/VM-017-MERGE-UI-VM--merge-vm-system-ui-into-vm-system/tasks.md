@@ -17,7 +17,7 @@
 - [x] Add Go web static serving package (`internal/web`) with disk + embed modes
 - [x] Wire SPA/static handler into daemon serve path without shadowing `/api/v1`
 - [x] Add generator bridge to build/copy frontend assets into Go embed path
-- [ ] Add developer commands (`Makefile`) for backend/frontend dev and embed build
+- [x] Add developer commands (`Makefile`) for backend/frontend dev and embed build
 - [ ] Validate backend tests and frontend checks/build in merged repository
 - [ ] Update VM-017 design/index/changelog/diary with implementation outcomes
 - [ ] Upload implementation update bundle to reMarkable

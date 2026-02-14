@@ -71,3 +71,13 @@ Added go-generate frontend bridge under internal/web/tools to build ui and copy 
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/tools/main.go — Frontend build-and-copy implementation
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 12 checked
 
+
+## 2026-02-14
+
+Added root Makefile targets for merged backend/frontend workflow (dev, install/check/build, web-generate, embed build) and checked task 13.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/Makefile — Developer and CI command entrypoints
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 13 checked
+
