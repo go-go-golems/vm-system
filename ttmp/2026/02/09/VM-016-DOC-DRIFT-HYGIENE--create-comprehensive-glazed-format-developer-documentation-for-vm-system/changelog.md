@@ -36,3 +36,8 @@ are embedded via `pkg/doc/doc.go`, and accessible via `vm-system help <slug>`.
 - `pkg/doc/vm-system-examples.md`
 - `pkg/doc/vm-system-how-to-use.md`
 - `pkg/doc/vm-system-command-map.md`
+
+## 2026-02-14
+
+Ticket closed per request.
+
