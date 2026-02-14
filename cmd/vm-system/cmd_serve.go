@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/go-go-golems/vm-system/internal/web"
 	"github.com/go-go-golems/vm-system/pkg/vmdaemon"
 	vmhttp "github.com/go-go-golems/vm-system/pkg/vmtransport/http"
 )
@@ -36,13 +36,26 @@ func (c *serveCommand) Run(_ context.Context, vals *values.Values) error {
 	cfg := vmdaemon.DefaultConfig(dbPath)
 	cfg.ListenAddr = settings.ListenAddr
 
-	app, err := vmdaemon.New(cfg, http.NewServeMux())
+	app, err := vmdaemon.New(cfg, nil)
 	if err != nil {
 		return err
 	}
 	defer app.Close()
 
-	app.SetHandler(vmhttp.NewHandler(app.Core()))
+	apiHandler := vmhttp.NewHandler(app.Core())
+	publicFS, fsErr := web.PublicFS()
+	if fsErr != nil {
+		app.SetHandler(apiHandler)
+		log.Warn().
+			Err(fsErr).
+			Msg("web ui assets unavailable; serving API only")
+	} else {
+		app.SetHandler(web.NewHandler(apiHandler, publicFS))
+		log.Info().
+			Str("component", "daemon").
+			Msg("web ui assets enabled")
+	}
+
 	log.Info().
 		Str("component", "daemon").
 		Str("listen_addr", cfg.ListenAddr).

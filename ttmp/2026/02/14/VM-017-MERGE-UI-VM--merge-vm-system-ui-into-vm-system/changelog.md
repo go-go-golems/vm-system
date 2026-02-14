@@ -47,3 +47,16 @@ Imported vm-system-ui into vm-system as ui/ using git subtree with history prese
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/package.json — Imported frontend project root
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/vite.config.ts — Imported frontend build/proxy config
 
+
+## 2026-02-14
+
+Implemented internal/web static serving layer (disk + embed) and wired cmd serve to compose API and SPA handlers without shadowing /api; checked tasks 10 and 11 and validated compilation.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_serve.go — Serve command handler composition
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/publicfs_disk.go — Disk-mode public FS resolver
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/publicfs_embed.go — Embed-mode public FS loader
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/spa.go — SPA/static handler with index fallback and /api bypass
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Tasks 10 and 11 checked
+

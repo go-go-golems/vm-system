@@ -611,3 +611,72 @@ git subtree add --prefix ui git@github.com:wesen/vm-system-ui.git main
 git stash pop
 docmgr task check --ticket VM-017-MERGE-UI-VM --id 9
 ```
+
+## Step 9: Add Go Static Web Layer and Wire It Into `serve`
+
+With `ui/` imported, I implemented the first runtime consolidation slice: a new `internal/web` package that can serve frontend assets from disk in normal builds and from `go:embed` in `-tags embed` builds. I then wired `cmd_serve` to compose API routing with SPA/static fallback while preserving `/api` ownership by the existing HTTP transport.
+
+This step closes tasks 10 and 11 from the implementation checklist and establishes the server-side integration boundary that future generator/build steps plug into.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Continue implementation checkpoint-by-checkpoint with commit discipline.
+
+**Inferred user intent:** Convert architecture plan into executable repository/runtime wiring incrementally.
+
+**Commit (code):** pending — this step is part of the static-serving checkpoint commit.
+
+### What I did
+- Added new files:
+  - `internal/web/publicfs_embed.go`
+  - `internal/web/publicfs_disk.go`
+  - `internal/web/spa.go`
+  - `internal/web/embed/public/index.html` (placeholder to keep embed path valid)
+- Updated `cmd/vm-system/cmd_serve.go`:
+  - API handler remains `vmhttp.NewHandler(app.Core())`.
+  - If `web.PublicFS()` succeeds, daemon serves SPA/static + API via `web.NewHandler(...)`.
+  - If assets are unavailable, daemon logs warning and serves API only.
+- Ran `gofmt` on all changed Go files.
+- Ran targeted compile tests:
+  - `GOWORK=off go test ./cmd/vm-system ./internal/web`
+- Checked off tasks 10 and 11.
+
+### Why
+- This is the minimum viable server integration needed before adding build-copy generation.
+- It keeps API routes stable while enabling frontend hosting on `/`.
+
+### What worked
+- Serve command compiles with the new package.
+- Targeted tests passed for command package and new web package.
+- Task checklist updates applied cleanly.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Passing `nil` initial handler into `vmdaemon.New` is safe when `SetHandler` is called before `Run`; this keeps handler composition in command wiring rather than daemon internals.
+
+### What was tricky to build
+- The disk-mode public asset resolver needed resilient path discovery to support `go run` from varying working directories. I handled this by scanning upward for `go.mod` and falling back to relative/executable-based candidates.
+
+### What warrants a second pair of eyes
+- Review SPA fallback semantics in `internal/web/spa.go` to ensure desired behavior for non-GET requests and deep-link handling.
+
+### What should be done in the future
+- Add the generator bridge so placeholder assets are replaced by real built frontend artifacts automatically.
+
+### Code review instructions
+- Start at:
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/internal/web/spa.go`
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/cmd/vm-system/cmd_serve.go`
+- Validate compile checks:
+  - `GOWORK=off go test ./cmd/vm-system ./internal/web`
+
+### Technical details
+- Core command used for verification:
+
+```bash
+GOWORK=off go test ./cmd/vm-system ./internal/web
+```
