@@ -93,3 +93,25 @@ Removed __manus__ and related imported debug/runtime junk from ui (Vite Manus pl
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/package.json — Removed vite-plugin-manus-runtime dependency
 - /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ui/vite.config.ts — Removed Manus-specific plugin and debug collector logic
 
+
+## 2026-02-14
+
+Completed merged-repo validation (Go tests, frontend check/build, go-generate bridge, embed build) and updated VM-017 design/index docs with as-built implementation status and merged path references; task 15 checked.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/design-doc/01-vm-system-vm-system-ui-merge-integration-design-and-analysis.md — Implementation status and updated related files
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/index.md — Ticket overview/status aligned to implementation progress
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/reference/01-diary.md — Steps 12-14 capture validation and doc alignment
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Tasks 14 and 15 checked
+
+
+## 2026-02-14
+
+Uploaded VM-017 implementation update bundle to reMarkable and verified folder now contains both analysis and implementation PDFs; checked task 16 and reached full task completion.
+
+### Related Files
+
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/reference/01-diary.md — Step 15 records upload and verification
+- /home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/tasks.md — Task 16 checked
+

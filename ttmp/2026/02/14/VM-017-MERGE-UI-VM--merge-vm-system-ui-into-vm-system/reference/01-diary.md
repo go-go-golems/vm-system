@@ -958,3 +958,114 @@ pnpm -C ui remove -D vite-plugin-manus-runtime
 pnpm -C ui check
 pnpm -C ui run build
 ```
+
+## Step 14: Update VM-017 Design/Index to Reflect As-Built Outcomes
+
+I updated the ticket’s primary design and index documents from “plan-only” posture to “plan + implemented state” posture. The design doc now includes an implementation status section with completed work and commit references, and frontmatter file links now point to the merged `ui/` paths and new `internal/web` artifacts.
+
+This closes task 15.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Keep ticket documentation synchronized with implementation progress before final upload.
+
+**Inferred user intent:** Make the ticket self-sufficient for reviewers and future maintainers.
+
+**Commit (code):** pending — this step is part of the documentation-outcome checkpoint commit.
+
+### What I did
+- Updated design doc frontmatter related files from old split-repo paths to current merged-repo paths.
+- Added `Implementation Status (2026-02-14)` section summarizing completed integration work and key commits.
+- Updated reference list with new in-repo file paths (`ui/...`, `internal/web/...`).
+- Updated ticket `index.md` summary/status text to reflect implementation progress.
+- Checked off task 15.
+
+### Why
+- Without this update, the ticket would still read as proposal-only and not capture what has already landed in code.
+
+### What worked
+- The documentation now reflects actual repository/runtime state and remaining tasks.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Frontmatter drift can happen quickly during implementation; explicit related-file refresh keeps doc navigation reliable.
+
+### What was tricky to build
+- Commit references in docs require periodic refresh while checkpoints are still being created; I limited references to stable already-created commits.
+
+### What warrants a second pair of eyes
+- Verify that implementation-status section scope matches what reviewers expect (what is done vs what remains).
+
+### What should be done in the future
+- After final upload, mark ticket status according to your workflow (`review`/`done`) once reviewed.
+
+### Code review instructions
+- Read:
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/design-doc/01-vm-system-vm-system-ui-merge-integration-design-and-analysis.md`
+  - `/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/14/VM-017-MERGE-UI-VM--merge-vm-system-ui-into-vm-system/index.md`
+
+### Technical details
+- Documentation update commands were manual file edits plus `docmgr task check --id 15`.
+
+## Step 15: Upload Implementation Update Bundle and Complete Ticket Tasks
+
+I uploaded the updated implementation bundle (design + diary) to the same VM-017 reMarkable folder and verified both the original analysis PDF and the new implementation-update PDF are visible. This closes task 16 and leaves the ticket task list fully checked.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+**Assistant interpretation:** Finish the workflow end-to-end with uploaded artifacts and explicit progress tracking.
+
+**Inferred user intent:** Ensure implementation results are documented and delivered externally, not only committed locally.
+
+**Commit (code):** pending — this step is part of the final documentation checkpoint commit.
+
+### What I did
+- Ran dry-run upload for the updated bundle.
+- Uploaded:
+  - `VM-017-MERGE-UI-VM Implementation Update.pdf`
+- Verified remote folder listing:
+  - `[f] VM-017-MERGE-UI-VM Analysis and Integration Plan`
+  - `[f] VM-017-MERGE-UI-VM Implementation Update`
+- Checked task 16.
+
+### Why
+- The user requested reMarkable delivery and stepwise task completion with diary coverage.
+
+### What worked
+- Upload and listing verification both succeeded in this run.
+- All ticket tasks are now checked.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Using a distinct artifact name for implementation updates avoids clobbering baseline analysis output.
+
+### What was tricky to build
+- Keeping diary/changelog/task updates synchronized across multiple rapid commits requires disciplined ordering (task check + changelog + diary + commit).
+
+### What warrants a second pair of eyes
+- Decide whether to close the ticket immediately or after code review of this branch.
+
+### What should be done in the future
+- Optional: `docmgr ticket close --ticket VM-017-MERGE-UI-VM` after review/merge.
+
+### Code review instructions
+- Verify cloud listing command:
+  - `remarquee cloud ls "/ai/2026/02/14/VM-017-MERGE-UI-VM" --long --non-interactive`
+- Confirm tasks all checked:
+  - `docmgr task list --ticket VM-017-MERGE-UI-VM`
+
+### Technical details
+
+```bash
+remarquee upload bundle --dry-run <design-doc> <diary> --name "VM-017-MERGE-UI-VM Implementation Update" --remote-dir "/ai/2026/02/14/VM-017-MERGE-UI-VM" --toc-depth 2
+remarquee upload bundle <design-doc> <diary> --name "VM-017-MERGE-UI-VM Implementation Update" --remote-dir "/ai/2026/02/14/VM-017-MERGE-UI-VM" --toc-depth 2
+remarquee cloud ls "/ai/2026/02/14/VM-017-MERGE-UI-VM" --long --non-interactive
+```

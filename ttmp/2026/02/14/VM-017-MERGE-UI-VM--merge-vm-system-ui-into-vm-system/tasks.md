@@ -19,6 +19,6 @@
 - [x] Add generator bridge to build/copy frontend assets into Go embed path
 - [x] Add developer commands (`Makefile`) for backend/frontend dev and embed build
 - [x] Validate backend tests and frontend checks/build in merged repository
-- [ ] Update VM-017 design/index/changelog/diary with implementation outcomes
-- [ ] Upload implementation update bundle to reMarkable
+- [x] Update VM-017 design/index/changelog/diary with implementation outcomes
+- [x] Upload implementation update bundle to reMarkable
 - [x] Remove __manus__ and other imported Manus/debug junk from ui

@@ -22,9 +22,9 @@ RelatedFiles:
       Note: Step-by-step implementation diary
 ExternalSources: []
 Summary: Analyze and design the best path to merge vm-system-ui into vm-system as a subdirectory while preserving history and converging deployment/runtime architecture.
-LastUpdated: 2026-02-14T16:44:00-05:00
-WhatFor: Provide an executable blueprint for repository merge mechanics and post-merge runtime integration.
-WhenToUse: Use when preparing the merge PR, sequencing implementation phases, and validating follow-up tasks.
+LastUpdated: 2026-02-14T12:47:00-05:00
+WhatFor: Provide and track an executable blueprint plus implementation results for repository/runtime consolidation.
+WhenToUse: Use when reviewing VM-017 implementation outcomes, remaining tasks, and follow-up planning.
 ---
 
 
@@ -32,7 +32,7 @@ WhenToUse: Use when preparing the merge PR, sequencing implementation phases, an
 
 ## Overview
 
-This ticket covers the architecture analysis and design for merging `vm-system-ui` into `vm-system`. The recommended path is a history-preserving import into `ui/` (subtree-first), followed by phased production consolidation where the Go daemon serves the SPA while preserving existing `/api/v1` contracts.
+This ticket started as architecture/design analysis and now includes an active implementation stream. `vm-system-ui` has been imported into `ui/`, daemon-side static serving and `go generate` asset bridging are in place, and merged dev/build commands are available via root `Makefile` targets.
 
 ## Key Links
 
@@ -44,7 +44,7 @@ This ticket covers the architecture analysis and design for merging `vm-system-u
 ## Status
 
 Current status: **active**
-Analysis and documentation complete; reMarkable upload pending.
+Implementation mostly complete; final documentation polish and implementation artifact upload remain.
 
 ## Topics
 
