@@ -213,7 +213,7 @@ export default function WorkbenchPage() {
     }
   }, [dispatch, editorTabs]);
 
-  const runEditorTab = React.useCallback(async (code: string, packageId: string) => {
+  const runEditorTab = React.useCallback(async (tabId: string, code: string, packageId: string) => {
     try {
       if (!code.trim()) throw new Error("Plugin code cannot be empty");
 
@@ -236,6 +236,8 @@ export default function WorkbenchPage() {
       const plugin = await quickjsSandboxClient.loadPlugin(packageId, instanceId, code);
       registerPlugin(plugin, grants);
       dispatch(focusInstance(plugin.instanceId));
+      dispatch(markEditorTabClean(tabId));
+      dispatch(setTabActiveInstance({ tabId, instanceId: plugin.instanceId }));
     } catch (err) {
       dispatch(pushError({ kind: "load", instanceId: null, widgetId: null, message: String(err) }));
     }
@@ -427,8 +429,8 @@ export default function WorkbenchPage() {
             activeTabId={activeEditorTabId}
             onSelectTab={(id) => dispatch(setActiveEditorTab(id))}
             onCloseTab={(id) => dispatch(closeEditorTab(id))}
-            onRun={activeTab ? () => void runEditorTab(activeTab.code, activeTab.packageId) : undefined}
-            onReload={activeTab ? () => void runEditorTab(activeTab.code, activeTab.packageId) : undefined}
+            onRun={activeTab ? () => void runEditorTab(activeTab.id, activeTab.code, activeTab.packageId) : undefined}
+            onReload={activeTab ? () => void runEditorTab(activeTab.id, activeTab.code, activeTab.packageId) : undefined}
           />
           {activeTab ? (
             <CodeEditor
