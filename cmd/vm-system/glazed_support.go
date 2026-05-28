@@ -9,7 +9,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/settings"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 

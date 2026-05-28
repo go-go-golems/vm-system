@@ -21,3 +21,11 @@ web-generate:
 build:
 	go generate ./internal/web
 	GOWORK=off go build -tags embed -o vm-system ./cmd/vm-system
+
+.PHONY: logcopter-generate
+logcopter-generate:
+	GOWORK=off go generate ./...
+
+.PHONY: logcopter-check
+logcopter-check:
+	GOWORK=off go tool logcopter-gen -include-main -area-prefix go-go-golems.vm-system -strip-prefix github.com/go-go-golems/vm-system -check ./cmd/... ./internal/... ./pkg/...

@@ -1,0 +1,3 @@
+package vm_system
+
+//go:generate go tool logcopter-gen -include-main -area-prefix go-go-golems.vm-system -strip-prefix github.com/go-go-golems/vm-system ./cmd/... ./internal/... ./pkg/...

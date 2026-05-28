@@ -10,7 +10,6 @@ import (
 	"github.com/go-go-golems/vm-system/pkg/vmcontrol"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
-	"github.com/rs/zerolog/log"
 )
 
 // App hosts the long-lived runtime process around vmcontrol and HTTP transport.
