@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // LibraryCache manages downloaded library files
@@ -32,7 +31,7 @@ func NewLibraryCache(cacheDir string) (*LibraryCache, error) {
 	return &LibraryCache{
 		cacheDir: cacheDir,
 		cached:   make(map[string]string),
-		logger:   log.With().Str("component", "library_cache").Logger(),
+		logger:   log.Raw().With().Str("component", "library_cache").Logger(),
 	}, nil
 }
 

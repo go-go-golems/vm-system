@@ -17,7 +17,6 @@ import (
 	"github.com/go-go-golems/vm-system/pkg/vmpath"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // SessionManager manages VM sessions
@@ -47,7 +46,7 @@ func NewSessionManager(store *vmstore.VMStore) *SessionManager {
 	return &SessionManager{
 		store:    store,
 		sessions: make(map[string]*Session),
-		logger:   log.With().Str("component", "session_manager").Logger(),
+		logger:   log.Raw().With().Str("component", "session_manager").Logger(),
 	}
 }
 
