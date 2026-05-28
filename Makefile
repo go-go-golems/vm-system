@@ -24,7 +24,7 @@ build:
 
 .PHONY: logcopter-generate
 logcopter-generate:
-	GOWORK=off go generate ./...
+	GOWORK=off go tool logcopter-gen -include-main -area-prefix go-go-golems.vm-system -strip-prefix github.com/go-go-golems/vm-system ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: logcopter-check
 logcopter-check:
