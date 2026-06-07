@@ -106,6 +106,15 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 	}
 
 	failSessionCreation := func(prefix string, cause error) (*Session, error) {
+		if session.EngineRuntime != nil {
+			_ = session.EngineRuntime.Close(context.Background())
+			session.EngineRuntime = nil
+			session.Runtime = nil
+		}
+		sm.sessionsMu.Lock()
+		delete(sm.sessions, sessionID)
+		sm.sessionsMu.Unlock()
+
 		lastError := fmt.Sprintf("%s: %v", prefix, cause)
 		if updateErr := markSessionCreationFailed(lastError); updateErr != nil {
 			return nil, fmt.Errorf("%s: %w (also failed to persist crashed status: %v)", prefix, cause, updateErr)
