@@ -5,9 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dop251/goja"
-	"github.com/dop251/goja_nodejs/require"
-	gogojamodules "github.com/go-go-golems/go-go-goja/modules"
+	goja "github.com/dop251/goja"
+	"github.com/go-go-golems/go-go-goja/modules"
 	_ "github.com/go-go-golems/go-go-goja/modules/database"
 	_ "github.com/go-go-golems/go-go-goja/modules/exec"
 	_ "github.com/go-go-golems/go-go-goja/modules/fs"
@@ -39,7 +38,7 @@ func IsJSBuiltinModule(name string) bool {
 
 // RegisteredModuleNames returns sorted registered go-go-goja module names.
 func RegisteredModuleNames() []string {
-	docs := gogojamodules.DefaultRegistry.GetDocumentation()
+	docs := modules.DefaultRegistry.GetDocumentation()
 	names := make([]string, 0, len(docs))
 	for name := range docs {
 		names = append(names, name)
@@ -58,34 +57,26 @@ func ValidateConfiguredModuleName(name string) (string, error) {
 	if IsJSBuiltinModule(normalized) {
 		return "", fmt.Errorf("%w: %q is a JavaScript built-in and cannot be configured per template", vmmodels.ErrModuleNotAllowed, normalized)
 	}
-	if gogojamodules.GetModule(normalized) == nil {
+	if modules.GetModule(normalized) == nil {
 		return "", fmt.Errorf("%w: %q is not a registered native module", vmmodels.ErrModuleNotAllowed, normalized)
 	}
 	return normalized, nil
 }
 
-// EnableConfiguredModules enables template-configured go-go-goja native
-// modules and installs require() for the provided runtime.
-func EnableConfiguredModules(vm *goja.Runtime, configured []string) error {
-	reg := require.NewRegistry()
-	seen := map[string]struct{}{}
-
-	for _, rawName := range configured {
+// RegisteredModuleLoaders returns Loader functions for the given module names,
+// validated against the default registry. Returns an error if any name is invalid.
+func RegisteredModuleLoaders(names []string) (map[string]func(*goja.Runtime, *goja.Object), error) {
+	loaders := make(map[string]func(*goja.Runtime, *goja.Object))
+	for _, rawName := range names {
 		name, err := ValidateConfiguredModuleName(rawName)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		module := gogojamodules.GetModule(name)
+		module := modules.GetModule(name)
 		if module == nil {
-			return fmt.Errorf("%w: %q is not a registered native module", vmmodels.ErrModuleNotAllowed, name)
+			return nil, fmt.Errorf("%w: %q is not a registered native module", vmmodels.ErrModuleNotAllowed, name)
 		}
-		reg.RegisterNativeModule(name, module.Loader)
-		seen[name] = struct{}{}
+		loaders[name] = module.Loader
 	}
-
-	reg.Enable(vm)
-	return nil
+	return loaders, nil
 }

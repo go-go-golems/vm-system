@@ -1,6 +1,7 @@
 package vmsession
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,11 +13,12 @@ import (
 	"github.com/dop251/goja"
 	"github.com/google/uuid"
 
+	"github.com/go-go-golems/go-go-goja/pkg/engine"
+	"github.com/go-go-golems/go-go-goja/pkg/runtimebridge"
 	"github.com/go-go-golems/vm-system/pkg/vmmodels"
 	"github.com/go-go-golems/vm-system/pkg/vmmodules"
 	"github.com/go-go-golems/vm-system/pkg/vmpath"
 	"github.com/go-go-golems/vm-system/pkg/vmstore"
-	"github.com/rs/zerolog"
 )
 
 // SessionManager manages VM sessions
@@ -24,7 +26,6 @@ type SessionManager struct {
 	store      *vmstore.VMStore
 	sessions   map[string]*Session
 	sessionsMu sync.RWMutex
-	logger     zerolog.Logger
 }
 
 // Session represents an active VM session
@@ -36,6 +37,7 @@ type Session struct {
 	WorktreePath  string
 	Status        vmmodels.SessionStatus
 	Runtime       *goja.Runtime
+	EngineRuntime *engine.Runtime
 	ExecutionLock sync.Mutex
 	CreatedAt     time.Time
 	LastError     string
@@ -46,7 +48,6 @@ func NewSessionManager(store *vmstore.VMStore) *SessionManager {
 	return &SessionManager{
 		store:    store,
 		sessions: make(map[string]*Session),
-		logger:   log.Raw().With().Str("component", "session_manager").Logger(),
 	}
 }
 
@@ -105,6 +106,15 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 	}
 
 	failSessionCreation := func(prefix string, cause error) (*Session, error) {
+		if session.EngineRuntime != nil {
+			_ = session.EngineRuntime.Close(context.Background())
+			session.EngineRuntime = nil
+			session.Runtime = nil
+		}
+		sm.sessionsMu.Lock()
+		delete(sm.sessions, sessionID)
+		sm.sessionsMu.Unlock()
+
 		lastError := fmt.Sprintf("%s: %v", prefix, cause)
 		if updateErr := markSessionCreationFailed(lastError); updateErr != nil {
 			return nil, fmt.Errorf("%s: %w (also failed to persist crashed status: %v)", prefix, cause, updateErr)
@@ -112,36 +122,68 @@ func (sm *SessionManager) CreateSession(vmID, workspaceID, baseCommitOID, worktr
 		return nil, fmt.Errorf("%s: %w", prefix, cause)
 	}
 
-	// Initialize goja runtime
+	// Initialize goja runtime using engine factory for proper module support
 	if vm.Engine == "goja" {
-		runtime := goja.New()
-		session.Runtime = runtime
-
 		// Parse runtime settings
 		var runtimeConfig vmmodels.RuntimeConfig
 		if err := json.Unmarshal(settings.Runtime, &runtimeConfig); err != nil {
 			return failSessionCreation("failed to parse runtime config", err)
 		}
 
-		if err := vmmodules.EnableConfiguredModules(runtime, vm.ExposedModules); err != nil {
-			return failSessionCreation("failed to enable configured modules", err)
+		// Build module loaders from configured module names
+		loaders, err := vmmodules.RegisteredModuleLoaders(vm.ExposedModules)
+		if err != nil {
+			return failSessionCreation("failed to validate configured modules", err)
 		}
+
+		// Convert loaders to NativeModuleRegistrar specs
+		var moduleRegs []engine.RuntimeModuleRegistrar
+		for name, loader := range loaders {
+			moduleRegs = append(moduleRegs, engine.NativeModuleRegistrar{
+				ModuleName: name,
+				Loader:     loader,
+			})
+		}
+
+		// Build factory with only the configured modules.
+		// Disable implicit default-registry loading so that only the
+		// explicitly configured modules are available via require().
+		builder := engine.NewRuntimeFactoryBuilder(engine.WithImplicitDefaultRegistryModules(false))
+		if len(moduleRegs) > 0 {
+			builder = builder.WithModules(moduleRegs...)
+		}
+
+		factory, err := builder.Build()
+		if err != nil {
+			return failSessionCreation("failed to build runtime factory", err)
+		}
+
+		rt, err := factory.NewRuntime(
+			engine.WithStartupContext(context.Background()),
+			engine.WithLifetimeContext(context.Background()),
+		)
+		if err != nil {
+			return failSessionCreation("failed to create runtime", err)
+		}
+
+		session.EngineRuntime = rt
+		session.Runtime = rt.VM
 
 		// Set up console if enabled
 		if runtimeConfig.Console {
 			console := map[string]interface{}{
 				"log": func(args ...interface{}) {
-					sm.logger.Info().
+					log.Info().
 						Str("session_id", session.ID).
 						Interface("args", args).
 						Msg("startup console.log")
 				},
 			}
-			runtime.Set("console", console)
+			session.Runtime.Set("console", console)
 		}
 
 		// Load configured libraries into runtime
-		if err := sm.loadLibraries(runtime, vm, session.ID); err != nil {
+		if err := sm.loadLibraries(session.Runtime, vm, session.ID); err != nil {
 			return failSessionCreation("failed to load libraries", err)
 		}
 	}
@@ -182,7 +224,7 @@ func (sm *SessionManager) GetSession(sessionID string) (*Session, error) {
 // CloseSession closes a session and releases resources
 func (sm *SessionManager) CloseSession(sessionID string) error {
 	sm.sessionsMu.Lock()
-	_, ok := sm.sessions[sessionID]
+	session, ok := sm.sessions[sessionID]
 	if ok {
 		delete(sm.sessions, sessionID)
 	}
@@ -190,6 +232,11 @@ func (sm *SessionManager) CloseSession(sessionID string) error {
 
 	if !ok {
 		return vmmodels.ErrSessionNotFound
+	}
+
+	// Close engine runtime if present
+	if session.EngineRuntime != nil {
+		_ = session.EngineRuntime.Close(context.Background())
 	}
 
 	// Update database
@@ -252,8 +299,17 @@ func (sm *SessionManager) runStartupFiles(session *Session) error {
 
 		switch file.Mode {
 		case "", "eval":
-			if _, err := session.Runtime.RunString(string(content)); err != nil {
-				return fmt.Errorf("failed to execute startup file %s: %w", file.Path, err)
+			if session.EngineRuntime != nil {
+				_, err = session.EngineRuntime.Owner.Call(context.Background(), "startup", func(_ context.Context, vm *goja.Runtime) (any, error) {
+					return vm.RunString(string(content))
+				})
+				if err != nil {
+					return fmt.Errorf("failed to execute startup file %s: %w", file.Path, err)
+				}
+			} else if session.Runtime != nil {
+				if _, err := session.Runtime.RunString(string(content)); err != nil {
+					return fmt.Errorf("failed to execute startup file %s: %w", file.Path, err)
+				}
 			}
 		default:
 			return fmt.Errorf("%w: %s", vmmodels.ErrStartupModeUnsupported, file.Mode)
@@ -305,7 +361,7 @@ func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM, 
 			return fmt.Errorf("failed to load library %s: %w", libName, err)
 		}
 
-		sm.logger.Info().
+		log.Info().
 			Str("session_id", sessionID).
 			Str("template_id", vm.ID).
 			Str("library", libName).
@@ -313,4 +369,16 @@ func (sm *SessionManager) loadLibraries(runtime *goja.Runtime, vm *vmmodels.VM, 
 	}
 
 	return nil
+}
+
+// GetRuntimeBridgeOwner returns the runtimebridge owner for the session's engine runtime, if available.
+func (s *Session) GetRuntimeBridgeOwner() (runtimebridge.RuntimeOwner, bool) {
+	if s.EngineRuntime == nil || s.EngineRuntime.VM == nil {
+		return nil, false
+	}
+	svc, ok := runtimebridge.Lookup(s.EngineRuntime.VM)
+	if !ok {
+		return nil, false
+	}
+	return svc.Owner, true
 }
